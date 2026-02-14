@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: lrdm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lrdm
+      POSTGRES_PASSWORD: lrdm_pass
+      POSTGRES_DB: lrdm_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - lrdm_pgdata:/var/lib/postgresql/data
+
+volumes:
+  lrdm_pgdata:
