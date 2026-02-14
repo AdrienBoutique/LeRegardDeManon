@@ -1,0 +1,36 @@
+﻿.page {
+  margin-top: 1rem;
+  border: 1px solid #e5dacf;
+  border-radius: 18px;
+  background: #fffdfb;
+  padding: 1.35rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+p {
+  margin: 0.45rem 0 0;
+  color: #6d5d50;
+}
+
+h2 {
+  margin-top: 1rem;
+}
+
+.faq {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.faq article {
+  border: 1px solid #eaded3;
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.9rem;
+}

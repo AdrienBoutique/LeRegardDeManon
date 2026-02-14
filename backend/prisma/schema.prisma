@@ -1,15 +1,175 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum NotificationType {
+  CONFIRMATION
+  REMINDER
+  CANCELLATION
+  FOLLOW_UP
+}
+
+model StaffMember {
+  id                String             @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String             @unique
+  phone             String?
+  role              String
+  isActive          Boolean            @default(true)
+  isTrainee         Boolean            @default(false)
+  colorHex          String             @default("#8C6A52")
+  defaultDiscountPercent Int?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  serviceLinks      ServiceStaff[]
+  appointments      Appointment[]
+  availabilityRules AvailabilityRule[]
+  timeOffs          TimeOff[]
+  notificationLogs  NotificationLog[]
+}
+
+model Service {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  description  String
+  durationMin  Int
+  priceCents   Int
+  isActive     Boolean        @default(true)
+  colorHex     String?
+  categoryId   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  category     ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  serviceLinks ServiceStaff[]
+  appointments Appointment[]
+  @@index([categoryId])
+}
+
+model ServiceCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  services  Service[]
+}
+
+model ServiceStaff {
+  id            String      @id @default(cuid())
+  serviceId     String
+  staffMemberId String
+  priceCentsOverride Int?
+  discountPercentOverride Int?
+  createdAt     DateTime    @default(now())
+  service       Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, staffMemberId])
+  @@index([staffMemberId])
+  @@index([serviceId])
+}
+
+model Client {
+  id               String            @id @default(cuid())
+  firstName        String
+  lastName         String
+  email            String?           @unique
+  phone            String?           @unique
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  appointments     Appointment[]
+  notificationLogs NotificationLog[]
+}
+
+model Appointment {
+  id               String            @id @default(cuid())
+  clientId         String
+  serviceId        String
+  staffMemberId    String
+  startsAt         DateTime
+  endsAt           DateTime
+  status           AppointmentStatus @default(PENDING)
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  client           Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  service          Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  staffMember      StaffMember       @relation(fields: [staffMemberId], references: [id], onDelete: Restrict)
+  notificationLogs NotificationLog[]
+
+  @@index([staffMemberId, startsAt])
+  @@index([clientId, startsAt])
+}
+
+model AvailabilityRule {
+  id            String      @id @default(cuid())
+  staffMemberId String
+  dayOfWeek     Int
+  startTime     String
+  endTime       String
+  isActive      Boolean     @default(true)
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([staffMemberId, dayOfWeek])
+  @@index([staffMemberId, dayOfWeek])
+}
+
+model TimeOff {
+  id            String      @id @default(cuid())
+  staffMemberId String
+  startsAt      DateTime
+  endsAt        DateTime
+  reason        String?
+  isAllDay      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@index([staffMemberId, startsAt])
+}
+
+model NotificationLog {
+  id            String           @id @default(cuid())
+  appointmentId String?
+  staffMemberId String?
+  clientId      String?
+  type          NotificationType
+  channel       String
+  recipient     String
+  payload       Json?
+  status        String           @default("SENT")
+  errorMessage  String?
+  sentAt        DateTime         @default(now())
+  appointment   Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  staffMember   StaffMember?     @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  client        Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([appointmentId])
+  @@index([clientId])
+  @@index([staffMemberId])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

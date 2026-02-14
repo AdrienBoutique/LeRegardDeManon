@@ -1,0 +1,166 @@
+<section class="admin-planning stack">
+  <header class="heading">
+    <div class="heading-top">
+      <div class="titles">
+        <h1>Planning hebdomadaire</h1>
+        <p class="month-label">{{ monthLabel() }}</p>
+      </div>
+
+      <div class="week-nav">
+        <button type="button" class="btn btn-ghost" (click)="previousMonth()">Mois precedent</button>
+        <button type="button" class="btn btn-ghost" (click)="nextMonth()">Mois suivant</button>
+        <button type="button" class="btn btn-ghost" (click)="previousWeek()">Semaine precedente</button>
+        <button type="button" class="btn btn-ghost" (click)="nextWeek()">Semaine suivante</button>
+      </div>
+    </div>
+
+    <p>{{ weekLabel() }}</p>
+
+    <div class="staff-filter" role="radiogroup" aria-label="Filtrer par praticienne">
+      @for (item of staffFilters(); track item.id) {
+        <button
+          type="button"
+          class="chip"
+          [class.active-chip]="staffFilter() === item.id"
+          (click)="setStaffFilter(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </div>
+
+    @if (staffFilter() === 'all' && staff().length) {
+      <div class="staff-legend" aria-label="Legende des couleurs praticiennes">
+        @for (person of staff(); track person.id) {
+          <span class="legend-item">
+            <span class="legend-dot" [ngStyle]="getStaffStyle(person.id)"></span>
+            <span>{{ person.name }}</span>
+          </span>
+        }
+      </div>
+    }
+
+    @if (isMobile()) {
+      <div class="mobile-day-nav">
+        <button type="button" class="btn btn-ghost" [disabled]="mobileDayIndex() === 0" (click)="previousDay()">
+          Jour precedent
+        </button>
+        <strong>{{ visibleDays()[0].label }}</strong>
+        <button type="button" class="btn btn-ghost" [disabled]="mobileDayIndex() === 6" (click)="nextDay()">
+          Jour suivant
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (loading()) {
+    <article class="card panel">Chargement du planning...</article>
+  } @else {
+    <section class="card planner-shell">
+      <div class="planning-header" [style.gridTemplateColumns]="gridTemplateColumns()">
+        <div class="corner-cell">Heure</div>
+        @for (day of visibleDays(); track day.key) {
+          <div class="day-head" [class.current-day]="isToday(day.key)">{{ day.shortLabel }}</div>
+        }
+      </div>
+
+      <div class="planning-body" [style.gridTemplateColumns]="gridTemplateColumns()">
+        <div class="hours-col">
+          @for (slot of timeSlots(); track slot.minuteFromStart) {
+            <div class="hour-cell">{{ slot.label }}</div>
+          }
+        </div>
+
+        @for (day of visibleDays(); track day.key) {
+          <div class="day-col" [style.height.px]="gridHeight()" [class.current-day]="isToday(day.key)">
+            @for (slot of timeSlots(); track slot.minuteFromStart) {
+              <div class="lane-line"></div>
+            }
+
+            @if (getDayShadingStyle(day.key); as shade) {
+              <div class="off-overlay off-overlay-top" [style.height]="shade.topHeight"></div>
+              <div
+                class="off-overlay off-overlay-bottom"
+                [style.top]="shade.bottomTop"
+                [style.height]="shade.bottomHeight"
+              ></div>
+            }
+
+            @for (leave of getTimeOffForDay(day.key); track leave.id) {
+              <div
+                class="timeoff-overlay"
+                [style.top]="leave.top"
+                [style.height]="leave.height"
+                [style.--timeOffBg]="leave.bg"
+                [style.--timeOffBorder]="leave.border"
+                [style.--timeOffText]="leave.text"
+                [title]="leave.staffName + (leave.reason ? ' - ' + leave.reason : '')"
+              >
+                <span class="timeoff-label">{{ leave.staffName }}</span>
+              </div>
+            }
+
+            @if (showNowLine(day.key)) {
+              <div class="now-line" [style.top.px]="getNowLineTop()">
+                <span class="now-dot"></span>
+              </div>
+            }
+
+            @for (appointment of getAppointmentsForDay(day.key); track appointment.id) {
+              <button
+                type="button"
+                class="appt-block"
+                [class.is-booked]="appointment.status === 'BOOKED'"
+                [class.is-done]="appointment.status === 'DONE'"
+                [class.is-no-show]="appointment.status === 'NO_SHOW'"
+                [ngStyle]="getAppointmentStyle(appointment)"
+                (click)="openAppointment(appointment)"
+                [attr.aria-label]="
+                  appointment.clientName +
+                  ', ' +
+                  appointment.serviceName +
+                  ', ' +
+                  formatRange(appointment.startAt, appointment.endAt) +
+                  ', ' +
+                  statusLabel(appointment.status)
+                "
+              >
+                <strong>{{ appointment.clientName }}</strong>
+                <div class="appt-meta">
+                  <span class="service-name">
+                    <span class="service-dot"></span>
+                    {{ appointment.serviceName }}
+                  </span>
+                  <small>{{ shortStatus(appointment.status) }} | {{ formatHour(appointment.startAt) }}</small>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+</section>
+
+@if (selectedAppointment(); as selected) {
+  <div class="overlay" (click)="closeAppointment()">
+    <aside class="drawer card" (click)="$event.stopPropagation()">
+      <h3>Rendez-vous</h3>
+      <p><strong>Client:</strong> {{ selected.clientName }}</p>
+      <p><strong>Service:</strong> {{ selected.serviceName }}</p>
+      <p><strong>Heure:</strong> {{ formatRange(selected.startAt, selected.endAt) }}</p>
+      <p><strong>Statut:</strong> {{ selected.status }}</p>
+
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" (click)="cancelAppointment()">Annuler</button>
+        <button type="button" class="btn btn-primary" (click)="markDone()">Marquer DONE</button>
+      </div>
+
+      <button type="button" class="btn btn-ghost" (click)="closeAppointment()">Fermer</button>
+    </aside>
+  </div>
+}

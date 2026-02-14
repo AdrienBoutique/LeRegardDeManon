@@ -1,0 +1,40 @@
+﻿.page {
+  margin-top: 1rem;
+  border: 1px solid #e5dacf;
+  border-radius: 18px;
+  background: #fffdfb;
+  padding: 1.35rem;
+}
+
+h1 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.intro {
+  margin: 0.5rem 0 0;
+  color: #6d5d50;
+}
+
+.interest-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  color: #5f4b3d;
+  font-weight: 500;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #d9c7b9;
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+}

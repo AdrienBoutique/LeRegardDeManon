@@ -1,0 +1,387 @@
+.admin-planning {
+  gap: 1rem;
+  min-height: 85vh;
+}
+
+.heading,
+.panel,
+.error-box,
+.planner-shell,
+.drawer {
+  padding: 1rem;
+}
+
+.heading {
+  padding: 1.25rem 0;
+  background: transparent;
+}
+
+h1,
+h3 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+p {
+  margin: 0.45rem 0 0;
+  color: var(--color-text-soft);
+}
+
+.heading-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.titles {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.month-label {
+  margin: 0;
+  font-size: 0.96rem;
+  color: #6b5a4d;
+  text-transform: capitalize;
+}
+
+.week-nav {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.staff-filter {
+  margin-top: 0.85rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.staff-legend {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #5f5044;
+  font-size: 0.82rem;
+}
+
+.legend-dot {
+  --apptBorder: #8c6a52;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--apptBorder);
+  border: 1px solid var(--apptBorder);
+  box-shadow: 0 1px 2px rgba(34, 24, 16, 0.12);
+}
+
+.active-chip {
+  background: #8c6a52;
+  color: #fff;
+}
+
+.mobile-day-nav {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.mobile-day-nav strong {
+  font-size: 0.9rem;
+  color: #4f4035;
+}
+
+.error-box {
+  color: #9f1f1f;
+}
+
+.planner-shell {
+  width: 100%;
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
+
+.planning-header,
+.planning-body {
+  display: grid;
+  width: 100%;
+}
+
+.planning-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(251, 246, 241, 0.94);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.corner-cell,
+.day-head {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.55rem;
+  font-weight: 600;
+  color: #4f4035;
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+}
+
+.corner-cell {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: #fdf8f3;
+}
+
+.day-head:last-child {
+  border-right: none;
+}
+
+.day-head.current-day {
+  background: rgba(169, 133, 102, 0.12);
+}
+
+.hours-col {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: rgba(255, 255, 255, 0.92);
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+}
+
+.hour-cell {
+  height: 40px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.day-col {
+  position: relative;
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+}
+
+.day-col:last-child {
+  border-right: none;
+}
+
+.day-col.current-day {
+  background: rgba(169, 133, 102, 0.06);
+}
+
+.lane-line {
+  height: 40px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+.off-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(70, 52, 38, 0.035) 0,
+      rgba(70, 52, 38, 0.035) 7px,
+      rgba(70, 52, 38, 0.02) 7px,
+      rgba(70, 52, 38, 0.02) 14px
+    );
+}
+
+.off-overlay-top {
+  top: 0;
+}
+
+.off-overlay-bottom {
+}
+
+.timeoff-overlay {
+  --timeOffBg: rgba(140, 106, 82, 0.1);
+  --timeOffBorder: #8c6a52;
+  --timeOffText: #2a211b;
+  position: absolute;
+  left: 0.2rem;
+  right: 0.2rem;
+  z-index: 3;
+  border-left: 4px solid var(--timeOffBorder);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--timeOffBg) 0,
+      var(--timeOffBg) 8px,
+      rgba(255, 255, 255, 0.28) 8px,
+      rgba(255, 255, 255, 0.28) 16px
+    );
+  border-radius: 6px;
+  pointer-events: none;
+  padding: 0.1rem 0.35rem;
+  overflow: hidden;
+}
+
+.timeoff-label {
+  color: var(--timeOffText);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid #8c6a52;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.now-dot {
+  position: absolute;
+  top: -5px;
+  left: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #8c6a52;
+}
+
+.appt-block {
+  --apptBg: rgba(140, 106, 82, 0.22);
+  --apptBorder: #8c6a52;
+  --apptText: #2a211b;
+  --serviceDot: #d8c5b5;
+  position: absolute;
+  left: 0.35rem;
+  right: 0.35rem;
+  border: 1px solid var(--apptBorder);
+  border-left: 6px solid var(--apptBorder);
+  border-radius: 10px;
+  background: var(--apptBg);
+  color: var(--apptText);
+  text-align: left;
+  padding: 0.42rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+  cursor: pointer;
+  box-shadow: 0 7px 16px rgba(50, 37, 26, 0.08);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.appt-block:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(50, 37, 26, 0.14);
+}
+
+.appt-block strong {
+  font-size: 0.84rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appt-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.appt-meta span,
+.appt-meta small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.service-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.service-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 999px;
+  background: var(--serviceDot);
+  border: 1px solid rgba(42, 33, 27, 0.25);
+}
+
+.appt-meta span {
+  font-size: 0.74rem;
+  opacity: 0.95;
+}
+
+.appt-meta small {
+  font-size: 0.68rem;
+  border-radius: 999px;
+  border: 1px solid rgba(42, 33, 27, 0.2);
+  padding: 0.03rem 0.26rem;
+}
+
+.appt-block.is-done {
+  opacity: 0.75;
+}
+
+.appt-block.is-no-show {
+  opacity: 0.6;
+  border-style: dashed;
+  border-left-style: solid;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(33, 26, 22, 0.4);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  padding: 1rem;
+}
+
+.drawer {
+  width: min(460px, 100%);
+}
+
+.actions {
+  margin: 1rem 0 0.6rem;
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 899px) {
+  .planner-shell {
+    padding: 0;
+  }
+}

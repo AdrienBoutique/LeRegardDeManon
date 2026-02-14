@@ -1,0 +1,17 @@
+.admin-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-content {
+  width: 100%;
+  padding: 1rem;
+}
+
+@media (min-width: 900px) {
+  .admin-content {
+    padding-inline: 2.5rem;
+    padding-top: 1.2rem;
+  }
+}

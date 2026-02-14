@@ -1,0 +1,210 @@
+﻿<section class="admin-services stack">
+  <header class="heading card">
+    <h1>Gestion des services</h1>
+    <p>Creer, modifier et desactiver les prestations visibles sur le site.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  <article class="card form-card">
+    <h2>Nouveau service</h2>
+    <form class="stack" [formGroup]="createForm" (ngSubmit)="submitCreate()">
+      <label>
+        Nom
+        <input type="text" formControlName="name" />
+      </label>
+      <label>
+        Description
+        <textarea rows="3" formControlName="description"></textarea>
+      </label>
+      <div class="grid two-cols">
+        <label>
+          Duree (min)
+          <input type="number" formControlName="durationMin" />
+        </label>
+        <label>
+          Prix (EUR)
+          <input type="number" step="0.01" formControlName="priceEur" />
+        </label>
+      </div>
+      <div class="category-row">
+        <label>
+          Categorie
+          <select formControlName="categoryId">
+            <option value="">Sans categorie</option>
+            @for (category of categories(); track category.id) {
+              <option [value]="category.id">{{ category.name }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="btn btn-ghost btn-plus" [disabled]="saving()" (click)="addCategoryForCreate()">
+          +
+        </button>
+      </div>
+      @if (categoryCreateTarget() === 'create') {
+        <div class="category-create-inline">
+          <input
+            type="text"
+            [value]="categoryDraft()"
+            (input)="setCategoryDraft($any($event.target).value)"
+            placeholder="Nom de la categorie"
+          />
+          <button type="button" class="btn btn-ghost" [disabled]="saving()" (click)="cancelCategoryCreate()">
+            Annuler
+          </button>
+          <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="confirmCategoryCreate()">
+            Ajouter
+          </button>
+        </div>
+      }
+      <div class="category-list">
+        @for (category of categories(); track category.id) {
+          <button type="button" class="category-tag" [disabled]="saving()" (click)="deleteCategory(category)">
+            {{ category.name }} <span aria-hidden="true">×</span>
+          </button>
+        }
+      </div>
+      <div class="color-row">
+        <label class="color-label">
+          Couleur (optionnel)
+          <select formControlName="colorHex">
+            <option value="">Auto</option>
+            @if (createForm.controls.colorHex.value && !hasColorOption(createForm.controls.colorHex.value)) {
+              <option [value]="createForm.controls.colorHex.value">
+                Couleur actuelle ({{ createForm.controls.colorHex.value }})
+              </option>
+            }
+            @for (color of colorOptions; track color.hex) {
+              <option [value]="color.hex">{{ color.label }} ({{ color.hex }})</option>
+            }
+          </select>
+        </label>
+        <span class="color-preview">
+          <span class="color-dot" [style.background]="createForm.controls.colorHex.value || '#d7c5b7'"></span>
+          {{ createForm.controls.colorHex.value || 'Auto' }}
+        </span>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="setCreateColorAuto()">Auto</button>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" formControlName="active" />
+        Actif
+      </label>
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Enregistrement...' : 'Creer le service' }}
+      </button>
+    </form>
+  </article>
+
+  @if (editingId()) {
+    <article class="card form-card edit-card">
+      <h2>Modifier le service</h2>
+      <form class="stack" [formGroup]="editForm" (ngSubmit)="submitEdit()">
+        <label>
+          Nom
+          <input type="text" formControlName="name" />
+        </label>
+        <label>
+          Description
+          <textarea rows="3" formControlName="description"></textarea>
+        </label>
+        <div class="grid two-cols">
+          <label>
+            Duree (min)
+            <input type="number" formControlName="durationMin" />
+          </label>
+          <label>
+            Prix (EUR)
+            <input type="number" step="0.01" formControlName="priceEur" />
+          </label>
+        </div>
+        <div class="category-row">
+          <label>
+            Categorie
+            <select formControlName="categoryId">
+              <option value="">Sans categorie</option>
+              @for (category of categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="btn btn-ghost btn-plus" [disabled]="saving()" (click)="addCategoryForEdit()">
+            +
+          </button>
+        </div>
+        @if (categoryCreateTarget() === 'edit') {
+          <div class="category-create-inline">
+            <input
+              type="text"
+              [value]="categoryDraft()"
+              (input)="setCategoryDraft($any($event.target).value)"
+              placeholder="Nom de la categorie"
+            />
+            <button type="button" class="btn btn-ghost" [disabled]="saving()" (click)="cancelCategoryCreate()">
+              Annuler
+            </button>
+            <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="confirmCategoryCreate()">
+              Ajouter
+            </button>
+          </div>
+        }
+        <div class="color-row">
+          <label class="color-label">
+            Couleur (optionnel)
+            <select formControlName="colorHex">
+              <option value="">Auto</option>
+              @if (editForm.controls.colorHex.value && !hasColorOption(editForm.controls.colorHex.value)) {
+                <option [value]="editForm.controls.colorHex.value">
+                  Couleur actuelle ({{ editForm.controls.colorHex.value }})
+                </option>
+              }
+              @for (color of colorOptions; track color.hex) {
+                <option [value]="color.hex">{{ color.label }} ({{ color.hex }})</option>
+              }
+            </select>
+          </label>
+          <span class="color-preview">
+            <span class="color-dot" [style.background]="editForm.controls.colorHex.value || '#d7c5b7'"></span>
+            {{ editForm.controls.colorHex.value || 'Auto' }}
+          </span>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="setEditColorAuto()">Auto</button>
+        </div>
+        <label class="check-row">
+          <input type="checkbox" formControlName="active" />
+          Actif
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">Sauvegarder</button>
+          <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Annuler</button>
+        </div>
+      </form>
+    </article>
+  }
+
+  <section class="services-list grid">
+    @if (loading()) {
+      <article class="card">Chargement...</article>
+    }
+
+    @for (service of services(); track service.id) {
+      <article class="card service-item">
+        <div class="top">
+          <h3>
+            <span class="color-dot" [style.background]="service.colorHex || '#d7c5b7'"></span>
+            {{ service.name }}
+          </h3>
+          <span class="chip" [class.inactive]="!service.active">{{ service.active ? 'Actif' : 'Inactif' }}</span>
+        </div>
+        <p>{{ service.description }}</p>
+        <p class="meta">{{ service.durationMin }} min - {{ formatPrice(service.priceCents) }}</p>
+        <p class="muted">Categorie: {{ service.categoryName || 'Sans categorie' }}</p>
+        <p class="muted">Couleur: {{ service.colorHex || 'Auto' }}</p>
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" (click)="startEdit(service)">Editer</button>
+          <button type="button" class="btn btn-ghost" (click)="deleteService(service)">Supprimer</button>
+        </div>
+      </article>
+    }
+  </section>
+</section>

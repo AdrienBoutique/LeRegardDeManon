@@ -1,0 +1,90 @@
+<section class="admin-hours stack">
+  <header class="card heading">
+    <h1>Horaires hebdomadaires</h1>
+    <p>Modifiez les horaires par praticienne et enregistrez en base.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (toastMessage()) {
+    <article class="toast">{{ toastMessage() }}</article>
+  }
+
+  <article class="card panel">
+    <h2>Praticienne</h2>
+    <div class="staff-picker" role="radiogroup" aria-label="Choisir une praticienne">
+      @if (loadingStaff()) {
+        <span class="muted">Chargement...</span>
+      } @else {
+        @for (member of staff(); track member.id) {
+          <button
+            type="button"
+            class="chip"
+            [class.active-chip]="selectedStaffId() === member.id"
+            (click)="selectStaff(member.id)"
+          >
+            <span class="dot" [style.background]="member.colorHex"></span>
+            {{ member.name }}
+          </button>
+        }
+      }
+    </div>
+  </article>
+
+  @if (hasStaff()) {
+    <article class="card panel">
+      <h2>Semaine type</h2>
+
+      @if (loadingAvailability()) {
+        <p class="muted">Chargement des horaires...</p>
+      } @else {
+        <div class="days stack">
+          @for (day of days(); track day.weekday) {
+            <article class="day-row card">
+              <strong>{{ day.label }}</strong>
+
+              <div class="day-controls">
+                <label class="check-row">
+                  <input type="checkbox" [checked]="day.off" (change)="toggleOff(day.weekday, $any($event.target).checked)" />
+                  OFF
+                </label>
+
+                <label>
+                  Debut
+                  <input
+                    type="time"
+                    [disabled]="day.off"
+                    [value]="day.startTime"
+                    (input)="updateTime(day.weekday, 'startTime', $any($event.target).value)"
+                  />
+                </label>
+
+                <label>
+                  Fin
+                  <input
+                    type="time"
+                    [disabled]="day.off"
+                    [value]="day.endTime"
+                    (input)="updateTime(day.weekday, 'endTime', $any($event.target).value)"
+                  />
+                </label>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </article>
+
+    <div class="save-bar">
+      <button type="button" class="btn btn-primary" [disabled]="saving() || loadingAvailability()" (click)="save()">
+        {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  } @else if (!loadingStaff()) {
+    <article class="card panel">
+      <p class="muted">Aucune praticienne active.</p>
+    </article>
+  }
+</section>

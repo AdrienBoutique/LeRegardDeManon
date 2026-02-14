@@ -1,0 +1,13 @@
+﻿<div class="app-shell">
+  @if (!isAdminRoute()) {
+    <app-navbar></app-navbar>
+  }
+
+  <main class="app-main" [class.app-main--admin]="isAdminRoute()">
+    <router-outlet></router-outlet>
+  </main>
+
+  @if (!isAdminRoute()) {
+    <app-footer></app-footer>
+  }
+</div>

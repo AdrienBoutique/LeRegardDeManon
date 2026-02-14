@@ -1,0 +1,217 @@
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
+import { AdminInstituteApiService, AdminStaffItem } from '../../../core/services/admin-institute-api.service';
+
+type EditableDay = {
+  weekday: number;
+  label: string;
+  off: boolean;
+  startTime: string;
+  endTime: string;
+};
+
+const DAYS: Array<{ weekday: number; label: string }> = [
+  { weekday: 0, label: 'Dimanche' },
+  { weekday: 1, label: 'Lundi' },
+  { weekday: 2, label: 'Mardi' },
+  { weekday: 3, label: 'Mercredi' },
+  { weekday: 4, label: 'Jeudi' },
+  { weekday: 5, label: 'Vendredi' },
+  { weekday: 6, label: 'Samedi' }
+];
+
+@Component({
+  selector: 'app-admin-hours',
+  templateUrl: './admin-hours.html',
+  styleUrl: './admin-hours.scss'
+})
+export class AdminHours {
+  private readonly api = inject(AdminInstituteApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  protected readonly loadingStaff = signal(false);
+  protected readonly loadingAvailability = signal(false);
+  protected readonly saving = signal(false);
+  protected readonly errorMessage = signal('');
+  protected readonly toastMessage = signal('');
+
+  protected readonly staff = signal<AdminStaffItem[]>([]);
+  protected readonly selectedStaffId = signal<string | null>(null);
+  protected readonly days = signal<EditableDay[]>(this.getDefaultDays());
+
+  protected readonly hasStaff = computed(() => this.staff().length > 0);
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+
+    this.fetchStaff();
+  }
+
+  protected selectStaff(staffId: string): void {
+    if (this.selectedStaffId() === staffId || this.loadingAvailability()) {
+      return;
+    }
+
+    this.selectedStaffId.set(staffId);
+    this.fetchAvailability(staffId);
+  }
+
+  protected toggleOff(weekday: number, off: boolean): void {
+    this.days.update((items) =>
+      items.map((item) =>
+        item.weekday === weekday
+          ? {
+              ...item,
+              off,
+              startTime: off ? item.startTime : item.startTime || '09:00',
+              endTime: off ? item.endTime : item.endTime || '18:00'
+            }
+          : item
+      )
+    );
+  }
+
+  protected updateTime(weekday: number, key: 'startTime' | 'endTime', value: string): void {
+    this.days.update((items) =>
+      items.map((item) => (item.weekday === weekday ? { ...item, [key]: value } : item))
+    );
+  }
+
+  protected save(): void {
+    const staffId = this.selectedStaffId();
+    if (!staffId || this.saving()) {
+      return;
+    }
+
+    const validationError = this.validateDays();
+    if (validationError) {
+      this.errorMessage.set(validationError);
+      return;
+    }
+
+    const payload = this.days().map((day) => ({
+      weekday: day.weekday,
+      off: day.off,
+      startTime: day.off ? undefined : day.startTime,
+      endTime: day.off ? undefined : day.endTime
+    }));
+
+    this.saving.set(true);
+    this.errorMessage.set('');
+
+    this.api
+      .updateAvailability(staffId, payload)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.applyAvailability(response.days);
+          this.showToast('Sauvegarde reussie.');
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? 'Impossible de sauvegarder les horaires.');
+        }
+      });
+  }
+
+  private fetchStaff(): void {
+    this.loadingStaff.set(true);
+    this.errorMessage.set('');
+
+    this.api
+      .listStaff()
+      .pipe(finalize(() => this.loadingStaff.set(false)))
+      .subscribe({
+        next: (items) => {
+          const active = items.filter((member) => member.active);
+          this.staff.set(active);
+
+          if (!active.length) {
+            this.selectedStaffId.set(null);
+            this.days.set(this.getDefaultDays());
+            return;
+          }
+
+          const first = active[0];
+          this.selectedStaffId.set(first.id);
+          this.fetchAvailability(first.id);
+        },
+        error: () => {
+          this.errorMessage.set('Impossible de charger les praticiennes.');
+        }
+      });
+  }
+
+  private fetchAvailability(staffId: string): void {
+    this.loadingAvailability.set(true);
+    this.errorMessage.set('');
+
+    this.api
+      .getAvailability(staffId)
+      .pipe(finalize(() => this.loadingAvailability.set(false)))
+      .subscribe({
+        next: (items) => this.applyAvailability(items),
+        error: () => {
+          this.days.set(this.getDefaultDays());
+          this.errorMessage.set('Impossible de charger les horaires.');
+        }
+      });
+  }
+
+  private applyAvailability(
+    items: Array<{ weekday: number; off?: boolean; startTime: string | null; endTime: string | null }>
+  ): void {
+    const byWeekday = new Map(items.map((day) => [day.weekday, day]));
+    const next = DAYS.map((day) => {
+      const item = byWeekday.get(day.weekday);
+      return {
+        weekday: day.weekday,
+        label: day.label,
+        off: item ? Boolean(item.off) : true,
+        startTime: item?.startTime ?? '09:00',
+        endTime: item?.endTime ?? '18:00'
+      };
+    });
+    this.days.set(next);
+  }
+
+  private validateDays(): string | null {
+    for (const day of this.days()) {
+      if (day.off) {
+        continue;
+      }
+
+      if (!day.startTime || !day.endTime) {
+        return `Veuillez renseigner les heures pour ${day.label}.`;
+      }
+
+      if (day.startTime >= day.endTime) {
+        return `Horaire invalide pour ${day.label} (debut avant fin).`;
+      }
+    }
+
+    return null;
+  }
+
+  private showToast(message: string): void {
+    this.toastMessage.set(message);
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+    this.toastTimer = setTimeout(() => this.toastMessage.set(''), 2600);
+  }
+
+  private getDefaultDays(): EditableDay[] {
+    return DAYS.map((day) => ({
+      weekday: day.weekday,
+      label: day.label,
+      off: true,
+      startTime: '09:00',
+      endTime: '18:00'
+    }));
+  }
+}

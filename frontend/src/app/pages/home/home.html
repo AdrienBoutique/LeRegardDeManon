@@ -1,0 +1,98 @@
+﻿<section class="hero" id="top">
+  <p class="badge">Institut de beaute du regard</p>
+  <h1>Le regard de Manon</h1>
+  <p class="lead">
+    Un institut dedie a la beaute du regard, avec une approche douce, precise et elegante.
+  </p>
+  <div class="actions">
+    <a routerLink="/rdv" class="btn btn-primary">Prendre rendez-vous</a>
+    <a routerLink="/soins" class="btn btn-ghost">Voir les soins</a>
+  </div>
+  <div class="anchors">
+    <a routerLink="/" fragment="soins">Soins populaires</a>
+    <a routerLink="/" fragment="apropos">A propos</a>
+    <a routerLink="/" fragment="avis">Avis</a>
+    <a routerLink="/" fragment="contact">Contact rapide</a>
+  </div>
+</section>
+
+<section class="panel" id="soins">
+  <h2>Soins populaires</h2>
+
+  @if (popularServices$ | async; as popularServices) {
+    <div class="cards-grid">
+      @for (service of popularServices; track service.id) {
+        <article class="card">
+          <p class="chip">{{ service.category }}</p>
+          <h3>{{ service.name }}</h3>
+          <p>{{ service.description }}</p>
+          <p class="meta">{{ service.durationMin }} min - {{ formatPrice(service.priceCents) }}</p>
+          <a [routerLink]="['/soins', service.id]" class="btn btn-ghost">Voir le detail</a>
+        </article>
+      }
+    </div>
+  } @else {
+    <article class="card">Chargement des soins...</article>
+  }
+</section>
+
+<section class="panel about" id="apropos">
+  <div>
+    <h2>A propos</h2>
+    <p>
+      Manon vous accueille dans un espace calme et lumineux, avec un diagnostic personnalise pour
+      respecter votre visage et vos attentes.
+    </p>
+    <div class="actions">
+      <a routerLink="/a-propos" class="btn btn-ghost">En savoir plus</a>
+    </div>
+  </div>
+  <div class="photo" role="img" aria-label="Cabine de soins"></div>
+</section>
+
+<section class="panel">
+  <h2>Pourquoi nous choisir</h2>
+  <div class="cards-grid points">
+    <article class="card"><h3>Precision</h3><p>Des gestes minutieux pour un resultat net et naturel.</p></article>
+    <article class="card"><h3>Hygiene stricte</h3><p>Protocoles d'hygiene renforces a chaque prestation.</p></article>
+    <article class="card"><h3>Conseil personnalise</h3><p>Chaque soin est adapte a votre morphologie et votre rythme.</p></article>
+  </div>
+</section>
+
+<section class="panel" id="avis">
+  <h2>Avis</h2>
+  <div class="cards-grid">
+    <article class="card testimonial">
+      <p class="rating">★★★★★</p>
+      <p>Accueil parfait et resultat tres naturel.</p>
+      <p class="meta">Camille</p>
+    </article>
+    <article class="card testimonial">
+      <p class="rating">★★★★★</p>
+      <p>Mon regard est sublime, je recommande.</p>
+      <p class="meta">Sarah</p>
+    </article>
+    <article class="card testimonial">
+      <p class="rating">★★★★★</p>
+      <p>Soin confortable et travail tres soigne.</p>
+      <p class="meta">Julie</p>
+    </article>
+  </div>
+</section>
+
+<section class="panel contact-quick" id="contact">
+  <h2>Contact rapide</h2>
+  <p class="item">12 rue des Lilas, 59000 Lille</p>
+  <p class="item">Lun-Sam: 9h30 - 19h00</p>
+  <div class="actions">
+    <a routerLink="/contact" class="btn btn-ghost">Page contact</a>
+    <a href="https://instagram.com" class="btn btn-ghost" target="_blank" rel="noreferrer">Instagram</a>
+  </div>
+</section>
+
+<section class="cta-final">
+  <h2>Prete a sublimer votre regard ?</h2>
+  <div class="actions" style="justify-content:center;">
+    <a routerLink="/rdv" class="btn btn-primary">Prendre RDV</a>
+  </div>
+</section>

@@ -1,0 +1,122 @@
+<section class="admin-timeoff stack">
+  <header class="card heading">
+    <h1>Conges</h1>
+    <p>Ajoutez les conges a venir et retrouvez-les dans le planning global.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (toastMessage()) {
+    <article class="toast">{{ toastMessage() }}</article>
+  }
+
+  <article class="card panel">
+    <h2>Praticienne</h2>
+    <div class="staff-picker" role="radiogroup" aria-label="Choisir une praticienne">
+      @if (loadingStaff()) {
+        <span class="muted">Chargement...</span>
+      } @else {
+        <button
+          type="button"
+          class="chip"
+          [class.active-chip]="selectedStaffId() === 'institut'"
+          (click)="selectStaff('institut')"
+        >
+          Institut
+        </button>
+        @for (member of staff(); track member.id) {
+          <button
+            type="button"
+            class="chip"
+            [class.active-chip]="selectedStaffId() === member.id"
+            (click)="selectStaff(member.id)"
+          >
+            <span class="dot" [style.background]="member.colorHex"></span>
+            {{ member.name }}
+          </button>
+        }
+      }
+    </div>
+  </article>
+
+  @if (hasStaff()) {
+    <article class="card panel">
+      <h2>Ajouter un conge</h2>
+      <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
+        <label class="check-row">
+          <input type="checkbox" formControlName="isAllDay" />
+          Jour(s) complet(s)
+        </label>
+
+        @if (form.controls.isAllDay.value) {
+          <div class="grid two-cols">
+            <label>
+              Du
+              <input type="date" formControlName="startDate" />
+            </label>
+            <label>
+              Au
+              <input type="date" formControlName="endDate" />
+            </label>
+          </div>
+        } @else {
+          <div class="grid two-cols">
+            <label>
+              Debut
+              <input type="datetime-local" formControlName="startsAt" />
+            </label>
+            <label>
+              Fin
+              <input type="datetime-local" formControlName="endsAt" />
+            </label>
+          </div>
+        }
+
+        <label>
+          Raison (optionnel)
+          <input type="text" formControlName="reason" />
+        </label>
+
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Enregistrement...' : 'Enregistrer le conge' }}
+        </button>
+      </form>
+    </article>
+
+    <article class="card panel">
+      <h2>Conges a venir</h2>
+      @if (loadingTimeOff()) {
+        <p class="muted">Chargement...</p>
+      } @else if (!upcomingTimeOff().length) {
+        <p class="muted">Aucun conge a venir.</p>
+      } @else {
+        <div class="stack timeoff-list">
+          @for (item of upcomingTimeOff(); track item.id) {
+            <article class="card timeoff-item">
+              <p class="line">
+                <strong>{{ formatRange(item) }}</strong>
+                @if (item.isAllDay) {
+                  <span class="chip">Journee</span>
+                }
+                @if (isGlobalReason(item.reason)) {
+                  <span class="chip global-chip">Institut</span>
+                } @else {
+                  <span class="chip person-chip">Praticienne</span>
+                }
+              </p>
+              <p class="muted">Source: {{ sourceLabel(item) }}</p>
+              <p class="muted">{{ displayReason(item.reason) }}</p>
+              <button type="button" class="btn btn-ghost btn-small" (click)="remove(item.id)">Supprimer</button>
+            </article>
+          }
+        </div>
+      }
+    </article>
+  } @else if (!loadingStaff()) {
+    <article class="card panel">
+      <p class="muted">Aucune praticienne active.</p>
+    </article>
+  }
+</section>

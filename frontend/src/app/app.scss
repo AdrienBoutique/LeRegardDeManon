@@ -1,0 +1,32 @@
+﻿:host {
+  display: block;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.app-main {
+  width: min(var(--container), calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1.2rem 0 3rem;
+}
+
+.app-main--admin {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 900px) {
+  .app-main {
+    padding-top: 1.6rem;
+  }
+
+  .app-main--admin {
+    padding-top: 0;
+  }
+}

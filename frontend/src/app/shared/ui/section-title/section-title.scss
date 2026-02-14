@@ -1,0 +1,16 @@
+﻿.section-title {
+  margin-bottom: 1.25rem;
+}
+
+.subtitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7c6a5d;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 1.1rem + 2vw, 2.8rem);
+}

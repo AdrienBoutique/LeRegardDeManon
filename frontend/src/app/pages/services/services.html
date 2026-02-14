@@ -1,0 +1,57 @@
+﻿<app-section-title title="Soins" subtitle="Nos prestations"></app-section-title>
+
+@if (services$ | async; as services) {
+  <section class="services-top card">
+    <div class="filters">
+      @for (category of getCategories(services); track category) {
+        <button
+          type="button"
+          class="chip filter-chip"
+          [class.active]="selectedCategory() === category"
+          (click)="setCategory(category)"
+        >
+          {{ category }}
+        </button>
+      }
+    </div>
+
+    <label class="search-field" for="services-search">
+      Rechercher un soin
+      <input
+        id="services-search"
+        type="search"
+        placeholder="Nom ou mot-cle"
+        [value]="searchTerm()"
+        (input)="setSearch($any($event.target).value)"
+      />
+    </label>
+  </section>
+
+  <section class="grid services-grid">
+    @for (service of filterServices(services); track service.id) {
+      <article class="card service-card">
+        <div class="stack">
+          <p class="chip">{{ service.category }}</p>
+          <h2>{{ service.name }}</h2>
+          <p class="summary">{{ service.description }}</p>
+        </div>
+
+        <div class="bottom">
+          <p class="meta">{{ service.durationMin }} min</p>
+          <p class="price">{{ formatPrice(service.priceCents) }}</p>
+        </div>
+
+        <a [routerLink]="['/soins', service.id]" class="btn btn-ghost">Voir le detail</a>
+      </article>
+    }
+
+    @if (filterServices(services).length === 0) {
+      <article class="card empty-state">
+        <h3>Aucun soin trouve</h3>
+        <p>Essayez un autre mot-cle ou une categorie differente.</p>
+      </article>
+    }
+  </section>
+} @else {
+  <article class="card" style="padding: 1rem;">Chargement des services...</article>
+}

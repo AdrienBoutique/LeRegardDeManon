@@ -1,0 +1,113 @@
+<section class="admin-staff stack">
+  <header class="card heading">
+    <h1>Praticiennes</h1>
+    <p>Gerez les profils, statuts et reductions par defaut.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  <article class="card form-card">
+    <h2>Ajouter une praticienne</h2>
+
+    <form class="stack" [formGroup]="createForm" (ngSubmit)="submitCreate()">
+      <div class="grid two-cols">
+        <label>
+          Nom complet
+          <input type="text" formControlName="name" />
+        </label>
+
+        <label>
+          Email
+          <input type="email" formControlName="email" />
+        </label>
+      </div>
+
+      <div class="grid three-cols">
+        <label class="check-row">
+          <input type="checkbox" formControlName="active" />
+          Active
+        </label>
+
+        <label class="check-row">
+          <input type="checkbox" formControlName="isTrainee" />
+          Stagiaire
+        </label>
+
+        <label>
+          Reduction % defaut
+          <input type="number" min="0" max="100" formControlName="defaultDiscountPercent" />
+        </label>
+      </div>
+
+      <div class="color-row">
+        <label class="color-label">
+          Couleur
+          <select formControlName="colorHex">
+            @if (createForm.controls.colorHex.value && !hasColorOption(createForm.controls.colorHex.value)) {
+              <option [value]="createForm.controls.colorHex.value">
+                Couleur actuelle ({{ createForm.controls.colorHex.value }})
+              </option>
+            }
+            @for (color of colorOptions; track color.hex) {
+              <option [value]="color.hex">{{ color.label }} ({{ color.hex }})</option>
+            }
+          </select>
+        </label>
+        <span class="color-preview">
+          <span class="color-dot" [style.background]="createForm.controls.colorHex.value"></span>
+          {{ createForm.controls.colorHex.value }}
+        </span>
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Creation...' : 'Ajouter' }}
+      </button>
+    </form>
+  </article>
+
+  <section class="grid staff-grid">
+    @if (loading()) {
+      <article class="card staff-card">Chargement...</article>
+    }
+
+    @for (member of staff(); track member.id) {
+      <article class="card staff-card">
+        <div class="top">
+          <h3>
+            <span class="color-dot" [style.background]="member.colorHex"></span>
+            {{ member.name }}
+          </h3>
+          <div class="chips">
+            <span class="chip" [class.inactive]="!member.active">{{ member.active ? 'Active' : 'Inactive' }}</span>
+            @if (member.isTrainee) {
+              <span class="chip">Stagiaire</span>
+            }
+          </div>
+        </div>
+
+        <p>{{ member.email }}</p>
+        @if (member.defaultDiscountPercent !== null) {
+          <p class="muted">Reduction par defaut: {{ member.defaultDiscountPercent }}%</p>
+        }
+
+        <div class="actions">
+          <a class="btn btn-ghost" [routerLink]="['/admin/staff', member.id]">Ouvrir</a>
+          @if (pendingDeleteId() === member.id) {
+            <button type="button" class="btn btn-danger-lite" [disabled]="saving()" (click)="deleteStaff(member)">
+              Confirmer
+            </button>
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="cancelDelete()">
+              Annuler
+            </button>
+          } @else {
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="requestDelete(member.id)">
+              Desactiver
+            </button>
+          }
+        </div>
+      </article>
+    }
+  </section>
+</section>

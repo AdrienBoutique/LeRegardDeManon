@@ -1,0 +1,29 @@
+﻿<section class="detail">
+  @if (service$ | async; as item) {
+    <div class="detail-grid">
+      <article class="card info-card">
+        <p class="chip">{{ item.category }}</p>
+        <h1>{{ item.name }}</h1>
+        <p class="summary">{{ item.description }}</p>
+
+        <div class="facts">
+          <p><strong>Duree</strong><span>{{ item.durationMin }} min</span></p>
+          <p><strong>Tarif</strong><span>{{ formatPrice(item.priceCents) }}</span></p>
+        </div>
+      </article>
+
+      <aside class="card booking-card">
+        <h2>Reservation</h2>
+        <p>Choisissez un creneau qui vous convient et recevez une confirmation rapide.</p>
+        <a routerLink="/rdv" class="btn btn-primary">Reserver ce soin</a>
+        <a routerLink="/soins" class="btn btn-ghost">Retour aux soins</a>
+      </aside>
+    </div>
+  } @else {
+    <article class="card info-card">
+      <h1>Soin introuvable</h1>
+      <p>Retournez a la page des soins pour choisir une prestation valide.</p>
+      <a routerLink="/soins" class="btn btn-ghost">Voir les soins</a>
+    </article>
+  }
+</section>

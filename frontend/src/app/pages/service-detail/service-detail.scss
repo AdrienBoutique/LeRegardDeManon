@@ -1,0 +1,75 @@
+﻿.detail {
+  margin-top: 1rem;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.info-card,
+.booking-card {
+  padding: 1.15rem;
+}
+
+.info-card h1 {
+  margin: 0.75rem 0 0.55rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.65rem, 2.5vw, 2.2rem);
+}
+
+.summary {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.facts {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.facts p {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: #fffcf9;
+}
+
+.facts strong {
+  color: #5f4f42;
+}
+
+.booking-card {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  background: linear-gradient(180deg, #fffdfb, #fcf7f2);
+}
+
+.booking-card h2 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.booking-card p {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+@media (min-width: 960px) {
+  .detail-grid {
+    grid-template-columns: 1.3fr 0.8fr;
+    align-items: start;
+  }
+
+  .booking-card {
+    position: sticky;
+    top: 95px;
+  }
+}

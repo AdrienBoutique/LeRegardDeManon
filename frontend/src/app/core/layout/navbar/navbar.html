@@ -1,0 +1,51 @@
+﻿<header class="site-header">
+  <nav class="nav" aria-label="Navigation principale">
+    <a
+      class="brand"
+      routerLink="/"
+      (pointerdown)="onBrandPointerDown($event)"
+      (pointerup)="onBrandPointerEnd()"
+      (pointercancel)="onBrandPointerEnd()"
+      (pointerleave)="onBrandPointerEnd()"
+      (contextmenu)="onBrandContextMenu($event)"
+      (click)="onBrandClick($event); closeMenu()"
+      >Le regard de Manon</a
+    >
+
+    <button
+      class="burger"
+      [class.open]="menuOpen()"
+      type="button"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="main-nav-links"
+      aria-label="Ouvrir le menu"
+      (click)="toggleMenu()"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div class="links" id="main-nav-links" [class.open]="menuOpen()">
+      <a routerLink="/" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" (click)="closeMenu()">Accueil</a>
+      <a routerLink="/soins" routerLinkActive="active" (click)="closeMenu()">Soins</a>
+      <a routerLink="/a-propos" routerLinkActive="active" (click)="closeMenu()">A propos</a>
+      <a routerLink="/formations" routerLinkActive="active" (click)="closeMenu()">Formations</a>
+      <a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a>
+      <a routerLink="/rdv" class="cta" (click)="closeMenu()">Prendre RDV</a>
+    </div>
+  </nav>
+</header>
+
+@if (proModalOpen()) {
+  <div class="pro-overlay" (click)="closeProAccess()">
+    <section class="pro-modal" role="dialog" aria-modal="true" aria-label="Acces professionnel" (click)="$event.stopPropagation()">
+      <p class="pro-title">Acces professionnel</p>
+      <p class="pro-text">Espace reserve a l'equipe.</p>
+      <div class="pro-actions">
+        <button type="button" class="btn btn-primary" (click)="openAdminLogin()">Se connecter</button>
+        <button type="button" class="btn btn-ghost" (click)="closeProAccess()">Annuler</button>
+      </div>
+    </section>
+  </div>
+}

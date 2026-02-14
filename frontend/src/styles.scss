@@ -1,0 +1,140 @@
+﻿:root {
+  --color-bg: #f7f2ed;
+  --color-surface: #fffdfb;
+  --color-surface-soft: #f6eee7;
+  --color-text: #2e241d;
+  --color-text-soft: #6f6053;
+  --color-border: #e4d8ce;
+  --color-border-soft: #efe4da;
+  --color-primary: #8c6a52;
+  --color-primary-strong: #6f4f3b;
+  --color-accent: #e8d5c1;
+  --color-focus: #2e7ca7;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 10px 24px rgba(45, 33, 24, 0.08);
+  --shadow-md: 0 20px 44px rgba(45, 33, 24, 0.11);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  --container: 1120px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(224, 196, 172, 0.24), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(247, 233, 219, 0.55), transparent 33%),
+    var(--color-bg);
+  line-height: 1.55;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.container {
+  width: min(var(--container), calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.section {
+  margin-top: var(--space-6);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: #f1e2d5;
+  color: #6f4f3b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.68rem 1.05rem;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 170ms ease, box-shadow 170ms ease, background-color 170ms ease,
+    border-color 170ms ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #9a765d, var(--color-primary));
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #87624a, var(--color-primary-strong));
+}
+
+.btn-ghost {
+  border-color: #d9c7b8;
+  color: #5f4f42;
+  background: #fff;
+}
+
+.btn-ghost:hover {
+  border-color: #c8b2a0;
+  background: #fffcf8;
+}

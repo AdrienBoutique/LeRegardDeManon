@@ -1,0 +1,372 @@
+.booking {
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.steps li {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-pill);
+  padding: 0.45rem 0.62rem;
+  text-align: center;
+  background: #fff;
+}
+
+.steps li.active {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.step-card {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.step-card.dimmed {
+  opacity: 0.6;
+}
+
+.step-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.step-card h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  color: #5f4f42;
+}
+
+.calendar-wrap {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.calendar-label {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #5f4f42;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.64rem 0.72rem;
+  font: inherit;
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.staff-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.category-chip {
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #5f4f42;
+  padding: 0.42rem 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-chip:hover {
+  transform: translateY(-1px);
+  border-color: #c8b19f;
+}
+
+.category-chip.active {
+  border-color: var(--color-primary);
+  background: #fff6ef;
+  color: #583f30;
+  box-shadow: 0 8px 18px rgba(44, 32, 23, 0.08);
+}
+
+.segment-btn {
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #5f4f42;
+  padding: 0.52rem 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.segment-btn:hover {
+  transform: translateY(-1px);
+  border-color: #c8b19f;
+}
+
+.segment-btn.active {
+  border-color: var(--color-primary);
+  background: #fff6ef;
+  color: #583f30;
+  box-shadow: 0 9px 20px rgba(44, 32, 23, 0.08);
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.time-pill {
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  padding: 0.54rem 0.74rem;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 0.18rem;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.time-pill strong {
+  font-size: 0.98rem;
+}
+
+.time-pill span {
+  font-size: 0.76rem;
+  color: var(--color-text-soft);
+}
+
+.time-pill:hover {
+  transform: translateY(-1px);
+  border-color: #c8b19f;
+}
+
+.time-pill.active {
+  border-color: var(--color-primary);
+  background: #fff8f1;
+  box-shadow: 0 9px 22px rgba(44, 32, 23, 0.1);
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+.service-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.service-card.disabled {
+  opacity: 0.62;
+  background: #f8f5f1;
+}
+
+.service-card.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 11px 24px rgba(44, 32, 23, 0.12);
+}
+
+.service-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.service-top h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.duration,
+.description,
+.price,
+.reason {
+  margin: 0;
+}
+
+.duration {
+  font-size: 0.84rem;
+  color: var(--color-text-soft);
+}
+
+.price {
+  font-weight: 700;
+  color: #5b4434;
+}
+
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.discount-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d3b89f;
+  border-radius: var(--radius-pill);
+  padding: 0.16rem 0.52rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6a4b37;
+  background: #f8eee5;
+}
+
+.price-base {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #8a7666;
+  text-decoration: line-through;
+}
+
+.description {
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.reason {
+  color: #8b2d2d;
+  font-size: 0.85rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.error {
+  margin: 0;
+  color: #a32121;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.skeleton-pill,
+.skeleton-card {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #f2e9e0 0%, #fbf6f1 45%, #f2e9e0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.skeleton-pill {
+  height: 3rem;
+}
+
+.skeleton-card {
+  min-height: 7rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.two-cols {
+  grid-template-columns: 1fr;
+}
+
+.confirmation p {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.confirmation dl {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.confirmation dt {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+}
+
+.confirmation dd {
+  margin: 0.12rem 0 0;
+  font-weight: 600;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (min-width: 760px) {
+  .booking {
+    padding: 1.25rem;
+  }
+
+  .steps {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .time-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .service-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

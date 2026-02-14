@@ -1,0 +1,254 @@
+<app-section-title
+  title="Prendre rendez-vous"
+  subtitle="Choisissez votre praticienne, votre horaire, puis le soin adapte"
+></app-section-title>
+
+<section class="booking card">
+  <ol class="steps" aria-label="Etapes de reservation">
+    <li [class.active]="step() >= 1">1. Praticienne & date</li>
+    <li [class.active]="step() >= 2">2. Horaire</li>
+    <li [class.active]="step() >= 3">3. Soin</li>
+    <li [class.active]="step() >= 4">4. Coordonnees</li>
+    <li [class.active]="step() >= 5">5. Confirmation</li>
+  </ol>
+
+  @if (step() !== 5) {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="stack">
+      <section class="step-card" [class.dimmed]="step() > 1">
+        <header>
+          <h2>Praticienne et date</h2>
+        </header>
+
+        <div class="staff-segmented" role="radiogroup" aria-label="Choix praticienne">
+          @for (choice of staffChoices(); track choice.id) {
+            <button
+              type="button"
+              class="segment-btn"
+              [class.active]="isSelectedStaff(choice.id)"
+              (click)="selectStaff(choice.id)"
+            >
+              {{ choice.label }}
+            </button>
+          }
+        </div>
+
+        <div class="calendar-wrap">
+          <p class="calendar-label">Date souhaitee</p>
+          <app-booking-calendar
+            [monthDate]="monthDate()"
+            [dayMeta]="dayMeta()"
+            [selectedDay]="form.controls.date.value || null"
+            (monthChange)="onMonthChange($event)"
+            (daySelect)="onDaySelect($event)"
+          ></app-booking-calendar>
+        </div>
+
+        @if (loadingStaff()) {
+          <p class="hint">Chargement des praticiennes...</p>
+        }
+        @if (loadingMonthMeta()) {
+          <p class="hint">Mise a jour des disponibilites du mois...</p>
+        }
+      </section>
+
+      <section class="step-card" [class.dimmed]="step() < 2">
+        <header>
+          <h2>Heures disponibles</h2>
+        </header>
+
+        @if (!canShowStep2()) {
+          <p class="hint">Choisissez une date pour voir les departs disponibles.</p>
+        } @else if (loadingStarts()) {
+          <div class="skeleton-grid">
+            @for (_ of [1, 2, 3, 4, 5, 6, 7, 8]; track $index) {
+              <span class="skeleton-pill"></span>
+            }
+          </div>
+        } @else if (startsError()) {
+          <p class="error">{{ startsError() }}</p>
+        } @else {
+          <div class="time-grid">
+            @for (start of freeStarts(); track start.startAt) {
+              <button
+                type="button"
+                class="time-pill"
+                [class.active]="isSelectedStart(start.startAt)"
+                (click)="selectStart(start.startAt)"
+              >
+                <strong>{{ formatHour(start.startAt) }}</strong>
+                <span>{{ startAvailabilityLabel(start.maxFreeMin) }}</span>
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="step-card" [class.dimmed]="step() < 3">
+        <header>
+          <h2>Choix du soin</h2>
+          @if (selectedStart()) {
+            <p class="chip">{{ formatDateTime(selectedStart()!.startAt) }}</p>
+          }
+        </header>
+
+        @if (!canShowStep3()) {
+          <p class="hint">Selectionnez d'abord une heure de depart.</p>
+        } @else {
+          <div class="category-filter" role="radiogroup" aria-label="Filtrer par categorie">
+            @for (category of categoryChoices(); track category.id) {
+              <button
+                type="button"
+                class="category-chip"
+                [class.active]="selectedCategoryId() === category.id"
+                (click)="selectCategory(category.id)"
+              >
+                {{ category.label }}
+              </button>
+            }
+          </div>
+
+          <label>
+            Rechercher un soin
+            <input
+              type="search"
+              [value]="searchTerm()"
+              (input)="setSearch($any($event.target).value)"
+              placeholder="Nom du soin"
+            />
+          </label>
+
+          @if (loadingEligibleServices() || loadingCatalog()) {
+            <div class="service-grid">
+              @for (_ of [1, 2, 3]; track $index) {
+                <article class="service-card skeleton-card"></article>
+              }
+            </div>
+          } @else if (eligibleError()) {
+            <p class="error">{{ eligibleError() }}</p>
+          } @else {
+            <div class="service-grid">
+              @for (service of filteredEligibleServices(); track service.id) {
+                <article class="service-card" [class.disabled]="!service.eligible" [class.selected]="isSelectedService(service.id)">
+                  <div class="service-top">
+                    <h3>{{ service.name }}</h3>
+                    <p class="duration">{{ service.durationMin }} min</p>
+                  </div>
+                  <p class="chip">{{ getServiceCategoryLabel(service) }}</p>
+
+                  <p class="description">{{ getServiceDescription(service.id) }}</p>
+                  <div class="price-row">
+                    <p class="price">{{ formatPrice(service.effectivePriceCents) }}</p>
+                    @if (isDiscountedService(service)) {
+                      <span class="discount-badge">Tarif stagiaire -{{ discountPercent(service) }}%</span>
+                    }
+                  </div>
+                  @if (isDiscountedService(service)) {
+                    <p class="price-base">Prix standard: {{ formatPrice(service.basePriceCents) }}</p>
+                  }
+
+                  @if (!service.eligible) {
+                    <p class="reason">{{ service.reason ?? 'Non disponible' }}</p>
+                  }
+
+                  <button type="button" class="btn btn-ghost" [disabled]="!service.eligible" (click)="selectService(service)">
+                    {{ service.eligible ? 'Choisir ce soin' : 'Indisponible' }}
+                  </button>
+                </article>
+              }
+            </div>
+
+            @if (filteredEligibleServices().length === 0) {
+              <p class="hint">Aucun soin ne correspond a votre recherche.</p>
+            }
+          }
+        }
+      </section>
+
+      <section class="step-card" [class.dimmed]="step() < 4">
+        <header>
+          <h2>Vos coordonnees</h2>
+          @if (selectedService()) {
+            <p class="chip">{{ selectedService()!.name }}</p>
+          }
+        </header>
+
+        @if (!canShowStep4()) {
+          <p class="hint">Selectionnez un soin pour continuer.</p>
+        } @else {
+          <div class="grid two-cols">
+            <label>
+              Prenom
+              <input type="text" formControlName="firstName" placeholder="Votre prenom" />
+            </label>
+
+            <label>
+              Nom
+              <input type="text" formControlName="lastName" placeholder="Votre nom" />
+            </label>
+          </div>
+
+          <div class="grid two-cols">
+            <label>
+              Email
+              <input type="email" formControlName="email" placeholder="vous@email.fr" />
+            </label>
+
+            <label>
+              Telephone
+              <input type="tel" formControlName="phone" placeholder="06 00 00 00 00" />
+            </label>
+          </div>
+
+          <label>
+            Notes (optionnel)
+            <textarea rows="3" formControlName="notes" placeholder="Informations utiles pour votre rendez-vous"></textarea>
+          </label>
+
+          @if (form.hasError('contactRequired') && (form.controls.email.touched || form.controls.phone.touched)) {
+            <p class="error">Renseignez au moins un email ou un numero de telephone.</p>
+          }
+
+          @if (form.controls.email.hasError('email') && form.controls.email.touched) {
+            <p class="error">Le format de l'email est invalide.</p>
+          }
+
+          @if (submitError()) {
+            <p class="error">{{ submitError() }}</p>
+          }
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit" [disabled]="submitting() || !canSubmit()">
+              {{ submitting() ? 'Reservation en cours...' : 'Confirmer le rendez-vous' }}
+            </button>
+          </div>
+        }
+      </section>
+    </form>
+  } @else {
+    @if (confirmation(); as done) {
+      <section class="step-card confirmation">
+        <h2>Rendez-vous confirme</h2>
+        <p>Merci, votre reservation est bien prise en compte.</p>
+
+        <dl>
+          <div>
+            <dt>Soin</dt>
+            <dd>{{ done.serviceName }}</dd>
+          </div>
+          <div>
+            <dt>Date & heure</dt>
+            <dd>{{ formatDateTime(done.startAt) }}</dd>
+          </div>
+          <div>
+            <dt>Praticienne</dt>
+            <dd>{{ done.staffName }}</dd>
+          </div>
+        </dl>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" (click)="resetBooking()">Prendre un autre rendez-vous</button>
+        </div>
+      </section>
+    }
+  }
+</section>

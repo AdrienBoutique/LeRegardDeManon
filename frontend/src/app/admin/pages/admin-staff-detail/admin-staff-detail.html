@@ -1,0 +1,205 @@
+<section class="admin-staff-detail stack">
+  @if (staff(); as member) {
+    <header class="card heading">
+      <h1>
+        <span class="color-dot" [style.background]="member.colorHex"></span>
+        {{ member.name }}
+      </h1>
+      <p>{{ member.email }}</p>
+    </header>
+
+    @if (errorMessage()) {
+      <article class="card error-box">{{ errorMessage() }}</article>
+    }
+    @if (successMessage()) {
+      <article class="card success-box">{{ successMessage() }}</article>
+    }
+
+    <nav class="tabs card" aria-label="Sections">
+      <button type="button" [class.active]="tab() === 'info'" (click)="setTab('info')">Infos</button>
+      <button type="button" [class.active]="tab() === 'services'" (click)="setTab('services')">Services & Prix</button>
+      <button type="button" [class.active]="tab() === 'availability'" (click)="setTab('availability')">Horaires</button>
+    </nav>
+
+    @if (tab() === 'info') {
+      <article class="card panel">
+        <h2>Informations</h2>
+        <form class="stack" [formGroup]="infoForm" (ngSubmit)="saveInfo()">
+          <div class="grid two-cols">
+            <label>
+              Nom
+              <input type="text" formControlName="name" />
+            </label>
+            <label>
+              Email
+              <input type="email" formControlName="email" />
+            </label>
+          </div>
+
+          <div class="grid three-cols">
+            <label class="check-row">
+              <input type="checkbox" formControlName="active" />
+              Active
+            </label>
+            <label class="check-row">
+              <input type="checkbox" formControlName="isTrainee" />
+              Stagiaire
+            </label>
+            <label>
+              Reduction par defaut (%)
+              <input type="number" min="0" max="100" formControlName="defaultDiscountPercent" />
+            </label>
+          </div>
+
+          <div class="color-row">
+            <label class="color-label">
+              Couleur praticienne
+              <select formControlName="colorHex">
+                @if (infoForm.controls.colorHex.value && !hasColorOption(infoForm.controls.colorHex.value)) {
+                  <option [value]="infoForm.controls.colorHex.value">
+                    Couleur actuelle ({{ infoForm.controls.colorHex.value }})
+                  </option>
+                }
+                @for (color of colorOptions; track color.hex) {
+                  <option [value]="color.hex">{{ color.label }} ({{ color.hex }})</option>
+                }
+              </select>
+            </label>
+            <span class="muted color-value">
+              <span class="color-dot" [style.background]="infoForm.controls.colorHex.value"></span>
+              {{ infoForm.controls.colorHex.value }}
+            </span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-small" [disabled]="saving()">
+            {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
+          </button>
+        </form>
+      </article>
+    }
+
+    @if (tab() === 'services') {
+      <article class="card panel">
+        <h2>Services et prix</h2>
+
+        <section class="service-grid">
+          @for (row of serviceRows(); track row.service.id) {
+            <article class="service-item card">
+              <div class="service-top">
+                <h3>{{ row.service.name }}</h3>
+                <label class="check-row">
+                  <input
+                    type="checkbox"
+                    [checked]="row.enabled"
+                    (change)="toggleService(row.service.id, $any($event.target).checked)"
+                  />
+                  Peut faire
+                </label>
+              </div>
+
+              <p class="muted">Prix base: {{ formatPrice(row.service.priceCents) }}</p>
+
+              <div class="grid two-cols">
+                <label>
+                  Prix fixe (EUR)
+                  <input
+                    #fixedInput
+                    type="number"
+                    step="0.01"
+                    [disabled]="!row.enabled"
+                    [value]="row.fixedPriceEur ?? ''"
+                  />
+                </label>
+
+                <label class="check-row trainee-discount-row">
+                  <input
+                    #traineeDiscountInput
+                    type="checkbox"
+                    [disabled]="!row.enabled || !staff()?.isTrainee || staff()?.defaultDiscountPercent === null"
+                    [checked]="row.hasTraineeDiscount"
+                  />
+                  Reduction tarif stagiaire
+                </label>
+              </div>
+
+              <p class="muted">
+                Prix final:
+                {{ formatPrice(previewFinalPriceCents(row.service.priceCents, fixedInput.value, traineeDiscountInput.checked)) }}
+              </p>
+              @if (staff()?.isTrainee && staff()?.defaultDiscountPercent !== null) {
+                <p class="muted">Reduction stagiaire par defaut: {{ staff()?.defaultDiscountPercent }}%</p>
+              }
+
+              <button
+                type="button"
+                class="btn btn-ghost"
+                [disabled]="!row.enabled || saving()"
+                (click)="saveServicePricing(row.service.id, fixedInput.value, traineeDiscountInput.checked)"
+              >
+                Appliquer
+              </button>
+            </article>
+          }
+        </section>
+      </article>
+    }
+
+    @if (tab() === 'availability') {
+      <article class="card panel">
+        <h2>Horaires hebdomadaires</h2>
+
+        <div class="days stack">
+          @for (row of dayRows(); track row.weekday) {
+            <article class="day-row card">
+              <strong>{{ row.label }}</strong>
+
+              <div class="grid day-grid">
+                <label class="check-row">
+                  <input
+                    type="checkbox"
+                    [checked]="row.off"
+                    (change)="updateDayRow(row.weekday, { off: $any($event.target).checked })"
+                  />
+                  OFF
+                </label>
+
+                <label>
+                  Debut
+                  <input
+                    type="time"
+                    [disabled]="row.off"
+                    [value]="row.startTime"
+                    (input)="updateDayRow(row.weekday, { startTime: $any($event.target).value })"
+                  />
+                </label>
+
+                <label>
+                  Fin
+                  <input
+                    type="time"
+                    [disabled]="row.off"
+                    [value]="row.endTime"
+                    (input)="updateDayRow(row.weekday, { endTime: $any($event.target).value })"
+                  />
+                </label>
+              </div>
+            </article>
+          }
+        </div>
+
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveAvailability()">
+          Sauvegarder les horaires
+        </button>
+      </article>
+    }
+
+  } @else {
+    <article class="card panel">
+      @if (loading()) {
+        Chargement...
+      } @else {
+        Praticienne introuvable.
+      }
+    </article>
+  }
+</section>

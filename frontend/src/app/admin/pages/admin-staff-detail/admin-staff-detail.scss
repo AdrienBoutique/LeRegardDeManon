@@ -1,0 +1,179 @@
+.admin-staff-detail {
+  gap: 1rem;
+}
+
+.heading,
+.panel,
+.tabs,
+.error-box,
+.success-box {
+  padding: 1rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+p {
+  margin: 0.45rem 0 0;
+  color: var(--color-text-soft);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  border: 1px solid var(--color-border);
+  background: #fff;
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: #f3e5d9;
+  border-color: #d8c1ad;
+  color: var(--color-primary-strong);
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  color: #5f4f42;
+  font-weight: 600;
+}
+
+input,
+textarea {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+}
+
+.two-cols,
+.three-cols,
+.day-grid {
+  grid-template-columns: 1fr;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.check-row input {
+  width: auto;
+}
+
+.trainee-discount-row {
+  align-self: end;
+  min-height: 42px;
+  font-weight: 600;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.color-label {
+  min-width: min(320px, 100%);
+}
+
+.color-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(42, 33, 27, 0.22);
+  display: inline-block;
+}
+
+.service-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.service-item {
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.service-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.days {
+  margin-bottom: 0.8rem;
+}
+
+.day-row {
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.timeoff-item {
+  padding: 0.8rem;
+}
+
+.muted {
+  font-size: 0.9rem;
+}
+
+.error-box {
+  color: #9f1f1f;
+}
+
+.success-box {
+  color: #2f5b37;
+  border: 1px solid #b7d6be;
+  background: #e9f5ec;
+}
+
+.btn-small {
+  width: fit-content;
+  padding: 0.46rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+@media (min-width: 860px) {
+  .two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .three-cols,
+  .day-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .service-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

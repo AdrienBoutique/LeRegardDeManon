@@ -1,0 +1,35 @@
+<article class="calendar-card">
+  <header class="calendar-header">
+    <button type="button" class="nav-btn" (click)="previousMonth()" aria-label="Mois precedent">‹</button>
+    <h3>{{ monthLabel() }}</h3>
+    <button type="button" class="nav-btn" (click)="nextMonth()" aria-label="Mois suivant">›</button>
+  </header>
+
+  <div class="weekday-row">
+    @for (label of weekdayLabels; track label) {
+      <span>{{ label }}</span>
+    }
+  </div>
+
+  <div class="calendar-grid">
+    @for (cell of cells(); track cell.ymd) {
+      <button
+        type="button"
+        class="day-cell"
+        [class.other-month]="!cell.inCurrentMonth"
+        [class.today]="cell.isToday"
+        [class.selected]="cell.isSelected"
+        [class.disabled]="isDisabled(cell)"
+        [disabled]="isDisabled(cell)"
+        (click)="selectDay(cell)"
+      >
+        <span class="day-number">{{ cell.dayNumber }}</span>
+        <span class="dots">
+          @for (_ of dotIndexes(cell.level); track $index) {
+            <span class="dot"></span>
+          }
+        </span>
+      </button>
+    }
+  </div>
+</article>
