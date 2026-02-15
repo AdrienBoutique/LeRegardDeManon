@@ -26,10 +26,22 @@ const optionalString = z
   .transform((value) => (value.length === 0 ? undefined : value))
   .optional();
 
+const optionalNullableString = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((value) => (typeof value === "string" ? value.trim() : undefined))
+  .transform((value) => (value && value.length > 0 ? value : undefined));
+
 const createAppointmentSchema = z.object({
-  serviceId: z.string().min(1),
-  staffId: optionalString,
+  staffId: optionalNullableString,
   startAt: z.string().datetime({ offset: true }),
+  services: z
+    .array(
+      z.object({
+        serviceId: z.string().min(1),
+        priceCents: z.number().int().min(0).optional(),
+      })
+    )
+    .min(1),
   client: z
     .object({
       firstName: z.string().trim().min(1),
@@ -49,11 +61,41 @@ const createAppointmentSchema = z.object({
   notes: optionalString,
 });
 
+type ServiceLinkRow = {
+  staffMemberId: string;
+  priceCentsOverride: number | null;
+  discountPercentOverride: number | null;
+  staffMember: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+};
+
+type ServiceWithLinks = {
+  id: string;
+  name: string;
+  durationMin: number;
+  priceCents: number;
+  serviceLinks: ServiceLinkRow[];
+};
+
+type ItemSnapshot = {
+  serviceId: string;
+  serviceName: string;
+  durationMin: number;
+  priceCents: number;
+  order: number;
+};
+
 type CandidateStaff = {
   id: string;
   firstName: string;
   lastName: string;
-  effectivePriceCents: number;
+  maxFreeMin: number;
+  totalDurationMin: number;
+  totalPriceCents: number;
+  itemSnapshots: ItemSnapshot[];
 };
 
 function computeEffectivePrice(
@@ -72,9 +114,53 @@ function computeEffectivePrice(
   return basePriceCents;
 }
 
+function buildWorkIntervals(
+  dateIso: string,
+  dayStartLocal: DateTime,
+  rules: Array<{
+    staffMemberId: string;
+    startTime: string;
+    endTime: string;
+    effectiveFrom: Date | null;
+    effectiveTo: Date | null;
+  }>
+): Map<string, TimeInterval[]> {
+  const workIntervalsByStaff = new Map<string, TimeInterval[]>();
+
+  for (const rule of rules) {
+    const effectiveFrom = rule.effectiveFrom
+      ? DateTime.fromJSDate(rule.effectiveFrom, { zone: BRUSSELS_TIMEZONE }).startOf("day")
+      : null;
+    const effectiveTo = rule.effectiveTo
+      ? DateTime.fromJSDate(rule.effectiveTo, { zone: BRUSSELS_TIMEZONE }).endOf("day")
+      : null;
+
+    const isApplicable =
+      (!effectiveFrom || dayStartLocal >= effectiveFrom) &&
+      (!effectiveTo || dayStartLocal <= effectiveTo);
+
+    if (!isApplicable) {
+      continue;
+    }
+
+    const start = buildDateTimeForDay(dateIso, rule.startTime);
+    const end = buildDateTimeForDay(dateIso, rule.endTime);
+
+    if (end <= start) {
+      continue;
+    }
+
+    const intervals = workIntervalsByStaff.get(rule.staffMemberId) ?? [];
+    intervals.push({ startMs: start.toUTC().toMillis(), endMs: end.toUTC().toMillis() });
+    workIntervalsByStaff.set(rule.staffMemberId, intervals);
+  }
+
+  return workIntervalsByStaff;
+}
+
 export const publicAppointmentsRouter = Router();
 
-publicAppointmentsRouter.post("/appointments", async (req, res) => {
+publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (req, res) => {
   try {
     const payload = parseOrThrow(createAppointmentSchema, req.body);
 
@@ -88,8 +174,13 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
 
     const created = await prisma.$transaction(
       async (tx) => {
-        const service = await tx.service.findFirst({
-          where: { id: payload.serviceId, isActive: true },
+        const uniqueServiceIds = Array.from(new Set(payload.services.map((service) => service.serviceId)));
+
+        const services = await tx.service.findMany({
+          where: {
+            id: { in: uniqueServiceIds },
+            isActive: true,
+          },
           select: {
             id: true,
             name: true,
@@ -118,31 +209,86 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
           },
         });
 
-        if (!service) {
-          throw new HttpError(404, "Service not found");
+        const serviceById = new Map<string, ServiceWithLinks>(services.map((service) => [service.id, service]));
+        const missingServiceIds = uniqueServiceIds.filter((serviceId) => !serviceById.has(serviceId));
+
+        if (missingServiceIds.length > 0) {
+          throw new HttpError(404, "One or more services not found");
         }
 
-        const candidateStaff: CandidateStaff[] = service.serviceLinks.map((link) => ({
-          id: link.staffMember.id,
-          firstName: link.staffMember.firstName,
-          lastName: link.staffMember.lastName,
-          effectivePriceCents: computeEffectivePrice(
-            service.priceCents,
-            link.priceCentsOverride,
-            link.discountPercentOverride
-          ),
-        }));
+        const candidateStaffIds = payload.staffId
+          ? [payload.staffId]
+          : uniqueServiceIds.reduce<string[] | null>((acc, serviceId) => {
+              const service = serviceById.get(serviceId)!;
+              const staffIds = service.serviceLinks.map((link) => link.staffMemberId);
 
-        if (candidateStaff.length === 0) {
+              if (acc === null) {
+                return staffIds;
+              }
+
+              const current = new Set(staffIds);
+              return acc.filter((id) => current.has(id));
+            }, null) ?? [];
+
+        if (candidateStaffIds.length === 0) {
           throw new HttpError(
             400,
             payload.staffId
-              ? "Selected staff cannot perform this service"
-              : "No active staff can perform this service"
+              ? "Selected staff cannot perform all selected services"
+              : "No active staff can perform the selected services"
           );
         }
 
-        const staffIds = candidateStaff.map((staff) => staff.id);
+        const candidateById = new Map<string, CandidateStaff>();
+        for (const staffId of candidateStaffIds) {
+          const snapshots: ItemSnapshot[] = [];
+          let totalDurationMin = 0;
+          let totalPriceCents = 0;
+          let firstName = "";
+          let lastName = "";
+
+          for (let index = 0; index < payload.services.length; index += 1) {
+            const requested = payload.services[index];
+            const service = serviceById.get(requested.serviceId)!;
+            const link = service.serviceLinks.find((entry) => entry.staffMemberId === staffId);
+            if (!link) {
+              throw new HttpError(400, "Selected staff cannot perform all selected services");
+            }
+
+            if (index === 0) {
+              firstName = link.staffMember.firstName;
+              lastName = link.staffMember.lastName;
+            }
+
+            const snapshotPrice =
+              requested.priceCents ??
+              computeEffectivePrice(
+                service.priceCents,
+                link.priceCentsOverride,
+                link.discountPercentOverride
+              );
+
+            snapshots.push({
+              serviceId: service.id,
+              serviceName: service.name,
+              durationMin: service.durationMin,
+              priceCents: snapshotPrice,
+              order: index,
+            });
+            totalDurationMin += service.durationMin;
+            totalPriceCents += snapshotPrice;
+          }
+
+          candidateById.set(staffId, {
+            id: staffId,
+            firstName,
+            lastName,
+            maxFreeMin: 0,
+            totalDurationMin,
+            totalPriceCents,
+            itemSnapshots: snapshots,
+          });
+        }
 
         const dayStartLocal = startAtLocal.startOf("day");
         const dayEndLocal = dayStartLocal.plus({ days: 1 });
@@ -155,7 +301,7 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
         const [rules, timeOffs, appointments] = await Promise.all([
           tx.availabilityRule.findMany({
             where: {
-              staffMemberId: { in: staffIds },
+              staffMemberId: { in: candidateStaffIds },
               dayOfWeek: weekday,
               isActive: true,
             },
@@ -169,7 +315,7 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
           }),
           tx.timeOff.findMany({
             where: {
-              staffMemberId: { in: staffIds },
+              staffMemberId: { in: candidateStaffIds },
               startsAt: { lt: dayEndUtc },
               endsAt: { gt: dayStartUtc },
             },
@@ -181,7 +327,7 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
           }),
           tx.appointment.findMany({
             where: {
-              staffMemberId: { in: staffIds },
+              staffMemberId: { in: candidateStaffIds },
               startsAt: { lt: dayEndUtc },
               endsAt: { gt: dayStartUtc },
               status: { not: AppointmentStatus.CANCELLED },
@@ -194,36 +340,7 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
           }),
         ]);
 
-        const workIntervalsByStaff = new Map<string, TimeInterval[]>();
-
-        for (const rule of rules) {
-          const effectiveFrom = rule.effectiveFrom
-            ? DateTime.fromJSDate(rule.effectiveFrom, { zone: BRUSSELS_TIMEZONE }).startOf("day")
-            : null;
-          const effectiveTo = rule.effectiveTo
-            ? DateTime.fromJSDate(rule.effectiveTo, { zone: BRUSSELS_TIMEZONE }).endOf("day")
-            : null;
-
-          const isApplicable =
-            (!effectiveFrom || dayStartLocal >= effectiveFrom) &&
-            (!effectiveTo || dayStartLocal <= effectiveTo);
-
-          if (!isApplicable) {
-            continue;
-          }
-
-          const start = buildDateTimeForDay(dateIso, rule.startTime);
-          const end = buildDateTimeForDay(dateIso, rule.endTime);
-
-          if (end <= start) {
-            continue;
-          }
-
-          const intervals = workIntervalsByStaff.get(rule.staffMemberId) ?? [];
-          intervals.push({ startMs: start.toUTC().toMillis(), endMs: end.toUTC().toMillis() });
-          workIntervalsByStaff.set(rule.staffMemberId, intervals);
-        }
-
+        const workIntervalsByStaff = buildWorkIntervals(dateIso, dayStartLocal, rules);
         const blockedIntervalsByStaff = new Map<string, TimeInterval[]>();
 
         for (const timeOff of timeOffs) {
@@ -244,11 +361,11 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
           blockedIntervalsByStaff.set(appointment.staffMemberId, intervals);
         }
 
-        const eligibleCandidates = candidateStaff
-          .map((staff) => {
+        const eligibleCandidates = Array.from(candidateById.values())
+          .map((candidate) => {
             const freeIntervals = subtractIntervals(
-              workIntervalsByStaff.get(staff.id) ?? [],
-              blockedIntervalsByStaff.get(staff.id) ?? []
+              workIntervalsByStaff.get(candidate.id) ?? [],
+              blockedIntervalsByStaff.get(candidate.id) ?? []
             );
             const containingInterval = freeIntervals.find(
               (interval) => startAtMs >= interval.startMs && startAtMs < interval.endMs
@@ -258,9 +375,9 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
               : 0;
 
             return {
-              ...staff,
+              ...candidate,
               maxFreeMin,
-              eligible: maxFreeMin >= service.durationMin,
+              eligible: maxFreeMin >= candidate.totalDurationMin,
             };
           })
           .filter((candidate) => candidate.eligible);
@@ -272,8 +389,8 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
         const selectedStaff = payload.staffId
           ? eligibleCandidates.find((candidate) => candidate.id === payload.staffId)
           : eligibleCandidates.sort((a, b) => {
-              if (a.effectivePriceCents !== b.effectivePriceCents) {
-                return a.effectivePriceCents - b.effectivePriceCents;
+              if (a.totalPriceCents !== b.totalPriceCents) {
+                return a.totalPriceCents - b.totalPriceCents;
               }
 
               if (a.maxFreeMin !== b.maxFreeMin) {
@@ -288,7 +405,7 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
         }
 
         const startAtUtc = startAtLocal.toUTC();
-        const endAtUtc = startAtUtc.plus({ minutes: service.durationMin });
+        const endAtUtc = startAtUtc.plus({ minutes: selectedStaff.totalDurationMin });
         const startAt = startAtUtc.toJSDate();
         const endAt = endAtUtc.toJSDate();
 
@@ -330,7 +447,6 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
         const appointment = await tx.appointment.create({
           data: {
             clientId: client.id,
-            serviceId: service.id,
             staffMemberId: selectedStaff.id,
             startsAt: startAt,
             endsAt: endAt,
@@ -344,10 +460,20 @@ publicAppointmentsRouter.post("/appointments", async (req, res) => {
           },
         });
 
+        await tx.appointmentItem.createMany({
+          data: selectedStaff.itemSnapshots.map((item) => ({
+            appointmentId: appointment.id,
+            serviceId: item.serviceId,
+            order: item.order,
+            durationMin: item.durationMin,
+            priceCents: item.priceCents,
+          })),
+        });
+
         return {
           appointment,
           staffName: `${selectedStaff.firstName} ${selectedStaff.lastName}`.trim(),
-          serviceName: service.name,
+          serviceName: selectedStaff.itemSnapshots.map((item) => item.serviceName).join(" + "),
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }

@@ -109,11 +109,16 @@ adminPlanningRouter.get("/planning", async (req, res) => {
           startsAt: true,
           endsAt: true,
           status: true,
-          service: {
+          items: {
+            orderBy: { order: "asc" },
             select: {
-              id: true,
-              name: true,
-              colorHex: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  colorHex: true,
+                },
+              },
             },
           },
           client: {
@@ -182,19 +187,27 @@ adminPlanningRouter.get("/planning", async (req, res) => {
         name: `${member.firstName} ${member.lastName}`.trim(),
         colorHex: member.colorHex,
       })),
-      appointments: appointments.map((appointment) => ({
-        id: appointment.id,
-        startAt: appointment.startsAt,
-        endAt: appointment.endsAt,
-        status: mapStatus(appointment.status),
-        serviceId: appointment.service.id,
-        serviceName: appointment.service.name,
-        serviceColorHex: appointment.service.colorHex,
-        clientName: `${appointment.client.firstName} ${appointment.client.lastName}`.trim(),
-        staffId: appointment.staffMember.id,
-        staffName: `${appointment.staffMember.firstName} ${appointment.staffMember.lastName}`.trim(),
-        staffColorHex: appointment.staffMember.colorHex,
-      })),
+      appointments: appointments.map((appointment) => {
+        const firstService = appointment.items[0]?.service;
+        const extraCount = Math.max(0, appointment.items.length - 1);
+        const fallbackServiceName = "Service";
+
+        return {
+          id: appointment.id,
+          startAt: appointment.startsAt,
+          endAt: appointment.endsAt,
+          status: mapStatus(appointment.status),
+          serviceId: firstService?.id ?? "",
+          serviceName: firstService
+            ? `${firstService.name}${extraCount > 0 ? ` +${extraCount}` : ""}`
+            : fallbackServiceName,
+          serviceColorHex: firstService?.colorHex ?? null,
+          clientName: `${appointment.client.firstName} ${appointment.client.lastName}`.trim(),
+          staffId: appointment.staffMember.id,
+          staffName: `${appointment.staffMember.firstName} ${appointment.staffMember.lastName}`.trim(),
+          staffColorHex: appointment.staffMember.colorHex,
+        };
+      }),
       staffAvailability: staffAvailability.map((rule) => ({
         staffId: rule.staffMemberId,
         weekday: rule.dayOfWeek,

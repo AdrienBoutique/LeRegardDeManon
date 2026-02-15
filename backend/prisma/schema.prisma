@@ -55,7 +55,7 @@ model Service {
   updatedAt    DateTime       @updatedAt
   category     ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   serviceLinks ServiceStaff[]
-  appointments Appointment[]
+  appointmentItems AppointmentItem[]
   @@index([categoryId])
 }
 
@@ -98,7 +98,6 @@ model Client {
 model Appointment {
   id               String            @id @default(cuid())
   clientId         String
-  serviceId        String
   staffMemberId    String
   startsAt         DateTime
   endsAt           DateTime
@@ -107,12 +106,27 @@ model Appointment {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   client           Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  service          Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   staffMember      StaffMember       @relation(fields: [staffMemberId], references: [id], onDelete: Restrict)
   notificationLogs NotificationLog[]
+  items            AppointmentItem[]
 
   @@index([staffMemberId, startsAt])
   @@index([clientId, startsAt])
+}
+
+model AppointmentItem {
+  id            String      @id @default(cuid())
+  appointmentId String
+  serviceId     String
+  order         Int
+  durationMin   Int
+  priceCents    Int
+  createdAt     DateTime    @default(now())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service       Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([appointmentId])
+  @@index([serviceId])
 }
 
 model AvailabilityRule {
