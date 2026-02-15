@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { catchError, combineLatest, finalize, of, startWith } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 import {
   BookingApiService,
@@ -26,6 +27,20 @@ type CategoryChoice = {
   label: string;
 };
 
+type BookingSelectedService = {
+  id: string;
+  name: string;
+  durationMin: number;
+  priceCents: number;
+  staffPricingVariant?: 'standard' | 'trainee';
+};
+
+type BookingState = {
+  selectedServices: BookingSelectedService[];
+  totalDurationMin: number;
+  totalPriceCents: number;
+};
+
 function contactValidator(control: AbstractControl): ValidationErrors | null {
   const email = (control.get('email')?.value as string | null)?.trim();
   const phone = (control.get('phone')?.value as string | null)?.trim();
@@ -35,7 +50,7 @@ function contactValidator(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-booking',
-  imports: [SectionTitle, ReactiveFormsModule, BookingCalendar],
+  imports: [SectionTitle, ReactiveFormsModule, BookingCalendar, RouterLink],
   templateUrl: './booking.html',
   styleUrl: './booking.scss'
 })
@@ -66,13 +81,14 @@ export class Booking {
   protected readonly searchTerm = signal('');
   protected readonly selectedCategoryId = signal<string>('all');
   protected readonly confirmation = signal<CreateAppointmentResponse | null>(null);
+  protected readonly selectedServices = signal<BookingSelectedService[]>([]);
+  protected readonly maxSelectedServices = 4;
 
   protected readonly form = this.formBuilder.nonNullable.group(
     {
       staffId: [''],
       date: ['', [Validators.required, Validators.pattern(/^\d{4}-\d{2}-\d{2}$/)]],
       startAt: ['', [Validators.required]],
-      serviceId: ['', [Validators.required]],
       firstName: ['', [Validators.required]],
       lastName: ['', [Validators.required]],
       email: ['', [Validators.email]],
@@ -99,10 +115,20 @@ export class Booking {
     return this.freeStarts().find((entry) => entry.startAt === startAt);
   });
 
-  protected readonly selectedService = computed(() => {
-    const serviceId = this.form.controls.serviceId.value;
-    return this.eligibleServices().find((service) => service.id === serviceId);
+  protected readonly bookingState = computed<BookingState>(() => {
+    const services = this.selectedServices();
+    const totalDurationMin = services.reduce((sum, service) => sum + service.durationMin, 0);
+    const totalPriceCents = services.reduce((sum, service) => sum + service.priceCents, 0);
+
+    return {
+      selectedServices: services,
+      totalDurationMin,
+      totalPriceCents
+    };
   });
+
+  protected readonly totalDurationMin = computed(() => this.bookingState().totalDurationMin);
+  protected readonly totalPriceCents = computed(() => this.bookingState().totalPriceCents);
 
   protected readonly filteredEligibleServices = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
@@ -131,6 +157,22 @@ export class Booking {
       .sort((a, b) => a.label.localeCompare(b.label));
 
     return [{ id: 'all', label: 'Toutes categories' }, ...choices];
+  });
+
+  protected readonly slotCompatibilityByStart = computed(() => {
+    const requiredMin = this.totalDurationMin();
+    const map = new Map<string, { compatible: boolean; label: string }>();
+
+    for (const start of this.freeStarts()) {
+      const compatible = this.isSlotCompatibleForDuration(start, requiredMin);
+
+      map.set(start.startAt, {
+        compatible,
+        label: compatible ? `OK pour ${requiredMin} min` : 'Trop court'
+      });
+    }
+
+    return map;
   });
 
   constructor() {
@@ -193,16 +235,52 @@ export class Booking {
   }
 
   protected selectStart(startAt: string): void {
+    const start = this.freeStarts().find((item) => item.startAt === startAt);
+    if (start && !this.isStartCompatible(start)) {
+      return;
+    }
+
     this.form.controls.startAt.setValue(startAt);
     this.step.set(3);
   }
 
-  protected selectService(service: EligibleServiceItem): void {
+  protected addService(service: EligibleServiceItem): void {
     if (!service.eligible) {
       return;
     }
 
-    this.form.controls.serviceId.setValue(service.id);
+    if (this.isServiceInSelection(service.id)) {
+      return;
+    }
+
+    if (this.selectedServices().length >= this.maxSelectedServices) {
+      return;
+    }
+
+    this.selectedServices.update((selected) => [
+      ...selected,
+      {
+        id: service.id,
+        name: service.name,
+        durationMin: service.durationMin,
+        priceCents: service.effectivePriceCents,
+        staffPricingVariant: this.isDiscountedService(service) ? 'trainee' : 'standard'
+      }
+    ]);
+  }
+
+  protected removeService(serviceId: string): void {
+    this.selectedServices.update((services) => services.filter((service) => service.id !== serviceId));
+    if (this.selectedServices().length === 0 && this.step() > 3) {
+      this.step.set(3);
+    }
+  }
+
+  protected continueToContact(): void {
+    if (!this.canShowStep4()) {
+      return;
+    }
+
     this.step.set(4);
   }
 
@@ -224,7 +302,15 @@ export class Booking {
     this.submitError.set('');
 
     const raw = this.form.getRawValue();
-    const selectedService = this.selectedService();
+    const basket = this.selectedServices();
+    const primaryService = basket[0];
+    if (!primaryService) {
+      this.submitting.set(false);
+      this.submitError.set('Ajoutez au moins un soin.');
+      return;
+    }
+
+    const selectedService = this.eligibleServices().find((service) => service.id === primaryService.id);
 
     const resolvedStaffId =
       raw.staffId ||
@@ -232,9 +318,16 @@ export class Booking {
       this.selectedStart()?.staffIds[0] ||
       undefined;
 
+    const notes = raw.notes.trim();
+    const basketNotes =
+      basket.length > 1
+        ? `Panier soins: ${basket.map((service) => `${service.name} (${service.durationMin} min)`).join(', ')}`
+        : '';
+    const mergedNotes = [notes, basketNotes].filter((value) => value.length > 0).join('\n');
+
     this.bookingApi
       .createAppointment({
-        serviceId: raw.serviceId,
+        serviceId: primaryService.id,
         staffId: resolvedStaffId,
         startAt: raw.startAt,
         client: {
@@ -243,7 +336,7 @@ export class Booking {
           email: raw.email.trim() || undefined,
           phone: raw.phone.trim() || undefined
         },
-        notes: raw.notes.trim() || undefined
+        notes: mergedNotes || undefined
       })
       .pipe(
         finalize(() => {
@@ -271,7 +364,7 @@ export class Booking {
   }
 
   protected canShowStep4(): boolean {
-    return this.canShowStep3() && Boolean(this.form.controls.serviceId.value);
+    return this.canShowStep3() && this.selectedServices().length > 0;
   }
 
   protected canSubmit(): boolean {
@@ -293,7 +386,35 @@ export class Booking {
   }
 
   protected isSelectedService(serviceId: string): boolean {
-    return this.form.controls.serviceId.value === serviceId;
+    return this.isServiceInSelection(serviceId);
+  }
+
+  protected isStartCompatible(start: FreeStartItem): boolean {
+    return this.slotCompatibilityByStart().get(start.startAt)?.compatible ?? true;
+  }
+
+  protected startCompatibilityLabel(start: FreeStartItem): string {
+    return this.slotCompatibilityByStart().get(start.startAt)?.label ?? 'OK';
+  }
+
+  protected canAddService(service: EligibleServiceItem): boolean {
+    if (!service.eligible || this.isServiceInSelection(service.id) || this.selectedServices().length >= this.maxSelectedServices) {
+      return false;
+    }
+
+    const currentStart = this.selectedStart();
+    if (!currentStart) {
+      return false;
+    }
+
+    const projectedDuration = this.totalDurationMin() + service.durationMin;
+    return this.isSlotCompatibleForDuration(currentStart, projectedDuration);
+  }
+
+  protected selectedServicesSummary(): string {
+    return this.selectedServices()
+      .map((service) => service.name)
+      .join(', ');
   }
 
   protected formatPrice(priceCents: number): string {
@@ -331,22 +452,6 @@ export class Booking {
     }).format(new Date(startAt));
   }
 
-  protected startAvailabilityLabel(maxFreeMin: number): string {
-    if (maxFreeMin >= 180) {
-      return 'Large choix de soins';
-    }
-
-    if (maxFreeMin >= 90) {
-      return 'Bon choix de soins';
-    }
-
-    if (maxFreeMin >= 45) {
-      return 'Soins rapides';
-    }
-
-    return 'Soins courts uniquement';
-  }
-
   protected getServiceDescription(serviceId: string): string {
     return (
       this.catalogServices().find((service) => service.id === serviceId)?.description ??
@@ -373,7 +478,6 @@ export class Booking {
       staffId: currentStaff,
       date: currentDate,
       startAt: '',
-      serviceId: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -383,6 +487,7 @@ export class Booking {
 
     this.confirmation.set(null);
     this.submitError.set('');
+    this.selectedServices.set([]);
     this.step.set(currentDate ? 2 : 1);
   }
 
@@ -511,11 +616,11 @@ export class Booking {
     this.selectedCategoryId.set('all');
     this.confirmation.set(null);
     this.submitError.set('');
+    this.selectedServices.set([]);
 
     this.form.patchValue(
       {
         startAt: '',
-        serviceId: '',
         notes: ''
       },
       { emitEvent: false }
@@ -531,8 +636,7 @@ export class Booking {
     this.selectedCategoryId.set('all');
     this.confirmation.set(null);
     this.submitError.set('');
-
-    this.form.patchValue({ serviceId: '' }, { emitEvent: false });
+    this.selectedServices.set([]);
 
     if (this.form.controls.startAt.value) {
       this.step.set(3);
@@ -544,6 +648,44 @@ export class Booking {
 
   private startOfMonth(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  private isServiceInSelection(serviceId: string): boolean {
+    return this.selectedServices().some((service) => service.id === serviceId);
+  }
+
+  private addMinutesToTime(date: Date, minutes: number): Date {
+    const next = new Date(date);
+    next.setMinutes(next.getMinutes() + minutes);
+    return next;
+  }
+
+  private minutesBetween(a: Date, b: Date): number {
+    return Math.max(0, Math.floor((b.getTime() - a.getTime()) / 60000));
+  }
+
+  private mockWorkdayEndFor(start: Date): Date {
+    const end = new Date(start);
+    const weekday = start.getDay();
+
+    if (weekday === 6) {
+      end.setHours(16, 0, 0, 0);
+      return end;
+    }
+
+    end.setHours(19, 0, 0, 0);
+    return end;
+  }
+
+  private isSlotCompatibleForDuration(start: FreeStartItem, requiredMin: number): boolean {
+    const startTime = new Date(start.startAt);
+    const endTime = this.addMinutesToTime(startTime, requiredMin);
+    const workdayEnd = this.mockWorkdayEndFor(startTime);
+    const freeToCloseMin = this.minutesBetween(startTime, workdayEnd);
+
+    const fitsInWorkday = requiredMin <= freeToCloseMin && endTime.getTime() <= workdayEnd.getTime();
+    const noConflictMock = requiredMin <= start.maxFreeMin;
+    return fitsInWorkday && noConflictMock;
   }
 
   private buildMockMonthMeta(monthDate: Date): MonthDayMeta {

@@ -73,10 +73,12 @@
                 type="button"
                 class="time-pill"
                 [class.active]="isSelectedStart(start.startAt)"
+                [class.unavailable]="!isStartCompatible(start)"
+                [disabled]="!isStartCompatible(start)"
                 (click)="selectStart(start.startAt)"
               >
                 <strong>{{ formatHour(start.startAt) }}</strong>
-                <span>{{ startAvailabilityLabel(start.maxFreeMin) }}</span>
+                <span>{{ startCompatibilityLabel(start) }}</span>
               </button>
             }
           </div>
@@ -94,6 +96,40 @@
         @if (!canShowStep3()) {
           <p class="hint">Selectionnez d'abord une heure de depart.</p>
         } @else {
+          <section class="selection-cart" aria-label="Votre selection">
+            <header>
+              <h3>Votre selection</h3>
+              <span class="chip">Max {{ maxSelectedServices }} soins</span>
+            </header>
+
+            @if (selectedServices().length === 0) {
+              <p class="hint">Aucun soin ajoute pour l'instant.</p>
+            } @else {
+              <ul>
+                @for (item of selectedServices(); track item.id) {
+                  <li>
+                    <div>
+                      <strong>{{ item.name }}</strong>
+                      <span>{{ item.durationMin }} min - {{ formatPrice(item.priceCents) }}</span>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="removeService(item.id)">Retirer</button>
+                  </li>
+                }
+              </ul>
+
+              <div class="cart-total">
+                <p>Total: {{ totalDurationMin() }} min</p>
+                <p>{{ formatPrice(totalPriceCents()) }}</p>
+              </div>
+            }
+
+            <div class="actions">
+              <button type="button" class="btn btn-primary" [disabled]="!canShowStep4()" (click)="continueToContact()">
+                Continuer
+              </button>
+            </div>
+          </section>
+
           <div class="category-filter" role="radiogroup" aria-label="Filtrer par categorie">
             @for (category of categoryChoices(); track category.id) {
               <button
@@ -150,9 +186,18 @@
                     <p class="reason">{{ service.reason ?? 'Non disponible' }}</p>
                   }
 
-                  <button type="button" class="btn btn-ghost" [disabled]="!service.eligible" (click)="selectService(service)">
-                    {{ service.eligible ? 'Choisir ce soin' : 'Indisponible' }}
-                  </button>
+                  <div class="service-actions">
+                    <button type="button" class="btn btn-primary" [disabled]="!canAddService(service)" (click)="addService(service)">
+                      @if (isSelectedService(service.id)) {
+                        Ajoute
+                      } @else if (!service.eligible) {
+                        Indisponible
+                      } @else {
+                        Ajouter
+                      }
+                    </button>
+                    <a class="btn btn-ghost" [routerLink]="['/soins', service.id]">Voir detail</a>
+                  </div>
                 </article>
               }
             </div>
@@ -167,13 +212,13 @@
       <section class="step-card" [class.dimmed]="step() < 4">
         <header>
           <h2>Vos coordonnees</h2>
-          @if (selectedService()) {
-            <p class="chip">{{ selectedService()!.name }}</p>
+          @if (selectedServices().length > 0) {
+            <p class="chip">{{ selectedServicesSummary() }}</p>
           }
         </header>
 
         @if (!canShowStep4()) {
-          <p class="hint">Selectionnez un soin pour continuer.</p>
+          <p class="hint">Ajoutez au moins un soin compatible pour continuer.</p>
         } @else {
           <div class="grid two-cols">
             <label>

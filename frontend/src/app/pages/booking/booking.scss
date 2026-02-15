@@ -184,6 +184,77 @@ textarea {
   box-shadow: 0 9px 22px rgba(44, 32, 23, 0.1);
 }
 
+.time-pill.unavailable,
+.time-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.selection-cart {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: #fdfaf6;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.selection-cart header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.selection-cart h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.selection-cart ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.selection-cart li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid #e8d9cc;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 0.55rem;
+}
+
+.selection-cart li div {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.selection-cart li span {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #eadccf;
+  padding-top: 0.5rem;
+}
+
+.cart-total p {
+  margin: 0;
+  font-weight: 600;
+}
+
 .service-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -272,6 +343,17 @@ textarea {
 .reason {
   color: #8b2d2d;
   font-size: 0.85rem;
+}
+
+.service-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 0.34rem 0.58rem;
+  font-size: 0.82rem;
 }
 
 .hint {
