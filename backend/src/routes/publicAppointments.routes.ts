@@ -41,7 +41,9 @@ const createAppointmentSchema = z.object({
         priceCents: z.number().int().min(0).optional(),
       })
     )
-    .min(1),
+    .min(1)
+    .optional(),
+  serviceId: z.string().min(1).optional(),
   client: z
     .object({
       firstName: z.string().trim().min(1),
@@ -59,6 +61,14 @@ const createAppointmentSchema = z.object({
       }
     }),
   notes: optionalString,
+}).superRefine((value, ctx) => {
+  if ((!value.services || value.services.length === 0) && !value.serviceId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "services or serviceId is required",
+      path: ["services"],
+    });
+  }
 });
 
 type ServiceLinkRow = {
@@ -163,6 +173,12 @@ export const publicAppointmentsRouter = Router();
 publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (req, res) => {
   try {
     const payload = parseOrThrow(createAppointmentSchema, req.body);
+    const requestedServices =
+      payload.services && payload.services.length > 0
+        ? payload.services
+        : payload.serviceId
+          ? [{ serviceId: payload.serviceId }]
+          : [];
 
     const startAtRaw = DateTime.fromISO(payload.startAt, { setZone: true });
     if (!startAtRaw.isValid) {
@@ -174,7 +190,7 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
 
     const created = await prisma.$transaction(
       async (tx) => {
-        const uniqueServiceIds = Array.from(new Set(payload.services.map((service) => service.serviceId)));
+        const uniqueServiceIds = Array.from(new Set(requestedServices.map((service) => service.serviceId)));
 
         const services = await tx.service.findMany({
           where: {
@@ -247,8 +263,8 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
           let firstName = "";
           let lastName = "";
 
-          for (let index = 0; index < payload.services.length; index += 1) {
-            const requested = payload.services[index];
+          for (let index = 0; index < requestedServices.length; index += 1) {
+            const requested = requestedServices[index];
             const service = serviceById.get(requested.serviceId)!;
             const link = service.serviceLinks.find((entry) => entry.staffMemberId === staffId);
             if (!link) {
