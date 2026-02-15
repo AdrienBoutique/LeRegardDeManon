@@ -122,12 +122,6 @@
                 <p>{{ formatPrice(totalPriceCents()) }}</p>
               </div>
             }
-
-            <div class="actions">
-              <button type="button" class="btn btn-primary" [disabled]="!canShowStep4()" (click)="continueToContact()">
-                Continuer
-              </button>
-            </div>
           </section>
 
           <div class="category-filter" role="radiogroup" aria-label="Filtrer par categorie">
@@ -162,6 +156,9 @@
           } @else if (eligibleError()) {
             <p class="error">{{ eligibleError() }}</p>
           } @else {
+            @if (selectionError()) {
+              <p class="error">{{ selectionError() }}</p>
+            }
             <div class="service-grid">
               @for (service of filteredEligibleServices(); track service.id) {
                 <article class="service-card" [class.disabled]="!service.eligible" [class.selected]="isSelectedService(service.id)">
@@ -277,8 +274,22 @@
 
         <dl>
           <div>
-            <dt>Soin</dt>
-            <dd>{{ done.serviceName }}</dd>
+            <dt>Soins</dt>
+            <dd>
+              @if (selectedServices().length > 0) {
+                <ul class="confirmation-services">
+                  @for (item of selectedServices(); track item.id) {
+                    <li>
+                      <span>{{ item.name }}</span>
+                      <strong>{{ formatPrice(item.priceCents) }}</strong>
+                    </li>
+                  }
+                </ul>
+                <p class="confirmation-total">Total: {{ formatPrice(totalPriceCents()) }}</p>
+              } @else {
+                {{ done.serviceName }}
+              }
+            </dd>
           </div>
           <div>
             <dt>Date & heure</dt>

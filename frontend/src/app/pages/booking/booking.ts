@@ -71,6 +71,7 @@ export class Booking {
 
   protected readonly startsError = signal('');
   protected readonly eligibleError = signal('');
+  protected readonly selectionError = signal('');
   protected readonly submitError = signal('');
 
   protected readonly staffMembers = signal<BookingStaffItem[]>([]);
@@ -112,7 +113,21 @@ export class Booking {
 
   protected readonly selectedStart = computed(() => {
     const startAt = this.form.controls.startAt.value;
-    return this.freeStarts().find((entry) => entry.startAt === startAt);
+    if (!startAt) {
+      return undefined;
+    }
+
+    const exactMatch = this.freeStarts().find((entry) => entry.startAt === startAt);
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    const selectedMs = Date.parse(startAt);
+    if (Number.isNaN(selectedMs)) {
+      return undefined;
+    }
+
+    return this.freeStarts().find((entry) => Date.parse(entry.startAt) === selectedMs);
   });
 
   protected readonly bookingState = computed<BookingState>(() => {
@@ -246,16 +261,33 @@ export class Booking {
 
   protected addService(service: EligibleServiceItem): void {
     if (!service.eligible) {
+      this.selectionError.set('Ce soin est indisponible pour ce depart.');
       return;
     }
 
     if (this.isServiceInSelection(service.id)) {
+      this.selectionError.set('Ce soin est deja dans votre selection.');
       return;
     }
 
     if (this.selectedServices().length >= this.maxSelectedServices) {
+      this.selectionError.set(`Maximum ${this.maxSelectedServices} soins.`);
       return;
     }
+
+    const currentStart = this.selectedStart();
+    if (!currentStart && !this.form.controls.startAt.value) {
+      this.selectionError.set("Selectionnez d'abord une heure de depart.");
+      return;
+    }
+
+    const projectedDuration = this.totalDurationMin() + service.durationMin;
+    if (currentStart && !this.isSlotCompatibleForDuration(currentStart, projectedDuration)) {
+      this.selectionError.set('Ce soin ne rentre pas dans le creneau choisi.');
+      return;
+    }
+
+    this.selectionError.set('');
 
     this.selectedServices.update((selected) => [
       ...selected,
@@ -267,21 +299,16 @@ export class Booking {
         staffPricingVariant: this.isDiscountedService(service) ? 'trainee' : 'standard'
       }
     ]);
+
+    this.step.set(4);
   }
 
   protected removeService(serviceId: string): void {
     this.selectedServices.update((services) => services.filter((service) => service.id !== serviceId));
+    this.selectionError.set('');
     if (this.selectedServices().length === 0 && this.step() > 3) {
       this.step.set(3);
     }
-  }
-
-  protected continueToContact(): void {
-    if (!this.canShowStep4()) {
-      return;
-    }
-
-    this.step.set(4);
   }
 
   protected setSearch(value: string): void {
@@ -382,7 +409,18 @@ export class Booking {
   }
 
   protected isSelectedStart(startAt: string): boolean {
-    return this.form.controls.startAt.value === startAt;
+    const selected = this.form.controls.startAt.value;
+    if (!selected) {
+      return false;
+    }
+
+    if (selected === startAt) {
+      return true;
+    }
+
+    const selectedMs = Date.parse(selected);
+    const startMs = Date.parse(startAt);
+    return !Number.isNaN(selectedMs) && !Number.isNaN(startMs) && selectedMs === startMs;
   }
 
   protected isSelectedService(serviceId: string): boolean {
@@ -398,17 +436,7 @@ export class Booking {
   }
 
   protected canAddService(service: EligibleServiceItem): boolean {
-    if (!service.eligible || this.isServiceInSelection(service.id) || this.selectedServices().length >= this.maxSelectedServices) {
-      return false;
-    }
-
-    const currentStart = this.selectedStart();
-    if (!currentStart) {
-      return false;
-    }
-
-    const projectedDuration = this.totalDurationMin() + service.durationMin;
-    return this.isSlotCompatibleForDuration(currentStart, projectedDuration);
+    return service.eligible && !this.isServiceInSelection(service.id) && this.selectedServices().length < this.maxSelectedServices;
   }
 
   protected selectedServicesSummary(): string {
@@ -614,6 +642,7 @@ export class Booking {
     this.eligibleError.set('');
     this.searchTerm.set('');
     this.selectedCategoryId.set('all');
+    this.selectionError.set('');
     this.confirmation.set(null);
     this.submitError.set('');
     this.selectedServices.set([]);
@@ -632,6 +661,7 @@ export class Booking {
   private resetAfterStartChange(): void {
     this.eligibleServices.set([]);
     this.eligibleError.set('');
+    this.selectionError.set('');
     this.searchTerm.set('');
     this.selectedCategoryId.set('all');
     this.confirmation.set(null);

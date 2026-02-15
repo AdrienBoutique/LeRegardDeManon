@@ -421,6 +421,25 @@ textarea {
   font-weight: 600;
 }
 
+.confirmation-services {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.confirmation-services li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.confirmation-total {
+  margin: 0.45rem 0 0;
+  font-weight: 700;
+}
+
 @keyframes shimmer {
   0% {
     background-position: 100% 0;
