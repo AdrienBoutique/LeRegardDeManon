@@ -9,6 +9,18 @@
   padding: 1rem;
 }
 
+.heading-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.btn-add {
+  white-space: nowrap;
+}
+
 h1,
 h2,
 h3 {
@@ -149,6 +161,12 @@ select {
   font-weight: 600;
 }
 
+.color-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .actions {
   margin-top: 0.75rem;
   display: flex;
@@ -163,6 +181,30 @@ select {
 
 .error-box {
   color: #9f1f1f;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(28, 21, 16, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: min(860px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.modal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.75rem;
 }
 
 @media (min-width: 860px) {

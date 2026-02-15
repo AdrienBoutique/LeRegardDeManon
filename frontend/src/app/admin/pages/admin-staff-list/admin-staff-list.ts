@@ -23,6 +23,7 @@ export class AdminStaffList {
   protected readonly errorMessage = signal('');
   protected readonly staff = signal<AdminStaffItem[]>([]);
   protected readonly pendingDeleteId = signal<string | null>(null);
+  protected readonly createModalOpen = signal(false);
   protected readonly colorOptions = PASTEL_COLOR_OPTIONS;
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
@@ -84,6 +85,7 @@ export class AdminStaffList {
             colorHex: '#8C6A52',
             defaultDiscountPercent: 20
           });
+          this.closeCreateModal();
           this.fetchStaff();
         },
         error: (error: { error?: { error?: string } }) => {
@@ -118,6 +120,15 @@ export class AdminStaffList {
 
   protected cancelDelete(): void {
     this.pendingDeleteId.set(null);
+  }
+
+  protected openCreateModal(): void {
+    this.createModalOpen.set(true);
+    this.errorMessage.set('');
+  }
+
+  protected closeCreateModal(): void {
+    this.createModalOpen.set(false);
   }
 
   protected hasColorOption(hex: string | null | undefined): boolean {

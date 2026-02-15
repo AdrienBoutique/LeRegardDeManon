@@ -1,71 +1,17 @@
 <section class="admin-staff stack">
   <header class="card heading">
-    <h1>Praticiennes</h1>
-    <p>Gerez les profils, statuts et reductions par defaut.</p>
+    <div class="heading-top">
+      <div>
+        <h1>Praticiennes</h1>
+        <p>Gerez les profils, statuts et reductions par defaut.</p>
+      </div>
+      <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">Ajouter +</button>
+    </div>
   </header>
 
   @if (errorMessage()) {
     <article class="card error-box">{{ errorMessage() }}</article>
   }
-
-  <article class="card form-card">
-    <h2>Ajouter une praticienne</h2>
-
-    <form class="stack" [formGroup]="createForm" (ngSubmit)="submitCreate()">
-      <div class="grid two-cols">
-        <label>
-          Nom complet
-          <input type="text" formControlName="name" />
-        </label>
-
-        <label>
-          Email
-          <input type="email" formControlName="email" />
-        </label>
-      </div>
-
-      <div class="grid three-cols">
-        <label class="check-row">
-          <input type="checkbox" formControlName="active" />
-          Active
-        </label>
-
-        <label class="check-row">
-          <input type="checkbox" formControlName="isTrainee" />
-          Stagiaire
-        </label>
-
-        <label>
-          Reduction % defaut
-          <input type="number" min="0" max="100" formControlName="defaultDiscountPercent" />
-        </label>
-      </div>
-
-      <div class="color-row">
-        <label class="color-label">
-          Couleur
-          <select formControlName="colorHex">
-            @if (createForm.controls.colorHex.value && !hasColorOption(createForm.controls.colorHex.value)) {
-              <option [value]="createForm.controls.colorHex.value">
-                Couleur actuelle ({{ createForm.controls.colorHex.value }})
-              </option>
-            }
-            @for (color of colorOptions; track color.hex) {
-              <option [value]="color.hex">{{ color.label }} ({{ color.hex }})</option>
-            }
-          </select>
-        </label>
-        <span class="color-preview">
-          <span class="color-dot" [style.background]="createForm.controls.colorHex.value"></span>
-          {{ createForm.controls.colorHex.value }}
-        </span>
-      </div>
-
-      <button type="submit" class="btn btn-primary" [disabled]="saving()">
-        {{ saving() ? 'Creation...' : 'Ajouter' }}
-      </button>
-    </form>
-  </article>
 
   <section class="grid staff-grid">
     @if (loading()) {
@@ -110,4 +56,69 @@
       </article>
     }
   </section>
+
+  @if (createModalOpen()) {
+    <div class="modal-overlay" (click)="closeCreateModal()">
+      <article class="card form-card modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-top">
+          <h2>Ajouter une praticienne</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeCreateModal()">Fermer</button>
+        </div>
+
+        <form class="stack" [formGroup]="createForm" (ngSubmit)="submitCreate()">
+          <div class="grid two-cols">
+            <label>
+              Nom complet
+              <input type="text" formControlName="name" />
+            </label>
+
+            <label>
+              Email
+              <input type="email" formControlName="email" />
+            </label>
+          </div>
+
+          <div class="grid three-cols">
+            <label class="check-row">
+              <input type="checkbox" formControlName="active" />
+              Active
+            </label>
+
+            <label class="check-row">
+              <input type="checkbox" formControlName="isTrainee" />
+              Stagiaire
+            </label>
+
+            <label>
+              Reduction % defaut
+              <input type="number" min="0" max="100" formControlName="defaultDiscountPercent" />
+            </label>
+          </div>
+
+          <div class="color-row">
+            <label class="color-label">
+              Couleur
+              <select formControlName="colorHex">
+                @if (createForm.controls.colorHex.value && !hasColorOption(createForm.controls.colorHex.value)) {
+                  <option [value]="createForm.controls.colorHex.value">
+                    Couleur actuelle
+                  </option>
+                }
+                @for (color of colorOptions; track color.hex) {
+                  <option [value]="color.hex">{{ color.label }}</option>
+                }
+              </select>
+            </label>
+            <span class="color-preview">
+              <span class="color-dot" [style.background]="createForm.controls.colorHex.value"></span>
+            </span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Creation...' : 'Ajouter' }}
+          </button>
+        </form>
+      </article>
+    </div>
+  }
 </section>

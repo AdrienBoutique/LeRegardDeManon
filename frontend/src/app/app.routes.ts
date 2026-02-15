@@ -28,6 +28,8 @@ export const routes: Routes = [
       { path: 'services', component: AdminServices },
       { path: 'staff', component: AdminStaffList },
       { path: 'staff/:id', component: AdminStaffDetail },
+      { path: 'praticiennes', redirectTo: 'staff', pathMatch: 'full' },
+      { path: 'praticiennes/:id', redirectTo: 'staff/:id' },
       { path: 'horaires', component: AdminHours },
       { path: 'conges', component: AdminTimeOff },
       { path: 'planning', component: AdminPlanning },

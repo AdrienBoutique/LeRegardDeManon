@@ -23,6 +23,7 @@ export class AdminServices {
   protected readonly services = signal<AdminServiceItem[]>([]);
   protected readonly categories = signal<AdminServiceCategoryItem[]>([]);
   protected readonly editingId = signal<string | null>(null);
+  protected readonly createModalOpen = signal(false);
   protected readonly categoryCreateTarget = signal<'create' | 'edit' | null>(null);
   protected readonly categoryDraft = signal('');
   protected readonly colorOptions = PASTEL_COLOR_OPTIONS;
@@ -106,6 +107,7 @@ export class AdminServices {
             categoryId: '',
             active: true
           });
+          this.closeCreateModal();
           this.fetchServices();
         },
         error: (error: { error?: { error?: string } }) => {
@@ -175,6 +177,17 @@ export class AdminServices {
 
   protected addCategoryForCreate(): void {
     this.categoryCreateTarget.set('create');
+    this.categoryDraft.set('');
+  }
+
+  protected openCreateModal(): void {
+    this.createModalOpen.set(true);
+    this.errorMessage.set('');
+  }
+
+  protected closeCreateModal(): void {
+    this.createModalOpen.set(false);
+    this.categoryCreateTarget.set(null);
     this.categoryDraft.set('');
   }
 
