@@ -22,6 +22,11 @@ enum NotificationType {
   FOLLOW_UP
 }
 
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
 model StaffMember {
   id                String             @id @default(cuid())
   firstName         String
@@ -56,7 +61,37 @@ model Service {
   category     ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   serviceLinks ServiceStaff[]
   appointmentItems AppointmentItem[]
+  promotionLinks PromotionService[]
   @@index([categoryId])
+}
+
+model Promotion {
+  id               String             @id @default(cuid())
+  title            String
+  subtitle         String?
+  description      String?
+  discountType     DiscountType
+  discountValueInt Int
+  startAt          DateTime
+  endAt            DateTime
+  active           Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  services         PromotionService[]
+
+  @@index([active, startAt, endAt])
+}
+
+model PromotionService {
+  id          String    @id @default(cuid())
+  promotionId String
+  serviceId   String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, serviceId])
+  @@index([promotionId])
+  @@index([serviceId])
 }
 
 model ServiceCategory {
@@ -144,6 +179,18 @@ model AvailabilityRule {
 
   @@unique([staffMemberId, dayOfWeek])
   @@index([staffMemberId, dayOfWeek])
+}
+
+model InstituteAvailabilityRule {
+  id        String   @id @default(cuid())
+  dayOfWeek Int      @unique
+  startTime String
+  endTime   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dayOfWeek])
 }
 
 model TimeOff {

@@ -257,7 +257,73 @@ async function main() {
     ],
   });
 
-  console.log("[seed] Done: admin user, staff, categories, services, links, availability rules");
+  await prisma.instituteAvailabilityRule.deleteMany({});
+  await prisma.instituteAvailabilityRule.createMany({
+    data: [
+      { dayOfWeek: 0, startTime: "09:00", endTime: "18:00", isActive: false },
+      { dayOfWeek: 1, startTime: "09:30", endTime: "19:00", isActive: true },
+      { dayOfWeek: 2, startTime: "09:30", endTime: "19:00", isActive: true },
+      { dayOfWeek: 3, startTime: "09:30", endTime: "19:00", isActive: true },
+      { dayOfWeek: 4, startTime: "09:30", endTime: "19:00", isActive: true },
+      { dayOfWeek: 5, startTime: "09:30", endTime: "19:00", isActive: true },
+      { dayOfWeek: 6, startTime: "10:00", endTime: "17:00", isActive: true },
+    ],
+  });
+
+  const now = new Date();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const fourteenDaysMs = 14 * oneDayMs;
+
+  await prisma.promotion.deleteMany({
+    where: {
+      title: {
+        in: ["Saint-Valentin", "Offre stagiaire"],
+      },
+    },
+  });
+
+  await prisma.promotion.create({
+    data: {
+      title: "Saint-Valentin",
+      subtitle: "Offres du moment",
+      description: "Remise speciale sur une selection de soins pendant la periode.",
+      discountType: "PERCENT",
+      discountValueInt: 15,
+      startAt: new Date(now.getTime() - oneDayMs),
+      endAt: new Date(now.getTime() + fourteenDaysMs),
+      active: true,
+      services: {
+        create: [
+          { serviceId: rehaussement.id },
+          { serviceId: browLift.id },
+        ],
+      },
+    },
+  });
+
+  await prisma.promotion.create({
+    data: {
+      title: "Offre stagiaire",
+      subtitle: "Tarif decouverte",
+      description: "Promotion appliquee sur les soins realises par la stagiaire.",
+      discountType: "PERCENT",
+      discountValueInt: 20,
+      startAt: new Date(now.getTime() - thirtyDaysMs()),
+      endAt: new Date(now.getTime() + 180 * oneDayMs),
+      active: true,
+      services: {
+        create: [{ serviceId: browLift.id }],
+      },
+    },
+  });
+
+  console.log(
+    "[seed] Done: admin, staff, categories, services, links, availability rules (staff+institute), promotions"
+  );
+}
+
+function thirtyDaysMs(): number {
+  return 30 * 24 * 60 * 60 * 1000;
 }
 
 main()

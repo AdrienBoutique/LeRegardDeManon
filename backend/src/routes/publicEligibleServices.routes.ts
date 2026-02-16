@@ -5,10 +5,10 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import {
   BRUSSELS_TIMEZONE,
-  buildDateTimeForDay,
   subtractIntervals,
   TimeInterval,
 } from "../lib/time";
+import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const querySchema = z.object({
@@ -73,7 +73,7 @@ publicEligibleServicesRouter.get("/eligible-services", async (req, res) => {
 
     const staffIds = staffMembers.map((staff) => staff.id);
 
-    const [availabilityRules, timeOffs, appointments, activeServices] = await Promise.all([
+    const [availabilityRules, instituteRules, timeOffs, appointments, activeServices] = await Promise.all([
       staffIds.length > 0
         ? prisma.availabilityRule.findMany({
             where: {
@@ -90,6 +90,16 @@ publicEligibleServicesRouter.get("/eligible-services", async (req, res) => {
             },
           })
         : Promise.resolve([]),
+      prisma.instituteAvailabilityRule.findMany({
+        where: {
+          dayOfWeek: weekday,
+          isActive: true,
+        },
+        select: {
+          startTime: true,
+          endTime: true,
+        },
+      }),
       staffIds.length > 0
         ? prisma.timeOff.findMany({
             where: {
@@ -149,36 +159,14 @@ publicEligibleServicesRouter.get("/eligible-services", async (req, res) => {
         },
       }),
     ]);
-
-    const workIntervalsByStaff = new Map<string, TimeInterval[]>();
-
-    for (const rule of availabilityRules) {
-      const effectiveFrom = rule.effectiveFrom
-        ? DateTime.fromJSDate(rule.effectiveFrom, { zone: BRUSSELS_TIMEZONE }).startOf("day")
-        : null;
-      const effectiveTo = rule.effectiveTo
-        ? DateTime.fromJSDate(rule.effectiveTo, { zone: BRUSSELS_TIMEZONE }).endOf("day")
-        : null;
-
-      const isApplicable =
-        (!effectiveFrom || dayStartLocal >= effectiveFrom) &&
-        (!effectiveTo || dayStartLocal <= effectiveTo);
-
-      if (!isApplicable) {
-        continue;
-      }
-
-      const start = buildDateTimeForDay(dayStartLocal.toFormat("yyyy-MM-dd"), rule.startTime);
-      const end = buildDateTimeForDay(dayStartLocal.toFormat("yyyy-MM-dd"), rule.endTime);
-
-      if (end <= start) {
-        continue;
-      }
-
-      const intervals = workIntervalsByStaff.get(rule.staffMemberId) ?? [];
-      intervals.push({ startMs: start.toUTC().toMillis(), endMs: end.toUTC().toMillis() });
-      workIntervalsByStaff.set(rule.staffMemberId, intervals);
-    }
+    const dateIso = dayStartLocal.toFormat("yyyy-MM-dd");
+    const instituteIntervals = buildInstituteIntervals(dateIso, dayStartLocal, instituteRules);
+    const workIntervalsByStaff = buildStaffWorkIntervals(
+      dateIso,
+      dayStartLocal,
+      availabilityRules,
+      instituteIntervals
+    );
 
     const blockedIntervalsByStaff = new Map<string, TimeInterval[]>();
 

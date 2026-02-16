@@ -104,6 +104,33 @@ const putWeeklyAvailabilitySchema = z
     }
   });
 
+function formatWeeklyDays(
+  rules: Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isActive: boolean;
+  }>
+): Array<{
+  weekday: number;
+  off: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  active: boolean;
+}> {
+  const ruleByWeekday = new Map(rules.map((rule) => [rule.dayOfWeek, rule]));
+  return Array.from({ length: 7 }, (_, weekday) => {
+    const rule = ruleByWeekday.get(weekday);
+    return {
+      weekday,
+      off: !rule,
+      startTime: rule?.startTime ?? null,
+      endTime: rule?.endTime ?? null,
+      active: rule?.isActive ?? false,
+    };
+  });
+}
+
 export const adminAvailabilityRouter = Router();
 
 adminAvailabilityRouter.use(authAdmin);
@@ -186,21 +213,9 @@ adminAvailabilityRouter.put("/staff/:id/availability", async (req, res) => {
       orderBy: { dayOfWeek: "asc" },
     });
 
-    const ruleByWeekday = new Map(updatedRules.map((rule) => [rule.dayOfWeek, rule]));
-    const days = Array.from({ length: 7 }, (_, weekday) => {
-      const rule = ruleByWeekday.get(weekday);
-      return {
-        weekday,
-        off: !rule,
-        startTime: rule?.startTime ?? null,
-        endTime: rule?.endTime ?? null,
-        active: rule?.isActive ?? false,
-      };
-    });
-
     res.json({
       staffId,
-      days,
+      days: formatWeeklyDays(updatedRules),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -244,6 +259,86 @@ adminAvailabilityRouter.post("/staff/:id/availability", async (req, res) => {
     }
 
     console.error("[adminAvailability.create]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.get("/availability/institute", async (_req, res) => {
+  try {
+    const rules = await prisma.instituteAvailabilityRule.findMany({
+      where: { isActive: true },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+    });
+
+    const ruleByWeekday = new Map(rules.map((rule) => [rule.dayOfWeek, rule]));
+    const days = Array.from({ length: 7 }, (_, weekday) => {
+      const rule = ruleByWeekday.get(weekday);
+      return {
+        id: rule?.id ?? null,
+        weekday,
+        off: !rule,
+        startTime: rule?.startTime ?? null,
+        endTime: rule?.endTime ?? null,
+        active: rule?.isActive ?? false,
+        createdAt: rule?.createdAt ?? null,
+        updatedAt: rule?.updatedAt ?? null,
+      };
+    });
+
+    res.json(days);
+  } catch (error) {
+    console.error("[adminAvailability.listInstitute]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.put("/availability/institute", async (req, res) => {
+  try {
+    const payload = parseOrThrow(putWeeklyAvailabilitySchema, req.body);
+    const byWeekday = new Map(payload.days.map((day) => [day.weekday, day]));
+
+    await prisma.$transaction(async (tx) => {
+      for (let weekday = 0; weekday <= 6; weekday += 1) {
+        const day = byWeekday.get(weekday);
+        if (!day || day.off) {
+          await tx.instituteAvailabilityRule.deleteMany({
+            where: { dayOfWeek: weekday },
+          });
+          continue;
+        }
+
+        await tx.instituteAvailabilityRule.upsert({
+          where: { dayOfWeek: weekday },
+          update: {
+            startTime: day.startTime!,
+            endTime: day.endTime!,
+            isActive: true,
+          },
+          create: {
+            dayOfWeek: weekday,
+            startTime: day.startTime!,
+            endTime: day.endTime!,
+            isActive: true,
+          },
+        });
+      }
+    });
+
+    const updatedRules = await prisma.instituteAvailabilityRule.findMany({
+      where: { isActive: true },
+      orderBy: { dayOfWeek: "asc" },
+    });
+
+    res.json({
+      days: formatWeeklyDays(updatedRules),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[adminAvailability.putInstitute]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -81,7 +81,7 @@ adminPlanningRouter.get("/planning", async (req, res) => {
       ? { isActive: true, id: query.staffId }
       : { isActive: true };
 
-    const [staffMembers, appointments, staffAvailability, timeOff] = await Promise.all([
+    const [staffMembers, appointments, staffAvailability, instituteAvailability, timeOff] = await Promise.all([
       prisma.staffMember.findMany({
         where: staffWhere,
         orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
@@ -152,6 +152,15 @@ adminPlanningRouter.get("/planning", async (req, res) => {
           endTime: true,
         },
       }),
+      prisma.instituteAvailabilityRule.findMany({
+        where: { isActive: true },
+        orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+        select: {
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+        },
+      }),
       prisma.timeOff.findMany({
         where: {
           ...(query.staffId ? { staffMemberId: query.staffId } : { staffMember: { isActive: true } }),
@@ -181,6 +190,33 @@ adminPlanningRouter.get("/planning", async (req, res) => {
       }),
     ]);
 
+    const instituteByWeekday = new Map(
+      instituteAvailability.map((rule) => [rule.dayOfWeek, rule])
+    );
+
+    const scopedStaffAvailability = staffAvailability
+      .map((rule) => {
+        const instituteRule = instituteByWeekday.get(rule.dayOfWeek);
+        if (!instituteRule) {
+          return null;
+        }
+
+        const startTime = rule.startTime > instituteRule.startTime ? rule.startTime : instituteRule.startTime;
+        const endTime = rule.endTime < instituteRule.endTime ? rule.endTime : instituteRule.endTime;
+
+        if (endTime <= startTime) {
+          return null;
+        }
+
+        return {
+          staffId: rule.staffMemberId,
+          weekday: rule.dayOfWeek,
+          startTime,
+          endTime,
+        };
+      })
+      .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
+
     res.json({
       staff: staffMembers.map((member) => ({
         id: member.id,
@@ -208,8 +244,8 @@ adminPlanningRouter.get("/planning", async (req, res) => {
           staffColorHex: appointment.staffMember.colorHex,
         };
       }),
-      staffAvailability: staffAvailability.map((rule) => ({
-        staffId: rule.staffMemberId,
+      staffAvailability: scopedStaffAvailability,
+      instituteAvailability: instituteAvailability.map((rule) => ({
         weekday: rule.dayOfWeek,
         startTime: rule.startTime,
         endTime: rule.endTime,

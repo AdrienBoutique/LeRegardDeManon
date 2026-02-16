@@ -6,8 +6,10 @@ import { prisma } from "../lib/prisma";
 import {
   BRUSSELS_TIMEZONE,
   buildDateTimeForDay,
+  intersectIntervals,
   intervalsOverlap,
 } from "../lib/time";
+import { buildInstituteIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const STEP_MIN = 15;
@@ -83,7 +85,7 @@ publicSlotsRouter.get("/slots", async (req, res) => {
       return;
     }
 
-    const [availabilityRules, timeOffs, appointments] = await Promise.all([
+    const [availabilityRules, instituteRules, timeOffs, appointments] = await Promise.all([
       prisma.availabilityRule.findMany({
         where: {
           staffMemberId: { in: staffIds },
@@ -96,6 +98,16 @@ publicSlotsRouter.get("/slots", async (req, res) => {
           endTime: true,
           effectiveFrom: true,
           effectiveTo: true,
+        },
+      }),
+      prisma.instituteAvailabilityRule.findMany({
+        where: {
+          dayOfWeek: weekday,
+          isActive: true,
+        },
+        select: {
+          startTime: true,
+          endTime: true,
         },
       }),
       prisma.timeOff.findMany({
@@ -124,6 +136,7 @@ publicSlotsRouter.get("/slots", async (req, res) => {
         },
       }),
     ]);
+    const instituteIntervals = buildInstituteIntervals(query.date, dayStartLocal, instituteRules);
 
     const rulesByStaff = new Map<string, typeof availabilityRules>();
 
@@ -182,46 +195,53 @@ publicSlotsRouter.get("/slots", async (req, res) => {
       const staffName = `${staff.firstName} ${staff.lastName}`.trim();
 
       for (const rule of staffRules) {
-        const workStart = buildDateTimeForDay(query.date, rule.startTime);
-        const workEnd = buildDateTimeForDay(query.date, rule.endTime);
+        const workStart = buildDateTimeForDay(query.date, rule.startTime).toUTC().toMillis();
+        const workEnd = buildDateTimeForDay(query.date, rule.endTime).toUTC().toMillis();
 
         if (workEnd <= workStart) {
           continue;
         }
 
-        const latestStart = workEnd.minus({ minutes: service.durationMin });
+        const scopedIntervals = intersectIntervals(
+          [{ startMs: workStart, endMs: workEnd }],
+          instituteIntervals
+        );
 
-        for (
-          let cursor = workStart;
-          cursor <= latestStart;
-          cursor = cursor.plus({ minutes: STEP_MIN })
-        ) {
-          const slotStartUtc = cursor.toUTC();
-          const slotEndUtc = cursor.plus({ minutes: service.durationMin }).toUTC();
-          const slotStartMs = slotStartUtc.toMillis();
-          const slotEndMs = slotEndUtc.toMillis();
+        for (const interval of scopedIntervals) {
+          const latestStartMs = interval.endMs - service.durationMin * 60_000;
 
-          const hasConflict = blocks.some((block) =>
-            intervalsOverlap(slotStartMs, slotEndMs, block.startMs, block.endMs)
-          );
+          for (
+            let cursorMs = interval.startMs;
+            cursorMs <= latestStartMs;
+            cursorMs += STEP_MIN * 60_000
+          ) {
+            const slotStartUtc = DateTime.fromMillis(cursorMs, { zone: "utc" });
+            const slotEndUtc = slotStartUtc.plus({ minutes: service.durationMin });
+            const slotStartMs = slotStartUtc.toMillis();
+            const slotEndMs = slotEndUtc.toMillis();
 
-          if (hasConflict) {
-            continue;
+            const hasConflict = blocks.some((block) =>
+              intervalsOverlap(slotStartMs, slotEndMs, block.startMs, block.endMs)
+            );
+
+            if (hasConflict) {
+              continue;
+            }
+
+            const key = `${staff.id}|${slotStartUtc.toISO()}`;
+            if (dedupe.has(key)) {
+              continue;
+            }
+
+            dedupe.add(key);
+
+            slots.push({
+              startAt: slotStartUtc.toISO() ?? new Date(slotStartMs).toISOString(),
+              endAt: slotEndUtc.toISO() ?? new Date(slotEndMs).toISOString(),
+              staffId: staff.id,
+              staffName,
+            });
           }
-
-          const key = `${staff.id}|${slotStartUtc.toISO()}`;
-          if (dedupe.has(key)) {
-            continue;
-          }
-
-          dedupe.add(key);
-
-          slots.push({
-            startAt: slotStartUtc.toISO() ?? new Date(slotStartMs).toISOString(),
-            endAt: slotEndUtc.toISO() ?? new Date(slotEndMs).toISOString(),
-            staffId: staff.id,
-            staffName,
-          });
         }
       }
     }

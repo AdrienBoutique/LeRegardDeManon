@@ -5,10 +5,10 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import {
   BRUSSELS_TIMEZONE,
-  buildDateTimeForDay,
   subtractIntervals,
   TimeInterval,
 } from "../lib/time";
+import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const STEP_MIN = 15;
@@ -30,50 +30,6 @@ type DayStartsItem = {
   maxFreeMin: number;
   staffIds: string[];
 };
-
-function buildWorkIntervals(
-  dateIso: string,
-  dayStartLocal: DateTime,
-  rules: Array<{
-    staffMemberId: string;
-    startTime: string;
-    endTime: string;
-    effectiveFrom: Date | null;
-    effectiveTo: Date | null;
-  }>
-): Map<string, TimeInterval[]> {
-  const workIntervalsByStaff = new Map<string, TimeInterval[]>();
-
-  for (const rule of rules) {
-    const effectiveFrom = rule.effectiveFrom
-      ? DateTime.fromJSDate(rule.effectiveFrom, { zone: BRUSSELS_TIMEZONE }).startOf("day")
-      : null;
-    const effectiveTo = rule.effectiveTo
-      ? DateTime.fromJSDate(rule.effectiveTo, { zone: BRUSSELS_TIMEZONE }).endOf("day")
-      : null;
-
-    const isApplicable =
-      (!effectiveFrom || dayStartLocal >= effectiveFrom) &&
-      (!effectiveTo || dayStartLocal <= effectiveTo);
-
-    if (!isApplicable) {
-      continue;
-    }
-
-    const start = buildDateTimeForDay(dateIso, rule.startTime);
-    const end = buildDateTimeForDay(dateIso, rule.endTime);
-
-    if (end <= start) {
-      continue;
-    }
-
-    const intervals = workIntervalsByStaff.get(rule.staffMemberId) ?? [];
-    intervals.push({ startMs: start.toUTC().toMillis(), endMs: end.toUTC().toMillis() });
-    workIntervalsByStaff.set(rule.staffMemberId, intervals);
-  }
-
-  return workIntervalsByStaff;
-}
 
 async function listDayStarts(
   date: string,
@@ -115,7 +71,7 @@ async function listDayStarts(
     return { starts: [], staffMissing: false };
   }
 
-  const [availabilityRules, timeOffs, appointments] = await Promise.all([
+  const [availabilityRules, instituteRules, timeOffs, appointments] = await Promise.all([
     prisma.availabilityRule.findMany({
       where: {
         staffMemberId: { in: staffIds },
@@ -128,6 +84,16 @@ async function listDayStarts(
         endTime: true,
         effectiveFrom: true,
         effectiveTo: true,
+      },
+    }),
+    prisma.instituteAvailabilityRule.findMany({
+      where: {
+        dayOfWeek: weekday,
+        isActive: true,
+      },
+      select: {
+        startTime: true,
+        endTime: true,
       },
     }),
     prisma.timeOff.findMany({
@@ -157,7 +123,13 @@ async function listDayStarts(
     }),
   ]);
 
-  const workIntervalsByStaff = buildWorkIntervals(date, dayStartLocal, availabilityRules);
+  const instituteIntervals = buildInstituteIntervals(date, dayStartLocal, instituteRules);
+  const workIntervalsByStaff = buildStaffWorkIntervals(
+    date,
+    dayStartLocal,
+    availabilityRules,
+    instituteIntervals
+  );
   const blockedIntervalsByStaff = new Map<string, TimeInterval[]>();
 
   for (const timeOff of timeOffs) {

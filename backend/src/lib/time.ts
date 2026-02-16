@@ -114,3 +114,35 @@ export function subtractIntervals(
 
   return normalizeIntervals(result);
 }
+
+export function intersectIntervals(
+  intervalsA: TimeInterval[],
+  intervalsB: TimeInterval[]
+): TimeInterval[] {
+  const a = normalizeIntervals(intervalsA);
+  const b = normalizeIntervals(intervalsB);
+  const result: TimeInterval[] = [];
+
+  let indexA = 0;
+  let indexB = 0;
+
+  while (indexA < a.length && indexB < b.length) {
+    const left = a[indexA];
+    const right = b[indexB];
+
+    const startMs = Math.max(left.startMs, right.startMs);
+    const endMs = Math.min(left.endMs, right.endMs);
+
+    if (endMs > startMs) {
+      result.push({ startMs, endMs });
+    }
+
+    if (left.endMs <= right.endMs) {
+      indexA += 1;
+    } else {
+      indexB += 1;
+    }
+  }
+
+  return result;
+}
