@@ -15,7 +15,7 @@ import {
 } from '../../core/services/booking-api.service';
 import { BookingCalendar } from './components/booking-calendar/booking-calendar';
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4;
 
 type StaffChoice = {
   id: string;
@@ -59,7 +59,8 @@ export class Booking {
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly step = signal<Step>(1);
+  protected readonly currentStep = signal<Step>(1);
+  protected readonly maxStep = 4;
   protected readonly monthDate = signal(this.startOfMonth(new Date()));
 
   protected readonly loadingStaff = signal(false);
@@ -84,6 +85,12 @@ export class Booking {
   protected readonly confirmation = signal<CreateAppointmentResponse | null>(null);
   protected readonly selectedServices = signal<BookingSelectedService[]>([]);
   protected readonly maxSelectedServices = 4;
+  protected readonly stepItems = [
+    { id: 1, label: 'Praticienne, date & horaire' },
+    { id: 2, label: 'Soin' },
+    { id: 3, label: 'Coordonnees' },
+    { id: 4, label: 'Confirmation' }
+  ] as const;
 
   protected readonly form = this.formBuilder.nonNullable.group(
     {
@@ -190,6 +197,23 @@ export class Booking {
     return map;
   });
 
+  protected readonly completedSteps = computed(() => {
+    const done = new Set<number>();
+    if (this.isStep1Valid()) {
+      done.add(1);
+    }
+    if (this.isStep2Valid()) {
+      done.add(2);
+    }
+    if (this.isStep3Valid()) {
+      done.add(3);
+    }
+    if (this.confirmation()) {
+      done.add(4);
+    }
+    return done;
+  });
+
   constructor() {
     this.loadStaff();
     this.loadCatalog();
@@ -258,7 +282,6 @@ export class Booking {
     }
 
     this.form.controls.startAt.setValue(startAt);
-    this.step.set(3);
   }
 
   protected addService(service: EligibleServiceItem): void {
@@ -302,15 +325,73 @@ export class Booking {
       }
     ]);
 
-    this.step.set(4);
   }
 
   protected removeService(serviceId: string): void {
     this.selectedServices.update((services) => services.filter((service) => service.id !== serviceId));
     this.selectionError.set('');
-    if (this.selectedServices().length === 0 && this.step() > 3) {
-      this.step.set(3);
+    if (this.selectedServices().length === 0 && this.currentStep() > 2) {
+      this.goToStep(2);
     }
+  }
+
+  protected goToStep(step: number): void {
+    const normalized = Math.max(1, Math.min(this.maxStep, step)) as Step;
+    if (!this.canAccessStep(normalized)) {
+      return;
+    }
+    this.currentStep.set(normalized);
+    this.scrollToTop();
+  }
+
+  protected nextStep(): void {
+    if (!this.canGoNext()) {
+      return;
+    }
+    if (this.currentStep() >= this.maxStep) {
+      return;
+    }
+    this.currentStep.set((this.currentStep() + 1) as Step);
+    this.scrollToTop();
+  }
+
+  protected prevStep(): void {
+    if (!this.canGoPrev()) {
+      return;
+    }
+    this.currentStep.set((this.currentStep() - 1) as Step);
+    this.scrollToTop();
+  }
+
+  protected canGoNext(): boolean {
+    const step = this.currentStep();
+    switch (step) {
+      case 1:
+        return this.isStep1Valid();
+      case 2:
+        return this.isStep2Valid();
+      case 3:
+        return this.isStep3Valid();
+      case 4:
+      default:
+        return false;
+    }
+  }
+
+  protected canGoPrev(): boolean {
+    return this.currentStep() > 1;
+  }
+
+  protected canAccessStep(step: number): boolean {
+    return step <= this.currentStep();
+  }
+
+  protected handleStepSubmit(): void {
+    if (this.currentStep() < this.maxStep) {
+      this.nextStep();
+      return;
+    }
+    this.submit();
   }
 
   protected setSearch(value: string): void {
@@ -376,7 +457,8 @@ export class Booking {
       .subscribe({
         next: (result) => {
           this.confirmation.set(result);
-          this.step.set(5);
+          this.currentStep.set(4);
+          this.scrollToTop();
         },
         error: (error: { error?: { error?: string } }) => {
           this.submitError.set(error.error?.error ?? 'Impossible de creer le rendez-vous.');
@@ -404,6 +486,10 @@ export class Booking {
       !this.form.hasError('contactRequired') &&
       !this.form.controls.email.hasError('email')
     );
+  }
+
+  protected isStepCurrent(step: number): boolean {
+    return this.currentStep() === step;
   }
 
   protected isSelectedStaff(staffId: string): boolean {
@@ -467,6 +553,15 @@ export class Booking {
     return this.selectedServices()
       .map((service) => service.name)
       .join(', ');
+  }
+
+  protected selectedStaffLabel(): string {
+    const staffId = this.form.controls.staffId.value;
+    if (!staffId) {
+      return 'Peu importe';
+    }
+    const staff = this.staffMembers().find((member) => member.id === staffId);
+    return staff ? `${staff.firstName} ${staff.lastName}` : 'Praticienne';
   }
 
   protected formatPrice(priceCents: number): string {
@@ -540,7 +635,7 @@ export class Booking {
     this.confirmation.set(null);
     this.submitError.set('');
     this.selectedServices.set([]);
-    this.step.set(currentDate ? 2 : 1);
+    this.currentStep.set(1);
   }
 
   private loadStaff(): void {
@@ -600,7 +695,6 @@ export class Booking {
       .subscribe({
         next: (response) => {
           this.freeStarts.set(response.starts);
-          this.step.set(2);
 
           if (response.starts.length === 0) {
             this.startsError.set('Aucun horaire disponible pour cette date.');
@@ -628,7 +722,6 @@ export class Booking {
       .subscribe({
         next: (response) => {
           this.eligibleServices.set(response.services);
-          this.step.set(3);
 
           if (response.services.length === 0) {
             this.eligibleError.set('Aucun soin disponible sur ce depart.');
@@ -714,7 +807,7 @@ export class Booking {
       { emitEvent: false }
     );
 
-    this.step.set(this.form.controls.date.value ? 2 : 1);
+    this.currentStep.set(1);
   }
 
   private resetAfterStartChange(): void {
@@ -727,12 +820,28 @@ export class Booking {
     this.submitError.set('');
     this.selectedServices.set([]);
 
-    if (this.form.controls.startAt.value) {
-      this.step.set(3);
-      return;
-    }
+    this.currentStep.set(1);
+  }
 
-    this.step.set(this.form.controls.date.value ? 2 : 1);
+  private isStep1Valid(): boolean {
+    const staffId = this.form.controls.staffId.value;
+    const hasValidStaff =
+      staffId === '' || this.staffMembers().some((member) => member.id === staffId);
+    return hasValidStaff && this.form.controls.date.valid && Boolean(this.form.controls.startAt.value);
+  }
+
+  private isStep2Valid(): boolean {
+    return this.canShowStep3() && this.selectedServices().length > 0;
+  }
+
+  private isStep3Valid(): boolean {
+    return this.canSubmit();
+  }
+
+  private scrollToTop(): void {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   private startOfMonth(date: Date): Date {
