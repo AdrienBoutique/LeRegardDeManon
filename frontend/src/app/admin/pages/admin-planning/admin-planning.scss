@@ -126,6 +126,11 @@ p {
   box-shadow: 0 10px 18px rgba(56, 39, 27, 0.2);
 }
 
+.nav-btn-add {
+  background: #fff;
+  border-color: #d0b7a3;
+}
+
 .staff-filter {
   margin-top: 0.85rem;
   display: flex;
@@ -264,6 +269,18 @@ p {
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   position: relative;
   z-index: 1;
+}
+
+.lane-slot {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lane-slot:hover {
+  background: rgba(140, 106, 82, 0.04);
 }
 
 .off-overlay {

@@ -1,11 +1,17 @@
 import { NgStyle } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
+import { AdminServicesApiService } from '../../../core/services/admin-services-api.service';
 import {
   AdminPlanningService,
   PlanningAppointmentItem,
   PlanningStaffItem
 } from '../../../core/services/admin-planning.service';
+import { AppointmentDrawerComponent } from '../../appointments/appointment-drawer/appointment-drawer.component';
+import { AppointmentsApiService } from '../../appointments/appointments-api.service';
+import { Appointment, AppointmentServiceItem, ClientLite } from '../../appointments/appointment.models';
+import { AppointmentUiService } from '../../appointments/appointment-ui.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const START_HOUR = 8;
@@ -16,12 +22,15 @@ const TOTAL_MIN = (END_HOUR - START_HOUR) * 60;
 
 @Component({
   selector: 'app-admin-planning',
-  imports: [NgStyle],
+  imports: [NgStyle, AppointmentDrawerComponent],
   templateUrl: './admin-planning.html',
   styleUrl: './admin-planning.scss'
 })
 export class AdminPlanning {
   private readonly planningApi = inject(AdminPlanningService);
+  private readonly servicesApi = inject(AdminServicesApiService);
+  private readonly appointmentUi = inject(AppointmentUiService);
+  private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(false);
@@ -43,8 +52,6 @@ export class AdminPlanning {
   protected readonly staffAvailability = signal<
     Array<{ staffId: string; weekday: number; startTime: string; endTime: string }>
   >([]);
-  protected readonly selectedAppointment = signal<PlanningAppointmentItem | null>(null);
-
   protected readonly weekStart = signal(this.getMonday(new Date()));
   protected readonly isMobile = signal(typeof window !== 'undefined' ? window.innerWidth < 900 : true);
   protected readonly mobileDayIndex = signal(0);
@@ -150,6 +157,23 @@ export class AdminPlanning {
         window.clearInterval(timer);
       });
     }
+
+    this.servicesApi
+      .list()
+      .pipe(takeUntilDestroyed())
+      .subscribe((services) => {
+        const catalog: AppointmentServiceItem[] = services
+          .filter((item) => item.active)
+          .map((item) => ({
+            serviceId: item.id,
+            name: item.name,
+            durationMin: item.durationMin,
+            price: item.priceCents / 100
+          }));
+        this.appointmentUi.setContext({ servicesCatalog: catalog });
+      });
+
+    this.appointmentUi.saved$.pipe(takeUntilDestroyed()).subscribe(() => this.fetchPlanning());
 
     this.fetchPlanning();
   }
@@ -400,36 +424,23 @@ export class AdminPlanning {
     return (TOTAL_MIN / SLOT_MIN) * SLOT_HEIGHT;
   }
 
-  protected openAppointment(item: PlanningAppointmentItem): void {
-    this.selectedAppointment.set(item);
+  protected openCreateDrawer(): void {
+    this.appointmentUi.openCreate({
+      practitionerId: this.staffFilter() !== 'all' ? this.staffFilter() : undefined,
+      status: 'confirmed'
+    });
   }
 
-  protected closeAppointment(): void {
-    this.selectedAppointment.set(null);
+  protected onCellDblClick(dayKey: string, slotLabel: string): void {
+    this.appointmentUi.openCreate({
+      practitionerId: this.staffFilter() !== 'all' ? this.staffFilter() : undefined,
+      startAt: this.slotToIso(dayKey, slotLabel),
+      status: 'confirmed'
+    });
   }
 
-  protected markDone(): void {
-    const target = this.selectedAppointment();
-    if (!target) {
-      return;
-    }
-
-    this.appointments.update((items) =>
-      items.map((item) => (item.id === target.id ? { ...item, status: 'DONE' } : item))
-    );
-    this.selectedAppointment.set({ ...target, status: 'DONE' });
-  }
-
-  protected cancelAppointment(): void {
-    const target = this.selectedAppointment();
-    if (!target) {
-      return;
-    }
-
-    this.appointments.update((items) =>
-      items.map((item) => (item.id === target.id ? { ...item, status: 'NO_SHOW' } : item))
-    );
-    this.selectedAppointment.set({ ...target, status: 'NO_SHOW' });
+  protected openAppointmentEditor(item: PlanningAppointmentItem): void {
+    this.appointmentUi.openEdit(this.toAppointment(item));
   }
 
   protected formatHour(value: string): string {
@@ -466,6 +477,14 @@ export class AdminPlanning {
           this.staffAvailability.set(response.staffAvailability ?? []);
           this.timeOff.set(response.timeOff ?? []);
 
+          const mappedAppointments = response.appointments.map((item) => this.toAppointment(item));
+          this.appointmentUi.setContext({
+            practitioners: response.staff.map((person) => ({ id: person.id, name: person.name })),
+            appointments: mappedAppointments,
+            clients: this.buildClients(mappedAppointments)
+          });
+          this.appointmentsApi.setFallbackAppointments(mappedAppointments);
+
           if (this.staffFilter() !== 'all' && !response.staff.some((item) => item.id === this.staffFilter())) {
             this.staffFilter.set('all');
           }
@@ -501,6 +520,55 @@ export class AdminPlanning {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private toAppointment(item: PlanningAppointmentItem): Appointment {
+    return {
+      id: item.id,
+      practitionerId: item.staffId,
+      practitionerName: item.staffName,
+      startAt: item.startAt,
+      durationMin: this.diffMinutes(item.startAt, item.endAt),
+      services: [
+        {
+          serviceId: item.serviceId,
+          name: item.serviceName,
+          durationMin: this.diffMinutes(item.startAt, item.endAt),
+          price: 0
+        }
+      ],
+      clientName: item.clientName,
+      status: item.status === 'NO_SHOW' ? 'blocked' : 'confirmed'
+    };
+  }
+
+  private buildClients(appointments: Appointment[]): ClientLite[] {
+    const map = new Map<string, ClientLite>();
+    for (const item of appointments) {
+      const fullName = item.clientName?.trim();
+      if (!fullName || map.has(fullName)) {
+        continue;
+      }
+
+      const [firstName, ...rest] = fullName.split(/\s+/);
+      map.set(fullName, {
+        id: `known:${fullName.toLowerCase()}`,
+        firstName: firstName || '',
+        lastName: rest.join(' ')
+      });
+    }
+    return Array.from(map.values());
+  }
+
+  private diffMinutes(startIso: string, endIso: string): number {
+    const start = new Date(startIso).getTime();
+    const end = new Date(endIso).getTime();
+    return Math.max(15, Math.round((end - start) / 60_000));
+  }
+
+  private slotToIso(dayKey: string, slotLabel: string): string {
+    const local = new Date(`${dayKey}T${slotLabel}:00`);
+    return local.toISOString();
   }
 
   private sanitizeHex(value: string | null | undefined, fallback: string): string {
