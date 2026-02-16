@@ -1,0 +1,152 @@
+.admin-clients {
+  gap: 1rem;
+}
+
+.heading,
+.search-card,
+.client-card,
+.error-box,
+.empty-state {
+  padding: 1rem;
+}
+
+.heading-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.btn-add {
+  white-space: nowrap;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+p {
+  margin: 0.45rem 0 0;
+  color: var(--color-text-soft);
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  color: #5f4f42;
+  font-weight: 600;
+}
+
+input,
+textarea {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.clients-grid,
+.two-cols {
+  grid-template-columns: 1fr;
+}
+
+.client-card {
+  display: grid;
+  gap: 0.8rem;
+  cursor: pointer;
+}
+
+.client-card .top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.client-card dl {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.client-card dt {
+  font-size: 0.8rem;
+  color: #7a685b;
+}
+
+.client-card dd {
+  margin: 0.1rem 0 0;
+  color: #4f4035;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.error-box,
+.error-inline {
+  color: #9f1f1f;
+  margin: 0;
+}
+
+.btn-compact {
+  padding: 0.32rem 0.7rem;
+  font-size: 0.86rem;
+}
+
+.btn-danger-lite {
+  border: 1px solid #d8b8ae;
+  background: #fbf1ee;
+  color: #7f2a1f;
+}
+
+.btn-danger-lite:hover:not(:disabled) {
+  border-color: #c79386;
+  background: #f8e7e2;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(28, 21, 16, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1rem;
+}
+
+.modal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 860px) {
+  .clients-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

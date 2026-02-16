@@ -58,11 +58,21 @@ input,
 select,
 textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid #d9c6b6;
   border-radius: 10px;
   padding: 0.52rem 0.62rem;
   font: inherit;
   background: #fff;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #b69179;
+  box-shadow: 0 0 0 1px rgba(140, 106, 82, 0.2);
 }
 
 .hint {

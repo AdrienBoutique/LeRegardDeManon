@@ -1,30 +1,13 @@
-﻿.services-top {
+.services-top {
   padding: 1rem;
 }
 
-.filters {
-  display: flex;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.filter-chip {
-  border: 1px solid #dbc7b7;
-  cursor: pointer;
-}
-
-.filter-chip.active {
-  background: #8c6a52;
-  color: #fff;
-  border-color: #8c6a52;
-}
-
 .search-field {
-  margin-top: 0.9rem;
   display: grid;
   gap: 0.35rem;
   font-size: 0.92rem;
   color: var(--color-text-soft);
+  position: relative;
 }
 
 .search-field input {
@@ -35,8 +18,117 @@
   font: inherit;
 }
 
-.services-grid {
+.suggestions {
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  left: 0;
+  right: 0;
+  z-index: 12;
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(44, 32, 23, 0.12);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.suggestion-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  display: grid;
+  gap: 0.1rem;
+  cursor: pointer;
+}
+
+.suggestion-item:hover {
+  background: #fff6ee;
+}
+
+.suggestion-item strong {
+  font-size: 0.95rem;
+  color: #4a382b;
+}
+
+.suggestion-item span {
+  font-size: 0.82rem;
+  color: #776556;
+}
+
+.categories-stack {
   margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.category-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cat-header {
+  width: 100%;
+  min-height: 64px;
+  border-radius: var(--radius-md);
+  border: 1px solid #dbc7b7;
+  background: #fffaf5;
+  padding: 0.75rem 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.cat-header:hover {
+  border-color: #caa88f;
+  background: #fff6ee;
+  box-shadow: 0 8px 18px rgba(44, 32, 23, 0.08);
+}
+
+.cat-header .left {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.cat-header h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  color: #4a382b;
+}
+
+.cat-header .meta {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #746252;
+}
+
+.chev {
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #6f5643;
+  transition: transform 0.2s ease;
+}
+
+.chev.open {
+  transform: rotate(180deg);
+}
+
+.cat-body {
+  padding-top: 0.15rem;
+  animation: accordion-enter 180ms ease;
+}
+
+.soins-grid {
   grid-template-columns: 1fr;
 }
 
@@ -44,7 +136,23 @@
   padding: 1rem;
   display: grid;
   gap: 0.8rem;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: card-stagger-in 320ms ease forwards;
 }
+
+.cat-body .soins-grid > .service-card:nth-child(1) { animation-delay: 40ms; }
+.cat-body .soins-grid > .service-card:nth-child(2) { animation-delay: 80ms; }
+.cat-body .soins-grid > .service-card:nth-child(3) { animation-delay: 120ms; }
+.cat-body .soins-grid > .service-card:nth-child(4) { animation-delay: 160ms; }
+.cat-body .soins-grid > .service-card:nth-child(5) { animation-delay: 200ms; }
+.cat-body .soins-grid > .service-card:nth-child(6) { animation-delay: 240ms; }
+.cat-body .soins-grid > .service-card:nth-child(7) { animation-delay: 280ms; }
+.cat-body .soins-grid > .service-card:nth-child(8) { animation-delay: 320ms; }
+.cat-body .soins-grid > .service-card:nth-child(9) { animation-delay: 360ms; }
+.cat-body .soins-grid > .service-card:nth-child(10) { animation-delay: 400ms; }
+.cat-body .soins-grid > .service-card:nth-child(11) { animation-delay: 440ms; }
+.cat-body .soins-grid > .service-card:nth-child(12) { animation-delay: 480ms; }
 
 .service-card h2 {
   margin: 0;
@@ -90,14 +198,36 @@
   color: var(--color-text-soft);
 }
 
+@keyframes accordion-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes card-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (min-width: 760px) {
-  .services-grid {
+  .soins-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1060px) {
-  .services-grid {
+  .soins-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

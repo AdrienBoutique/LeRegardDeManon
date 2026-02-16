@@ -1,0 +1,136 @@
+<section class="admin-clients stack">
+  <header class="card heading">
+    <div class="heading-top">
+      <div>
+        <h1>Clientes</h1>
+        <p>Liste des clientes, recherche rapide et mise a jour des informations.</p>
+      </div>
+      <button type="button" class="btn btn-primary btn-add" (click)="openCreateModal()">Nouvelle cliente +</button>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  <section class="card search-card">
+    <label>
+      Rechercher une cliente
+      <input
+        type="search"
+        [value]="searchTerm()"
+        (input)="setSearch($any($event.target).value)"
+        placeholder="Nom, email, telephone"
+      />
+    </label>
+  </section>
+
+  <section class="grid clients-grid">
+    @if (loading()) {
+      <article class="card client-card">Chargement...</article>
+    }
+
+    @for (client of filteredClients(); track client.id) {
+      <article class="card client-card" (click)="openEditModal(client)">
+        <div class="top">
+          <h3>{{ fullName(client) }}</h3>
+          <span class="chip">Cliente</span>
+        </div>
+
+        <dl>
+          <div>
+            <dt>Email</dt>
+            <dd>{{ client.email || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Telephone</dt>
+            <dd>{{ client.phone || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Notes</dt>
+            <dd>{{ client.notes || '-' }}</dd>
+          </div>
+        </dl>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" (click)="openEditModal(client); $event.stopPropagation()">Modifier</button>
+          @if (pendingDeleteId() === client.id) {
+            <button
+              type="button"
+              class="btn btn-danger-lite"
+              [disabled]="saving()"
+              (click)="deleteClient(client); $event.stopPropagation()"
+            >
+              Confirmer
+            </button>
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="cancelDelete(); $event.stopPropagation()">
+              Annuler
+            </button>
+          } @else {
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="requestDelete(client.id); $event.stopPropagation()">
+              Supprimer
+            </button>
+          }
+        </div>
+      </article>
+    }
+
+    @if (!loading() && filteredClients().length === 0) {
+      <article class="card empty-state">
+        <h3>Aucune cliente trouvee</h3>
+        <p>Ajoutez une cliente ou essayez une autre recherche.</p>
+      </article>
+    }
+  </section>
+
+  @if (modalOpen()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <article class="card modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-top">
+          <h2>{{ editingId() ? 'Modifier la cliente' : 'Nouvelle cliente' }}</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeModal()">Fermer</button>
+        </div>
+
+        <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
+          <div class="grid two-cols">
+            <label>
+              Prenom
+              <input type="text" formControlName="firstName" />
+            </label>
+            <label>
+              Nom
+              <input type="text" formControlName="lastName" />
+            </label>
+          </div>
+
+          <div class="grid two-cols">
+            <label>
+              Email
+              <input type="email" formControlName="email" />
+            </label>
+            <label>
+              Telephone
+              <input type="text" formControlName="phone" />
+            </label>
+          </div>
+
+          <label>
+            Notes
+            <textarea rows="4" formControlName="notes"></textarea>
+          </label>
+
+          @if (form.hasError('contactRequired') && (form.controls.email.touched || form.controls.phone.touched)) {
+            <p class="error-inline">Renseignez au moins un email ou un telephone.</p>
+          }
+          @if (form.controls.email.hasError('email') && form.controls.email.touched) {
+            <p class="error-inline">Le format de l'email est invalide.</p>
+          }
+
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Enregistrement...' : editingId() ? 'Sauvegarder' : 'Creer la cliente' }}
+          </button>
+        </form>
+      </article>
+    </div>
+  }
+</section>

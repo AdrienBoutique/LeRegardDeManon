@@ -72,6 +72,9 @@
           </button>
         }
       </div>
+      @if (loadingStaffServices()) {
+        <p class="hint">Chargement des soins autorises pour cette praticienne...</p>
+      }
       @if (filteredServices().length === 0) {
         <p class="hint">Aucun service trouve.</p>
       }
@@ -112,6 +115,27 @@
             </button>
           }
         </div>
+
+        @if (draft().clientId) {
+          <div class="client-form">
+            <label>
+              Telephone
+              <input
+                [ngModel]="draft().clientDraft?.phone ?? ''"
+                (ngModelChange)="updateClientDraft('phone', $event)"
+                placeholder="Au moins telephone ou email"
+              />
+            </label>
+            <label>
+              Email
+              <input
+                [ngModel]="draft().clientDraft?.email ?? ''"
+                (ngModelChange)="updateClientDraft('email', $event)"
+                placeholder="Au moins telephone ou email"
+              />
+            </label>
+          </div>
+        }
       } @else {
         <div class="client-form">
           <label>
@@ -143,6 +167,10 @@
             />
           </label>
         </div>
+      }
+
+      @if (!(draft().clientDraft?.phone?.trim() || draft().clientDraft?.email?.trim())) {
+        <p class="hint">Renseignez au moins un telephone ou un email.</p>
       }
     </section>
   }

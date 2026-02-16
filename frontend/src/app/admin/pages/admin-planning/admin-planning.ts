@@ -1,8 +1,9 @@
 import { NgStyle } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 import { AdminServicesApiService } from '../../../core/services/admin-services-api.service';
+import { AdminClientsApiService } from '../../../core/services/admin-clients-api.service';
 import {
   AdminPlanningService,
   PlanningAppointmentItem,
@@ -29,6 +30,7 @@ const TOTAL_MIN = (END_HOUR - START_HOUR) * 60;
 export class AdminPlanning {
   private readonly planningApi = inject(AdminPlanningService);
   private readonly servicesApi = inject(AdminServicesApiService);
+  private readonly clientsApi = inject(AdminClientsApiService);
   private readonly appointmentUi = inject(AppointmentUiService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly destroyRef = inject(DestroyRef);
@@ -467,11 +469,13 @@ export class AdminPlanning {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    this.planningApi
-      .getPlanning(start, end)
+    forkJoin({
+      planning: this.planningApi.getPlanning(start, end),
+      clients: this.clientsApi.list().pipe(catchError(() => of([])))
+    })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (response) => {
+        next: ({ planning: response, clients }) => {
           this.staff.set(response.staff);
           this.appointments.set(response.appointments);
           this.staffAvailability.set(response.staffAvailability ?? []);
@@ -492,7 +496,16 @@ export class AdminPlanning {
           this.appointmentUi.setContext({
             practitioners: response.staff.map((person) => ({ id: person.id, name: person.name })),
             appointments: mappedAppointments,
-            clients: this.buildClients(mappedAppointments),
+            clients:
+              clients.length > 0
+                ? clients.map((client) => ({
+                    id: client.id,
+                    firstName: client.firstName,
+                    lastName: client.lastName,
+                    phone: client.phone ?? undefined,
+                    email: client.email ?? undefined
+                  }))
+                : this.buildClients(mappedAppointments),
             staffAvailability,
             instituteAvailability
           });

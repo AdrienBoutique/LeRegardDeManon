@@ -22,6 +22,7 @@ import { AdminContactContent } from './admin/pages/admin-contact-content/admin-c
 import { AdminContentHub } from './admin/pages/admin-content-hub/admin-content-hub';
 import { AdminLayout } from './admin/layout/admin-layout';
 import { adminGuard } from './core/guards/admin.guard';
+import { AdminClients } from './admin/pages/admin-clients/admin-clients';
 
 export const routes: Routes = [
   { path: 'admin/login', component: AdminLogin },
@@ -32,6 +33,7 @@ export const routes: Routes = [
     children: [
       { path: 'services', component: AdminServices },
       { path: 'promotions', component: AdminPromotions },
+      { path: 'clients', component: AdminClients },
       { path: 'edition', component: AdminContentHub },
       { path: 'accueil', component: AdminHomeContent },
       { path: 'a-propos', component: AdminAboutContent },

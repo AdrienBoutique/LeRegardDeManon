@@ -63,6 +63,9 @@ export class AppointmentsApiService {
         if (!firstService || !client?.firstName || !client?.lastName) {
           return throwError(() => new Error('Informations insuffisantes pour creer le rendez-vous.'));
         }
+        if (!client.email?.trim() && !client.phone?.trim()) {
+          return throwError(() => new Error('Renseignez au moins un telephone ou un email pour la cliente.'));
+        }
 
         return this.http
           .post<{
@@ -150,4 +153,3 @@ export class AppointmentsApiService {
     };
   }
 }
-

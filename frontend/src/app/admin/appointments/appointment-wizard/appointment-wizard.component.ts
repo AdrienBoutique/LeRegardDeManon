@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, finalize, of, switchMap } from 'rxjs';
+import { AdminInstituteApiService } from '../../../core/services/admin-institute-api.service';
 import { AdminServicesApiService } from '../../../core/services/admin-services-api.service';
 import { AppointmentsApiService } from '../appointments-api.service';
 import {
@@ -24,6 +25,8 @@ import { AppointmentUiService } from '../appointment-ui.service';
 })
 export class AppointmentWizardComponent {
   private readonly ui = inject(AppointmentUiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly instituteApi = inject(AdminInstituteApiService);
   private readonly servicesApi = inject(AdminServicesApiService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly conflictTrigger$ = new Subject<void>();
@@ -44,6 +47,8 @@ export class AppointmentWizardComponent {
   protected readonly clientQuery = signal('');
   protected readonly conflict = signal<{ conflict: boolean; conflictWith?: Appointment } | null>(null);
   protected readonly conflictLoading = signal(false);
+  protected readonly loadingStaffServices = signal(false);
+  protected readonly staffServiceIds = signal<Set<string> | null>(null);
   protected readonly saving = signal(false);
   protected readonly errorMessage = signal('');
 
@@ -60,11 +65,24 @@ export class AppointmentWizardComponent {
 
   protected readonly filteredServices = computed(() => {
     const query = this.serviceQuery().trim().toLowerCase();
+    const allowed = this.staffServiceIds();
+    const practitionerId = this.draft().practitionerId;
+
+    const byStaff = this.services().filter((item) => {
+      if (!practitionerId) {
+        return true;
+      }
+      if (!allowed) {
+        return true;
+      }
+      return allowed.has(item.serviceId);
+    });
+
     if (!query) {
-      return this.services();
+      return byStaff;
     }
 
-    return this.services().filter((item) => item.name.toLowerCase().includes(query));
+    return byStaff.filter((item) => item.name.toLowerCase().includes(query));
   });
 
   protected readonly canGoStep2 = computed(() => {
@@ -85,7 +103,7 @@ export class AppointmentWizardComponent {
 
   protected readonly canGoStep4 = computed(() => {
     const draft = this.draft();
-    return this.hasClientInput(draft);
+    return this.hasClientInput(draft) && this.hasContactInput(draft);
   });
 
   protected readonly canSubmit = computed(() => {
@@ -96,6 +114,7 @@ export class AppointmentWizardComponent {
     this.ui.isOpen$.pipe(takeUntilDestroyed()).subscribe((isOpen) => {
       if (isOpen && !this.wasOpen) {
         this.step.set(1);
+        this.clientMode.set('existing');
         this.errorMessage.set('');
         this.serviceQuery.set('');
         this.clientQuery.set('');
@@ -111,7 +130,7 @@ export class AppointmentWizardComponent {
         services: value.services ?? [],
         clientDraft: value.clientDraft ?? { firstName: '', lastName: '', phone: '', email: '' }
       });
-      this.clientMode.set(value.clientId ? 'existing' : 'new');
+      this.loadServicesForPractitioner(value.practitionerId);
       this.triggerConflictCheck();
     });
 
@@ -190,6 +209,10 @@ export class AppointmentWizardComponent {
       return;
     }
 
+    if (step === 3) {
+      this.clientMode.set('existing');
+    }
+
     this.step.set(step);
   }
 
@@ -253,7 +276,10 @@ export class AppointmentWizardComponent {
   protected switchClientMode(mode: 'existing' | 'new'): void {
     this.clientMode.set(mode);
     if (mode === 'new') {
-      this.ui.setPartial({ clientId: undefined });
+      this.ui.setPartial({
+        clientId: undefined,
+        clientDraft: { firstName: '', lastName: '', phone: '', email: '' }
+      });
     }
   }
 
@@ -263,8 +289,8 @@ export class AppointmentWizardComponent {
       clientDraft: {
         firstName: client.firstName,
         lastName: client.lastName,
-        phone: client.phone,
-        email: client.email
+        phone: client.phone ?? '',
+        email: client.email ?? ''
       }
     });
   }
@@ -275,7 +301,10 @@ export class AppointmentWizardComponent {
       ...current,
       [field]: value
     };
-    this.ui.setPartial({ clientDraft: next, clientId: undefined });
+    this.ui.setPartial({
+      clientDraft: next,
+      clientId: this.clientMode() === 'new' ? undefined : this.draft().clientId
+    });
   }
 
   protected updateStatus(value: AppointmentDraft['status']): void {
@@ -402,12 +431,47 @@ export class AppointmentWizardComponent {
     this.conflictTrigger$.next();
   }
 
+  private loadServicesForPractitioner(practitionerId?: string): void {
+    if (!practitionerId) {
+      this.staffServiceIds.set(null);
+      return;
+    }
+
+    this.loadingStaffServices.set(true);
+    this.instituteApi
+      .listStaffServices(practitionerId)
+      .pipe(
+        finalize(() => this.loadingStaffServices.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (links) => {
+          const allowed = new Set(links.filter((link) => link.serviceActive).map((link) => link.serviceId));
+          this.staffServiceIds.set(allowed);
+
+          const selected = this.draft().services;
+          const nextServices = selected.filter((service) => allowed.has(service.serviceId));
+          if (nextServices.length !== selected.length) {
+            this.ui.setPartial({ services: nextServices });
+            this.triggerConflictCheck();
+          }
+        },
+        error: () => {
+          this.staffServiceIds.set(null);
+        }
+      });
+  }
+
   private hasClientInput(draft: AppointmentDraft): boolean {
     if (draft.clientId) {
       return true;
     }
 
     return Boolean(draft.clientDraft?.firstName?.trim() && draft.clientDraft?.lastName?.trim());
+  }
+
+  private hasContactInput(draft: AppointmentDraft): boolean {
+    return Boolean(draft.clientDraft?.phone?.trim() || draft.clientDraft?.email?.trim());
   }
 
   private getSubmitBlockingReason(): string | null {
@@ -440,6 +504,9 @@ export class AppointmentWizardComponent {
     }
     if (!this.hasClientInput(draft)) {
       return 'Selectionnez une cliente existante ou renseignez nom et prenom.';
+    }
+    if (!this.hasContactInput(draft)) {
+      return 'Renseignez au moins un telephone ou un email pour la cliente.';
     }
     return null;
   }
@@ -509,6 +576,9 @@ export class AppointmentWizardComponent {
     if (!draft.clientId && (!clientDraft?.firstName?.trim() || !clientDraft.lastName?.trim())) {
       return null;
     }
+    if (!clientDraft?.phone?.trim() && !clientDraft?.email?.trim()) {
+      return null;
+    }
 
     return {
       practitionerId: draft.practitionerId,
@@ -516,7 +586,12 @@ export class AppointmentWizardComponent {
       durationMin: draft.durationMin,
       services: draft.services,
       clientId: draft.clientId,
-      clientDraft: clientDraft,
+      clientDraft: {
+        firstName: clientDraft?.firstName?.trim() ?? '',
+        lastName: clientDraft?.lastName?.trim() ?? '',
+        phone: clientDraft?.phone?.trim() || undefined,
+        email: clientDraft?.email?.trim() || undefined
+      },
       notes: draft.notes,
       status: draft.status
     };
