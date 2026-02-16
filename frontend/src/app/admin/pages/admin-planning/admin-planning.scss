@@ -12,7 +12,7 @@
 }
 
 .heading {
-  padding: 1.25rem 0;
+  padding: 0.9rem 0 0.45rem;
   background: transparent;
 }
 
@@ -27,11 +27,22 @@ p {
   color: var(--color-text-soft);
 }
 
-.heading-top {
+.heading-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.heading-left {
+  display: grid;
+  align-content: start;
+}
+
+.heading-right {
   display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-end;
 }
 
 .titles {
@@ -198,7 +209,7 @@ p {
   min-height: 44px;
   display: flex;
   align-items: center;
-  padding: 0 0.55rem;
+  padding: 0 0.45rem;
   font-weight: 600;
   color: #4f4035;
   border-right: 1px solid rgba(0, 0, 0, 0.09);
@@ -229,7 +240,7 @@ p {
 
 .hour-cell {
   height: 40px;
-  padding: 0.2rem 0.45rem;
+  padding: 0.18rem 0.32rem;
   font-size: 0.75rem;
   color: var(--color-text-soft);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
@@ -444,6 +455,15 @@ p {
 }
 
 @media (max-width: 899px) {
+  .heading-grid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .heading-right {
+    justify-content: stretch;
+  }
+
   .calendar-nav {
     width: 100%;
     align-items: stretch;

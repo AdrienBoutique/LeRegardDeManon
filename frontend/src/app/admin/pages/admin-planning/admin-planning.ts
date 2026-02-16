@@ -393,7 +393,7 @@ export class AdminPlanning {
   }
 
   protected gridTemplateColumns(): string {
-    return `80px repeat(${this.visibleDays().length}, minmax(180px, 1fr))`;
+    return `64px repeat(${this.visibleDays().length}, minmax(180px, 1fr))`;
   }
 
   protected gridHeight(): number {

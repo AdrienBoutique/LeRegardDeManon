@@ -78,7 +78,7 @@ export class Home {
     }
 
     const firstCard = container.querySelector<HTMLElement>('.offer-card');
-    const gap = 16;
+    const gap = Number.parseFloat(getComputedStyle(container).columnGap || '16') || 16;
     const step = firstCard ? firstCard.offsetWidth + gap : Math.max(280, Math.round(container.clientWidth * 0.85));
     container.scrollBy({ left: direction * step, behavior: 'smooth' });
   }

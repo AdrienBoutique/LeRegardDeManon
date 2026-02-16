@@ -1,81 +1,85 @@
 <section class="admin-planning stack">
   <header class="heading">
-    <div class="heading-top">
-      <div class="titles">
-        <h1>Planning hebdomadaire</h1>
-        <p class="month-label">{{ monthLabel() }}</p>
-      </div>
-
-      <div class="calendar-nav" aria-label="Navigation du calendrier">
-        <div class="nav-group">
-          <span class="nav-label">Mois</span>
-          <div class="nav-actions">
-            <button type="button" class="nav-btn" (click)="previousMonth()" aria-label="Mois precedent">
-              <span class="nav-icon" aria-hidden="true">&#8249;</span>
-              <span>Precedent</span>
-            </button>
-            <button type="button" class="nav-btn" (click)="nextMonth()" aria-label="Mois suivant">
-              <span>Suivant</span>
-              <span class="nav-icon" aria-hidden="true">&#8250;</span>
-            </button>
-          </div>
+    <div class="heading-grid">
+      <div class="heading-left">
+        <div class="titles">
+          <h1>Planning hebdomadaire</h1>
+          <p class="month-label">{{ monthLabel() }}</p>
         </div>
 
-        <div class="nav-group">
-          <span class="nav-label">Semaine</span>
-          <div class="nav-actions">
-            <button type="button" class="nav-btn" (click)="previousWeek()" aria-label="Semaine precedente">
-              <span class="nav-icon" aria-hidden="true">&#8249;</span>
-              <span>Precedente</span>
+        <p>{{ weekLabel() }}</p>
+
+        <div class="staff-filter" role="radiogroup" aria-label="Filtrer par praticienne">
+          @for (item of staffFilters(); track item.id) {
+            <button
+              type="button"
+              class="chip"
+              [class.active-chip]="staffFilter() === item.id"
+              (click)="setStaffFilter(item.id)"
+            >
+              {{ item.label }}
             </button>
-            <button type="button" class="nav-btn" (click)="nextWeek()" aria-label="Semaine suivante">
-              <span>Suivante</span>
-              <span class="nav-icon" aria-hidden="true">&#8250;</span>
-            </button>
-          </div>
+          }
         </div>
 
-        <button type="button" class="nav-btn nav-btn-today" (click)="goToCurrentWeek()">Aujourd'hui</button>
-      </div>
-    </div>
+        @if (staffFilter() === 'all' && staff().length) {
+          <div class="staff-legend" aria-label="Legende des couleurs praticiennes">
+            @for (person of staff(); track person.id) {
+              <span class="legend-item">
+                <span class="legend-dot" [ngStyle]="getStaffStyle(person.id)"></span>
+                <span>{{ person.name }}</span>
+              </span>
+            }
+          </div>
+        }
 
-    <p>{{ weekLabel() }}</p>
-
-    <div class="staff-filter" role="radiogroup" aria-label="Filtrer par praticienne">
-      @for (item of staffFilters(); track item.id) {
-        <button
-          type="button"
-          class="chip"
-          [class.active-chip]="staffFilter() === item.id"
-          (click)="setStaffFilter(item.id)"
-        >
-          {{ item.label }}
-        </button>
-      }
-    </div>
-
-    @if (staffFilter() === 'all' && staff().length) {
-      <div class="staff-legend" aria-label="Legende des couleurs praticiennes">
-        @for (person of staff(); track person.id) {
-          <span class="legend-item">
-            <span class="legend-dot" [ngStyle]="getStaffStyle(person.id)"></span>
-            <span>{{ person.name }}</span>
-          </span>
+        @if (isMobile()) {
+          <div class="mobile-day-nav">
+            <button type="button" class="btn btn-ghost" [disabled]="mobileDayIndex() === 0" (click)="previousDay()">
+              Jour precedent
+            </button>
+            <strong>{{ visibleDays()[0].label }}</strong>
+            <button type="button" class="btn btn-ghost" [disabled]="mobileDayIndex() === 6" (click)="nextDay()">
+              Jour suivant
+            </button>
+          </div>
         }
       </div>
-    }
 
-    @if (isMobile()) {
-      <div class="mobile-day-nav">
-        <button type="button" class="btn btn-ghost" [disabled]="mobileDayIndex() === 0" (click)="previousDay()">
-          Jour precedent
-        </button>
-        <strong>{{ visibleDays()[0].label }}</strong>
-        <button type="button" class="btn btn-ghost" [disabled]="mobileDayIndex() === 6" (click)="nextDay()">
-          Jour suivant
-        </button>
+      <div class="heading-right">
+        <div class="calendar-nav" aria-label="Navigation du calendrier">
+          <div class="nav-group">
+            <span class="nav-label">Mois</span>
+            <div class="nav-actions">
+              <button type="button" class="nav-btn" (click)="previousMonth()" aria-label="Mois precedent">
+                <span class="nav-icon" aria-hidden="true">&#8249;</span>
+                <span>Precedent</span>
+              </button>
+              <button type="button" class="nav-btn" (click)="nextMonth()" aria-label="Mois suivant">
+                <span>Suivant</span>
+                <span class="nav-icon" aria-hidden="true">&#8250;</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <span class="nav-label">Semaine</span>
+            <div class="nav-actions">
+              <button type="button" class="nav-btn" (click)="previousWeek()" aria-label="Semaine precedente">
+                <span class="nav-icon" aria-hidden="true">&#8249;</span>
+                <span>Precedente</span>
+              </button>
+              <button type="button" class="nav-btn" (click)="nextWeek()" aria-label="Semaine suivante">
+                <span>Suivante</span>
+                <span class="nav-icon" aria-hidden="true">&#8250;</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="nav-btn nav-btn-today" (click)="goToCurrentWeek()">Aujourd'hui</button>
+        </div>
       </div>
-    }
+    </div>
   </header>
 
   @if (errorMessage()) {

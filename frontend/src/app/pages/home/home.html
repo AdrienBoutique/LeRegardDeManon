@@ -29,13 +29,13 @@
       <app-section-title [title]="content().offers.title" [subtitle]="content().offers.subtitle"></app-section-title>
 
       <div class="offers-rail-head">
-        @if (promotions.length > 1) {
+        @if (promotions.length > 3) {
           <p class="offers-rail-hint">Faites glisser ou utilisez les fleches pour voir toutes les offres.</p>
         }
       </div>
 
       <div class="offers-rail-wrap">
-        @if (promotions.length > 1) {
+        @if (promotions.length > 3) {
           <button type="button" class="rail-btn rail-btn-left" (click)="scrollOffers(-1)" aria-label="Voir les offres precedentes">
             <span aria-hidden="true">&#8249;</span>
           </button>
