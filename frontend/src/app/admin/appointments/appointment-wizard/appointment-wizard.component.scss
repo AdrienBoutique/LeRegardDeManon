@@ -99,6 +99,13 @@ textarea {
   background: #f4e9dd;
 }
 
+.service-item.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f4efea;
+  color: #7a6a5c;
+}
+
 .totals {
   border: 1px solid #e6d6ca;
   border-radius: 12px;
@@ -176,4 +183,3 @@ textarea {
     grid-template-columns: 1fr 1fr;
   }
 }
-

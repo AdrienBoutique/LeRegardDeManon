@@ -10,7 +10,7 @@ import {
 } from '../../../core/services/admin-planning.service';
 import { AppointmentDrawerComponent } from '../../appointments/appointment-drawer/appointment-drawer.component';
 import { AppointmentsApiService } from '../../appointments/appointments-api.service';
-import { Appointment, AppointmentServiceItem, ClientLite } from '../../appointments/appointment.models';
+import { Appointment, AppointmentServiceItem, AvailabilityRuleLite, ClientLite } from '../../appointments/appointment.models';
 import { AppointmentUiService } from '../../appointments/appointment-ui.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -478,10 +478,23 @@ export class AdminPlanning {
           this.timeOff.set(response.timeOff ?? []);
 
           const mappedAppointments = response.appointments.map((item) => this.toAppointment(item));
+          const staffAvailability: AvailabilityRuleLite[] = (response.staffAvailability ?? []).map((rule) => ({
+            staffId: rule.staffId,
+            weekday: rule.weekday,
+            startTime: rule.startTime,
+            endTime: rule.endTime
+          }));
+          const instituteAvailability: AvailabilityRuleLite[] = (response.instituteAvailability ?? []).map((rule) => ({
+            weekday: rule.weekday,
+            startTime: rule.startTime,
+            endTime: rule.endTime
+          }));
           this.appointmentUi.setContext({
             practitioners: response.staff.map((person) => ({ id: person.id, name: person.name })),
             appointments: mappedAppointments,
-            clients: this.buildClients(mappedAppointments)
+            clients: this.buildClients(mappedAppointments),
+            staffAvailability,
+            instituteAvailability
           });
           this.appointmentsApi.setFallbackAppointments(mappedAppointments);
 

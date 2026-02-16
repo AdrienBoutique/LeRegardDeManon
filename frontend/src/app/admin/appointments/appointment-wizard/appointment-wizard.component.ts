@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +7,7 @@ import { Subject, debounceTime, finalize, of, switchMap } from 'rxjs';
 import { AdminServicesApiService } from '../../../core/services/admin-services-api.service';
 import { AppointmentsApiService } from '../appointments-api.service';
 import {
+  AvailabilityRuleLite,
   Appointment,
   AppointmentDraft,
   AppointmentServiceItem,
@@ -25,6 +27,7 @@ export class AppointmentWizardComponent {
   private readonly servicesApi = inject(AdminServicesApiService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly conflictTrigger$ = new Subject<void>();
+  private wasOpen = false;
 
   protected readonly step = signal(1);
   protected readonly mode = signal<'create' | 'edit'>('create');
@@ -32,7 +35,11 @@ export class AppointmentWizardComponent {
   protected readonly editingId = signal<string | null>(null);
   protected readonly practitioners = signal<Array<{ id: string; name: string }>>([]);
   protected readonly clients = signal<ClientLite[]>([]);
+  protected readonly appointments = signal<Appointment[]>([]);
   protected readonly services = signal<AppointmentServiceItem[]>([]);
+  protected readonly staffAvailability = signal<AvailabilityRuleLite[]>([]);
+  protected readonly instituteAvailability = signal<AvailabilityRuleLite[]>([]);
+  protected readonly serviceQuery = signal('');
   protected readonly clientMode = signal<'existing' | 'new'>('existing');
   protected readonly clientQuery = signal('');
   protected readonly conflict = signal<{ conflict: boolean; conflictWith?: Appointment } | null>(null);
@@ -51,12 +58,30 @@ export class AppointmentWizardComponent {
     );
   });
 
-  protected readonly canGoStep2 = computed(() => {
-    const draft = this.draft();
-    return Boolean(draft.practitionerId && draft.startAt && draft.durationMin > 0 && !this.conflict()?.conflict);
+  protected readonly filteredServices = computed(() => {
+    const query = this.serviceQuery().trim().toLowerCase();
+    if (!query) {
+      return this.services();
+    }
+
+    return this.services().filter((item) => item.name.toLowerCase().includes(query));
   });
 
-  protected readonly canGoStep3 = computed(() => this.draft().services.length > 0);
+  protected readonly canGoStep2 = computed(() => {
+    const draft = this.draft();
+    return Boolean(draft.practitionerId && draft.startAt && !this.conflict()?.conflict && !this.conflictLoading());
+  });
+
+  protected readonly maxAvailableDurationMin = computed(() => this.computeMaxAvailableDurationMin());
+
+  protected readonly selectionFitsAvailability = computed(() => {
+    const max = this.maxAvailableDurationMin();
+    if (max === null) {
+      return true;
+    }
+    return this.draft().durationMin <= max;
+  });
+  protected readonly canGoStep3 = computed(() => this.draft().services.length > 0 && this.selectionFitsAvailability());
 
   protected readonly canGoStep4 = computed(() => {
     const draft = this.draft();
@@ -68,6 +93,16 @@ export class AppointmentWizardComponent {
   });
 
   constructor() {
+    this.ui.isOpen$.pipe(takeUntilDestroyed()).subscribe((isOpen) => {
+      if (isOpen && !this.wasOpen) {
+        this.step.set(1);
+        this.errorMessage.set('');
+        this.serviceQuery.set('');
+        this.clientQuery.set('');
+      }
+      this.wasOpen = isOpen;
+    });
+
     this.ui.mode$.pipe(takeUntilDestroyed()).subscribe((value) => this.mode.set(value));
     this.ui.editingId$.pipe(takeUntilDestroyed()).subscribe((value) => this.editingId.set(value));
     this.ui.draft$.pipe(takeUntilDestroyed()).subscribe((value) => {
@@ -77,13 +112,14 @@ export class AppointmentWizardComponent {
         clientDraft: value.clientDraft ?? { firstName: '', lastName: '', phone: '', email: '' }
       });
       this.clientMode.set(value.clientId ? 'existing' : 'new');
-      this.errorMessage.set('');
-      this.step.set(1);
       this.triggerConflictCheck();
     });
 
     this.ui.practitioners$.pipe(takeUntilDestroyed()).subscribe((value) => this.practitioners.set(value));
     this.ui.clients$.pipe(takeUntilDestroyed()).subscribe((value) => this.clients.set(value));
+    this.ui.appointments$.pipe(takeUntilDestroyed()).subscribe((value) => this.appointments.set(value));
+    this.ui.staffAvailability$.pipe(takeUntilDestroyed()).subscribe((value) => this.staffAvailability.set(value));
+    this.ui.instituteAvailability$.pipe(takeUntilDestroyed()).subscribe((value) => this.instituteAvailability.set(value));
     this.ui.servicesCatalog$.pipe(takeUntilDestroyed()).subscribe((value) => {
       if (value.length) {
         this.services.set(value);
@@ -176,6 +212,10 @@ export class AppointmentWizardComponent {
   }
 
   protected toggleService(item: AppointmentServiceItem): void {
+    if (this.isServiceDisabled(item.serviceId)) {
+      return;
+    }
+
     const current = this.draft().services;
     const exists = current.some((service) => service.serviceId === item.serviceId);
     const nextServices = exists
@@ -190,6 +230,24 @@ export class AppointmentWizardComponent {
 
   protected isServiceSelected(serviceId: string): boolean {
     return this.draft().services.some((item) => item.serviceId === serviceId);
+  }
+
+  protected isServiceDisabled(serviceId: string): boolean {
+    if (this.isServiceSelected(serviceId)) {
+      return false;
+    }
+
+    const item = this.services().find((service) => service.serviceId === serviceId);
+    if (!item) {
+      return false;
+    }
+
+    const max = this.maxAvailableDurationMin();
+    if (max === null) {
+      return false;
+    }
+
+    return this.draft().durationMin + item.durationMin > max;
   }
 
   protected switchClientMode(mode: 'existing' | 'new'): void {
@@ -247,6 +305,50 @@ export class AppointmentWizardComponent {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
   }
 
+  protected practitionerNameById(practitionerId?: string): string {
+    if (!practitionerId) {
+      return 'Non definie';
+    }
+    return this.practitioners().find((item) => item.id === practitionerId)?.name ?? practitionerId;
+  }
+
+  protected formatDateTime(value?: string): string {
+    if (!value) {
+      return 'Non definie';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  }
+
+  protected selectedServicesLabel(): string {
+    if (!this.draft().services.length) {
+      return 'Aucun';
+    }
+    return this.draft()
+      .services.map((item) => item.name)
+      .join(', ');
+  }
+
+  protected statusLabel(status: AppointmentDraft['status']): string {
+    if (status === 'confirmed') {
+      return 'Confirme';
+    }
+    if (status === 'pending') {
+      return 'En attente';
+    }
+    return 'Bloque';
+  }
+
   protected conflictLabel(): string {
     const conflict = this.conflict();
     if (!conflict?.conflictWith) {
@@ -259,8 +361,9 @@ export class AppointmentWizardComponent {
   }
 
   protected save(): void {
-    if (!this.canSubmit()) {
-      this.errorMessage.set('Completez les champs requis avant de valider.');
+    const blockingReason = this.getSubmitBlockingReason();
+    if (blockingReason) {
+      this.errorMessage.set(blockingReason);
       return;
     }
 
@@ -284,13 +387,18 @@ export class AppointmentWizardComponent {
         this.ui.notifySaved();
         this.ui.close();
       },
-      error: () => {
-        this.errorMessage.set("Impossible d'enregistrer le rendez-vous.");
+      error: (error) => {
+        this.errorMessage.set(this.extractSaveErrorMessage(error));
       }
     });
   }
 
   private triggerConflictCheck(): void {
+    const draft = this.draft();
+    if (!draft.durationMin || draft.durationMin <= 0) {
+      this.conflict.set(null);
+      return;
+    }
     this.conflictTrigger$.next();
   }
 
@@ -300,6 +408,91 @@ export class AppointmentWizardComponent {
     }
 
     return Boolean(draft.clientDraft?.firstName?.trim() && draft.clientDraft?.lastName?.trim());
+  }
+
+  private getSubmitBlockingReason(): string | null {
+    const draft = this.draft();
+
+    if (this.conflictLoading()) {
+      return 'Verification de conflit en cours, veuillez patienter.';
+    }
+    if (!draft.practitionerId) {
+      return 'Selectionnez une praticienne.';
+    }
+    if (!draft.startAt) {
+      return 'Selectionnez une date et une heure.';
+    }
+    if (!draft.services.length) {
+      return 'Selectionnez au moins un service.';
+    }
+    if (!draft.durationMin || draft.durationMin <= 0) {
+      return 'La duree est calculee automatiquement depuis les services.';
+    }
+    if (!this.selectionFitsAvailability()) {
+      const max = this.maxAvailableDurationMin();
+      if (max !== null) {
+        return `La duree totale depasse le temps disponible (${max} min).`;
+      }
+      return 'La duree totale depasse le temps disponible.';
+    }
+    if (this.conflict()?.conflict) {
+      return this.conflictLabel();
+    }
+    if (!this.hasClientInput(draft)) {
+      return 'Selectionnez une cliente existante ou renseignez nom et prenom.';
+    }
+    return null;
+  }
+
+  private extractSaveErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      const api = error.error;
+      const apiMessage =
+        (typeof api === 'string' && api) ||
+        (api && typeof api === 'object' && (
+          api.message ||
+          api.error ||
+          api.detail ||
+          api.title
+        ));
+
+      if (typeof apiMessage === 'string' && apiMessage.trim()) {
+        return this.humanizeApiMessage(apiMessage);
+      }
+
+      if (error.status === 409) {
+        return 'Conflit detecte: ce creneau est deja pris.';
+      }
+      if (error.status === 400) {
+        return 'Donnees invalides. Verifiez les champs du rendez-vous.';
+      }
+      if (error.status === 401 || error.status === 403) {
+        return "Vous n'avez pas les droits pour enregistrer ce rendez-vous.";
+      }
+      if (error.status >= 500) {
+        return 'Erreur serveur. Reessayez dans quelques instants.';
+      }
+    }
+
+    if (error instanceof Error && error.message.trim()) {
+      return this.humanizeApiMessage(error.message);
+    }
+
+    return "Impossible d'enregistrer le rendez-vous.";
+  }
+
+  private humanizeApiMessage(message: string): string {
+    const normalized = message.trim().toLowerCase();
+    if (normalized.includes('selected staff cannot perform all selected services')) {
+      return 'La praticienne selectionnee ne peut pas realiser tous les services choisis. Modifiez la praticienne ou les soins.';
+    }
+    if (normalized.includes('cannot perform all selected services')) {
+      return 'Ce membre du staff ne peut pas realiser tous les services choisis.';
+    }
+    if (normalized.includes('conflict')) {
+      return 'Conflit detecte: ce creneau est deja pris.';
+    }
+    return message;
   }
 
   private toPayload(draft: AppointmentDraft): AppointmentUpsertPayload | null {
@@ -329,10 +522,104 @@ export class AppointmentWizardComponent {
     };
   }
 
+  private computeMaxAvailableDurationMin(): number | null {
+    const draft = this.draft();
+    if (!draft.practitionerId || !draft.startAt) {
+      return null;
+    }
+
+    const start = new Date(draft.startAt);
+    if (Number.isNaN(start.getTime())) {
+      return null;
+    }
+
+    const byStaff = this.remainingMinutesFromRules(
+      start,
+      this.staffAvailability().filter((rule) => rule.staffId === draft.practitionerId)
+    );
+    const byInstitute = this.remainingMinutesFromRules(start, this.instituteAvailability());
+    const byNextAppointment = this.remainingMinutesBeforeNextAppointment(start, draft.practitionerId, this.editingId() ?? undefined);
+
+    const candidates = [byStaff, byInstitute, byNextAppointment].filter((value): value is number => value !== null);
+    if (!candidates.length) {
+      return null;
+    }
+
+    return Math.max(0, Math.min(...candidates));
+  }
+
+  private remainingMinutesFromRules(start: Date, rules: AvailabilityRuleLite[]): number | null {
+    if (!rules.length) {
+      return null;
+    }
+
+    const weekday = start.getDay();
+    const dayRules = rules.filter((rule) => rule.weekday === weekday);
+    if (!dayRules.length) {
+      return 0;
+    }
+
+    const startMinute = start.getHours() * 60 + start.getMinutes();
+    const candidates = dayRules
+      .map((rule) => {
+        const startRuleMin = this.timeToMinutes(rule.startTime);
+        const endRuleMin = this.timeToMinutes(rule.endTime);
+        if (startMinute < startRuleMin || startMinute >= endRuleMin) {
+          return null;
+        }
+        return Math.max(0, endRuleMin - startMinute);
+      })
+      .filter((value): value is number => value !== null);
+
+    if (!candidates.length) {
+      return 0;
+    }
+
+    return Math.max(...candidates);
+  }
+
+  private remainingMinutesBeforeNextAppointment(start: Date, practitionerId: string, excludeId?: string): number | null {
+    const startMs = start.getTime();
+    const nextStartOffsets: number[] = [];
+
+    for (const item of this.appointments()) {
+      if (item.practitionerId !== practitionerId) {
+        continue;
+      }
+      if (excludeId && item.id === excludeId) {
+        continue;
+      }
+
+      const itemStart = new Date(item.startAt).getTime();
+      const itemEnd = itemStart + item.durationMin * 60_000;
+      if (Number.isNaN(itemStart) || Number.isNaN(itemEnd)) {
+        continue;
+      }
+
+      if (startMs >= itemStart && startMs < itemEnd) {
+        return 0;
+      }
+      if (itemStart > startMs) {
+        nextStartOffsets.push(Math.floor((itemStart - startMs) / 60_000));
+      }
+    }
+
+    if (!nextStartOffsets.length) {
+      return null;
+    }
+
+    return Math.max(0, Math.min(...nextStartOffsets));
+  }
+
+  private timeToMinutes(value: string): number {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
   private emptyDraft(): AppointmentDraft {
     return {
       services: [],
-      durationMin: 30,
+      durationMin: 0,
       priceTotal: 0,
       status: 'confirmed'
     };

@@ -30,12 +30,12 @@
         <input type="datetime-local" [ngModel]="startAtInputValue()" (ngModelChange)="setStartAt($event)" />
       </label>
 
-      <label>
-        Duree (min)
-        <input type="number" [ngModel]="draft().durationMin" readonly />
-      </label>
-
-      @if (conflictLoading()) {
+      @if (!draft().practitionerId) {
+        <p class="hint">Choisissez une praticienne pour continuer.</p>
+      }
+      @if (draft().durationMin <= 0) {
+        <p class="hint">La duree sera calculee automatiquement a l'etape Services.</p>
+      } @else if (conflictLoading()) {
         <p class="hint">Verification des conflits...</p>
       } @else if (conflict()?.conflict) {
         <p class="error">{{ conflictLabel() }}</p>
@@ -48,12 +48,22 @@
   @if (step() === 2) {
     <section class="step-panel">
       <h3>Services</h3>
+      <label>
+        Rechercher un service
+        <input
+          [ngModel]="serviceQuery()"
+          (ngModelChange)="serviceQuery.set($event)"
+          placeholder="Ex: Brow lift"
+        />
+      </label>
       <div class="services-list">
-        @for (item of services(); track item.serviceId) {
+        @for (item of filteredServices(); track item.serviceId) {
           <button
             type="button"
             class="service-item"
             [class.selected]="isServiceSelected(item.serviceId)"
+            [class.is-disabled]="isServiceDisabled(item.serviceId)"
+            [disabled]="isServiceDisabled(item.serviceId)"
             (click)="toggleService(item)"
           >
             <strong>{{ item.name }}</strong>
@@ -62,6 +72,15 @@
           </button>
         }
       </div>
+      @if (filteredServices().length === 0) {
+        <p class="hint">Aucun service trouve.</p>
+      }
+      @if (maxAvailableDurationMin() !== null) {
+        <p class="hint">Temps disponible pour ce creneau: {{ maxAvailableDurationMin() }} min.</p>
+      }
+      @if (!selectionFitsAvailability()) {
+        <p class="error">La selection depasse le temps disponible. Retirez un soin ou changez le creneau.</p>
+      }
       <div class="totals">
         <p><strong>Duree totale:</strong> {{ draft().durationMin }} min</p>
         <p><strong>Total:</strong> {{ formatMoney(draft().priceTotal) }}</p>
@@ -132,11 +151,12 @@
     <section class="step-panel">
       <h3>Confirmation</h3>
       <div class="summary">
-        <p><strong>Praticienne:</strong> {{ draft().practitionerId || 'Non definie' }}</p>
-        <p><strong>Date:</strong> {{ draft().startAt || 'Non definie' }}</p>
-        <p><strong>Services:</strong> {{ draft().services.length }}</p>
+        <p><strong>Praticienne:</strong> {{ practitionerNameById(draft().practitionerId) }}</p>
+        <p><strong>Date:</strong> {{ formatDateTime(draft().startAt) }}</p>
+        <p><strong>Services:</strong> {{ selectedServicesLabel() }}</p>
         <p><strong>Duree:</strong> {{ draft().durationMin }} min</p>
         <p><strong>Total:</strong> {{ formatMoney(draft().priceTotal) }}</p>
+        <p><strong>Statut:</strong> {{ statusLabel(draft().status) }}</p>
       </div>
 
       <label>
@@ -163,7 +183,14 @@
     <button type="button" class="btn btn-ghost" [disabled]="step() === 1" (click)="previousStep()">Retour</button>
 
     @if (step() < 4) {
-      <button type="button" class="btn btn-primary" (click)="nextStep()">Suivant</button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="(step() === 1 && !canGoStep2()) || (step() === 2 && !canGoStep3()) || (step() === 3 && !canGoStep4())"
+        (click)="nextStep()"
+      >
+        Suivant
+      </button>
     } @else {
       <button type="button" class="btn btn-primary" [disabled]="saving() || !canSubmit()" (click)="save()">
         {{ saving() ? 'Enregistrement...' : mode() === 'create' ? 'Creer' : 'Enregistrer' }}

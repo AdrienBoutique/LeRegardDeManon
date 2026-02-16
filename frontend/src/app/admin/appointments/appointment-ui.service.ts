@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
+  AvailabilityRuleLite,
   Appointment,
   AppointmentDraft,
   AppointmentServiceItem,
@@ -11,7 +12,7 @@ import {
 function createDefaultDraft(): AppointmentDraft {
   return {
     services: [],
-    durationMin: 30,
+    durationMin: 0,
     priceTotal: 0,
     status: 'confirmed'
   };
@@ -28,6 +29,8 @@ export class AppointmentUiService {
   readonly servicesCatalog$ = new BehaviorSubject<AppointmentServiceItem[]>([]);
   readonly clients$ = new BehaviorSubject<ClientLite[]>([]);
   readonly appointments$ = new BehaviorSubject<Appointment[]>([]);
+  readonly staffAvailability$ = new BehaviorSubject<AvailabilityRuleLite[]>([]);
+  readonly instituteAvailability$ = new BehaviorSubject<AvailabilityRuleLite[]>([]);
 
   readonly saved$ = new Subject<void>();
 
@@ -87,6 +90,8 @@ export class AppointmentUiService {
     servicesCatalog?: AppointmentServiceItem[];
     clients?: ClientLite[];
     appointments?: Appointment[];
+    staffAvailability?: AvailabilityRuleLite[];
+    instituteAvailability?: AvailabilityRuleLite[];
   }): void {
     if (input.practitioners) {
       this.practitioners$.next(input.practitioners);
@@ -99,6 +104,12 @@ export class AppointmentUiService {
     }
     if (input.appointments) {
       this.appointments$.next(input.appointments);
+    }
+    if (input.staffAvailability) {
+      this.staffAvailability$.next(input.staffAvailability);
+    }
+    if (input.instituteAvailability) {
+      this.instituteAvailability$.next(input.instituteAvailability);
     }
   }
 
@@ -126,4 +137,3 @@ export class AppointmentUiService {
     };
   }
 }
-

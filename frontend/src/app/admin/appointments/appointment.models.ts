@@ -20,6 +20,13 @@ export interface PractitionerLite {
   name: string;
 }
 
+export interface AvailabilityRuleLite {
+  staffId?: string;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+}
+
 export interface AppointmentDraft {
   practitionerId?: string;
   startAt?: string;
@@ -65,4 +72,3 @@ export interface AppointmentUpsertPayload {
   notes?: string;
   status: AppointmentStatus;
 }
-
