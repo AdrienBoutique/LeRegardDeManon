@@ -36,7 +36,11 @@ export type WeeklyAvailabilityDay = {
 };
 
 export type WeeklyAvailabilityResponse = {
-  staffId: string;
+  staffId?: string;
+  days: WeeklyAvailabilityDay[];
+};
+
+export type InstituteWeeklyAvailabilityResponse = {
   days: WeeklyAvailabilityDay[];
 };
 
@@ -110,11 +114,39 @@ export class AdminInstituteApiService {
     return this.listAvailability(staffId);
   }
 
+  getInstituteAvailability(): Observable<Array<{
+    id: string | null;
+    weekday: number;
+    off?: boolean;
+    startTime: string | null;
+    endTime: string | null;
+    active: boolean;
+    createdAt: string | null;
+    updatedAt: string | null;
+  }>> {
+    return this.http.get<Array<{
+      id: string | null;
+      weekday: number;
+      off?: boolean;
+      startTime: string | null;
+      endTime: string | null;
+      active: boolean;
+      createdAt: string | null;
+      updatedAt: string | null;
+    }>>(`${this.adminBaseUrl}/availability/institute`);
+  }
+
   updateAvailability(
     staffId: string,
     days: Array<{ weekday: number; off: boolean; startTime?: string; endTime?: string }>
   ): Observable<WeeklyAvailabilityResponse> {
     return this.http.put<WeeklyAvailabilityResponse>(`${this.adminBaseUrl}/staff/${staffId}/availability`, { days });
+  }
+
+  updateInstituteAvailability(
+    days: Array<{ weekday: number; off: boolean; startTime?: string; endTime?: string }>
+  ): Observable<InstituteWeeklyAvailabilityResponse> {
+    return this.http.put<InstituteWeeklyAvailabilityResponse>(`${this.adminBaseUrl}/availability/institute`, { days });
   }
 
   createAvailability(

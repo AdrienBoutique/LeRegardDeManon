@@ -15,6 +15,7 @@ import { AdminStaffDetail } from './admin/pages/admin-staff-detail/admin-staff-d
 import { AdminPlanning } from './admin/pages/admin-planning/admin-planning';
 import { AdminHours } from './admin/pages/admin-hours/admin-hours';
 import { AdminTimeOff } from './admin/pages/admin-timeoff/admin-timeoff';
+import { AdminPromotions } from './admin/pages/promotions/admin-promotions';
 import { AdminLayout } from './admin/layout/admin-layout';
 import { adminGuard } from './core/guards/admin.guard';
 
@@ -26,6 +27,7 @@ export const routes: Routes = [
     canActivate: [adminGuard],
     children: [
       { path: 'services', component: AdminServices },
+      { path: 'promotions', component: AdminPromotions },
       { path: 'staff', component: AdminStaffList },
       { path: 'staff/:id', component: AdminStaffDetail },
       { path: 'praticiennes', redirectTo: 'staff', pathMatch: 'full' },

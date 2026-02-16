@@ -224,6 +224,8 @@ export class Booking {
           this.loadEligibleServices(startAt, this.form.controls.staffId.value || undefined);
         }
       });
+
+    this.ensureInitialDateSelected();
   }
 
   protected selectStaff(staffId: string): void {
@@ -239,7 +241,7 @@ export class Booking {
 
   protected onDaySelect(dayYmd: string): void {
     this.form.controls.date.setValue(dayYmd);
-    const selectedDate = new Date(dayYmd);
+    const selectedDate = this.parseYmdToLocalDate(dayYmd);
     if (
       selectedDate.getFullYear() !== this.monthDate().getFullYear() ||
       selectedDate.getMonth() !== this.monthDate().getMonth()
@@ -251,7 +253,7 @@ export class Booking {
 
   protected selectStart(startAt: string): void {
     const start = this.freeStarts().find((item) => item.startAt === startAt);
-    if (start && !this.isStartCompatible(start)) {
+    if (start && !this.isStartSelectable(start)) {
       return;
     }
 
@@ -431,8 +433,30 @@ export class Booking {
     return this.slotCompatibilityByStart().get(start.startAt)?.compatible ?? true;
   }
 
+  protected isStartInPast(start: FreeStartItem): boolean {
+    const startMs = Date.parse(start.startAt);
+    if (Number.isNaN(startMs)) {
+      return false;
+    }
+
+    return startMs <= Date.now();
+  }
+
+  protected isStartSelectable(start: FreeStartItem): boolean {
+    return this.isStartCompatible(start) && !this.isStartInPast(start);
+  }
+
   protected startCompatibilityLabel(start: FreeStartItem): string {
-    return this.slotCompatibilityByStart().get(start.startAt)?.label ?? 'OK';
+    if (this.isStartInPast(start)) {
+      return 'Heure passee';
+    }
+
+    const requiredMin = this.totalDurationMin();
+    if (requiredMin <= 0) {
+      return '';
+    }
+
+    return this.slotCompatibilityByStart().get(start.startAt)?.label ?? '';
   }
 
   protected canAddService(service: EligibleServiceItem): boolean {
@@ -632,7 +656,42 @@ export class Booking {
       )
       .subscribe((meta) => {
         this.dayMeta.set(meta);
+        this.ensureDateSelectionFromMeta(meta, monthDate);
       });
+  }
+
+  private ensureInitialDateSelected(): void {
+    if (this.form.controls.date.value) {
+      return;
+    }
+
+    this.form.controls.date.setValue(this.toYmd(new Date()));
+  }
+
+  private ensureDateSelectionFromMeta(meta: MonthDayMeta, monthDate: Date): void {
+    const current = this.form.controls.date.value;
+    const currentLevel = current ? meta[current]?.level ?? 'none' : 'none';
+
+    if (current && currentLevel !== 'none') {
+      return;
+    }
+
+    const monthPrefix = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}-`;
+    const todayYmd = this.toYmd(new Date());
+    const availableDays = Object.entries(meta)
+      .filter(([ymd, item]) => ymd.startsWith(monthPrefix) && item.level !== 'none')
+      .map(([ymd]) => ymd)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (availableDays.length === 0) {
+      return;
+    }
+
+    const preferred = availableDays.find((ymd) => ymd >= todayYmd) ?? availableDays[0];
+
+    if (preferred !== current) {
+      this.form.controls.date.setValue(preferred);
+    }
   }
 
   private resetAfterDateOrStaffChange(): void {
@@ -756,5 +815,10 @@ export class Booking {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private parseYmdToLocalDate(ymd: string): Date {
+    const [year, month, day] = ymd.split('-').map(Number);
+    return new Date(year, month - 1, day);
   }
 }

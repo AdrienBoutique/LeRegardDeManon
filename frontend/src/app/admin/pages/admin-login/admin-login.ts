@@ -22,6 +22,12 @@ export class AdminLogin {
     password: ['', [Validators.required]]
   });
 
+  constructor() {
+    if (this.authService.isLoggedIn()) {
+      this.router.navigateByUrl('/admin/services');
+    }
+  }
+
   protected submit(): void {
     if (this.form.invalid || this.loading()) {
       this.form.markAllAsTouched();

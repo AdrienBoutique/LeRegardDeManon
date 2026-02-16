@@ -1,0 +1,278 @@
+<section class="admin-promotions stack">
+  <header class="card heading">
+    <h1>Promotions</h1>
+    <p>Creez et pilotez vos offres du moment.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  <section class="card create-card">
+    <h2>Creer une offre</h2>
+
+    <form class="stack" [formGroup]="createForm" (ngSubmit)="submitCreate()">
+      <div class="grid two-cols">
+        <label>
+          Titre
+          <input type="text" formControlName="title" placeholder="Ex: Offre Saint-Valentin" />
+        </label>
+
+        <label>
+          Sous-titre (optionnel)
+          <input type="text" formControlName="subtitle" placeholder="Ex: Offres du moment" />
+        </label>
+      </div>
+
+      <label>
+        Description (optionnel)
+        <textarea rows="3" formControlName="description" placeholder="Details de l'offre"></textarea>
+      </label>
+
+      <div class="grid two-cols">
+        <div class="field-block">
+          <p class="field-label">Type de remise</p>
+          <div class="discount-pills" role="radiogroup" aria-label="Type remise creation">
+            <button
+              type="button"
+              class="pill"
+              [class.active]="createForm.controls.discountType.value === 'PERCENT'"
+              (click)="createForm.controls.discountType.setValue('PERCENT')"
+            >
+              %
+            </button>
+            <button
+              type="button"
+              class="pill"
+              [class.active]="createForm.controls.discountType.value === 'FIXED'"
+              (click)="createForm.controls.discountType.setValue('FIXED')"
+            >
+              EUR
+            </button>
+          </div>
+        </div>
+
+        <label>
+          Valeur remise ({{ discountUnitLabel('create') }})
+          <input type="number" step="0.01" formControlName="discountValue" />
+          <span class="hint">{{ discountHint('create') }}</span>
+        </label>
+      </div>
+
+      <div class="grid two-cols">
+        <label>
+          Date debut
+          <input type="date" formControlName="startDate" />
+        </label>
+
+        <label>
+          Date fin
+          <input type="date" formControlName="endDate" />
+        </label>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" formControlName="active" />
+        Offre active
+      </label>
+
+      <section class="services-picker stack">
+        <div class="picker-top">
+          <h3>Services associes</h3>
+          <span class="chip">{{ createForm.controls.serviceIds.value.length }} selectionne(s)</span>
+        </div>
+
+        <label>
+          Rechercher un service
+          <input type="search" [value]="createSearch()" (input)="setCreateSearch($any($event.target).value)" />
+        </label>
+
+        <div class="chips-wrap">
+          @for (service of filteredCreateServices(); track service.id) {
+            <button
+              type="button"
+              class="service-chip"
+              [class.active]="isCreateServiceSelected(service.id)"
+              (click)="toggleCreateService(service.id)"
+            >
+              {{ service.name }} - {{ formatPrice(service.priceCents) }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <aside class="preview-card">
+        <p class="overline">Apercu carte publique</p>
+        <h3>{{ createForm.controls.title.value || 'Titre de l\'offre' }}</h3>
+        <p class="discount-line">{{ previewDiscountLabel('create') }}</p>
+
+        @if (createSelectedServices().length > 0) {
+          <ul>
+            @for (service of createSelectedServices(); track service.id) {
+              <li>
+                <span>{{ service.name }}</span>
+                <span>{{ formatPrice(service.priceCents) }} -> {{ formatPrice(previewDiscountedPrice(service, 'create')) }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="hint">Selectionnez des services pour voir le rendu.</p>
+        }
+      </aside>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Creation...' : 'Creer l\'offre' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="stack offers-list">
+    <h2>Offres existantes</h2>
+
+    @if (loading()) {
+      <article class="card">Chargement...</article>
+    }
+
+    @for (promotion of promotions(); track promotion.id) {
+      <article class="card offer-item">
+        <div class="offer-top">
+          <div>
+            <h3>{{ promotion.title }}</h3>
+            @if (promotion.subtitle) {
+              <p>{{ promotion.subtitle }}</p>
+            }
+          </div>
+          <span class="chip" [class.inactive]="!promotion.active">{{ promotion.active ? 'Active' : 'Inactive' }}</span>
+        </div>
+
+        <p>{{ formatPeriod(promotion.startAt, promotion.endAt) }}</p>
+        <p class="discount-summary">{{ promotion.computedDiscountLabel }}</p>
+
+        <div class="linked-services">
+          @for (service of promotion.services; track service.id) {
+            <span class="service-chip static">{{ service.name }}</span>
+          }
+        </div>
+
+        <ul class="price-preview">
+          @for (service of promotion.services; track service.id) {
+            <li>{{ service.name }}: {{ formatPrice(service.priceCents) }} -> {{ formatPrice(service.discountedPriceCents) }}</li>
+          }
+        </ul>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" (click)="startEdit(promotion)">Editer</button>
+          <button type="button" class="btn btn-ghost" (click)="togglePromotion(promotion)">
+            {{ promotion.active ? 'Desactiver' : 'Activer' }}
+          </button>
+          <button type="button" class="btn btn-ghost" (click)="deletePromotion(promotion)">Supprimer</button>
+        </div>
+
+        @if (editingId() === promotion.id) {
+          <form class="stack edit-box" [formGroup]="editForm" (ngSubmit)="submitEdit()">
+            <h4>Modifier l'offre</h4>
+
+            <div class="grid two-cols">
+              <label>
+                Titre
+                <input type="text" formControlName="title" />
+              </label>
+
+              <label>
+                Sous-titre
+                <input type="text" formControlName="subtitle" />
+              </label>
+            </div>
+
+            <label>
+              Description
+              <textarea rows="3" formControlName="description"></textarea>
+            </label>
+
+            <div class="grid two-cols">
+              <div class="field-block">
+                <p class="field-label">Type de remise</p>
+                <div class="discount-pills" role="radiogroup" aria-label="Type remise edition">
+                  <button
+                    type="button"
+                    class="pill"
+                    [class.active]="editForm.controls.discountType.value === 'PERCENT'"
+                    (click)="editForm.controls.discountType.setValue('PERCENT')"
+                  >
+                    %
+                  </button>
+                  <button
+                    type="button"
+                    class="pill"
+                    [class.active]="editForm.controls.discountType.value === 'FIXED'"
+                    (click)="editForm.controls.discountType.setValue('FIXED')"
+                  >
+                    EUR
+                  </button>
+                </div>
+              </div>
+
+              <label>
+                Valeur remise ({{ discountUnitLabel('edit') }})
+                <input type="number" step="0.01" formControlName="discountValue" />
+                <span class="hint">{{ discountHint('edit') }}</span>
+              </label>
+            </div>
+
+            <div class="grid two-cols">
+              <label>
+                Date debut
+                <input type="date" formControlName="startDate" />
+              </label>
+
+              <label>
+                Date fin
+                <input type="date" formControlName="endDate" />
+              </label>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" formControlName="active" />
+              Offre active
+            </label>
+
+            <label>
+              Rechercher un service
+              <input type="search" [value]="editSearch()" (input)="setEditSearch($any($event.target).value)" />
+            </label>
+
+            <div class="chips-wrap">
+              @for (service of filteredEditServices(); track service.id) {
+                <button
+                  type="button"
+                  class="service-chip"
+                  [class.active]="isEditServiceSelected(service.id)"
+                  (click)="toggleEditService(service.id)"
+                >
+                  {{ service.name }} - {{ formatPrice(service.priceCents) }}
+                </button>
+              }
+            </div>
+
+            <aside class="preview-card mini">
+              <p class="overline">Apercu</p>
+              <p class="discount-line">{{ previewDiscountLabel('edit') }}</p>
+              <ul>
+                @for (service of editSelectedServices(); track service.id) {
+                  <li>{{ service.name }}: {{ formatPrice(service.priceCents) }} -> {{ formatPrice(previewDiscountedPrice(service, 'edit')) }}</li>
+                }
+              </ul>
+            </aside>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">Sauvegarder</button>
+              <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Annuler</button>
+            </div>
+          </form>
+        }
+      </article>
+    }
+  </section>
+</section>

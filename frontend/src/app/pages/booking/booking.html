@@ -73,12 +73,14 @@
                 type="button"
                 class="time-pill"
                 [class.active]="isSelectedStart(start.startAt)"
-                [class.unavailable]="!isStartCompatible(start)"
-                [disabled]="!isStartCompatible(start)"
+                [class.unavailable]="!isStartSelectable(start)"
+                [disabled]="!isStartSelectable(start)"
                 (click)="selectStart(start.startAt)"
               >
                 <strong>{{ formatHour(start.startAt) }}</strong>
-                <span>{{ startCompatibilityLabel(start) }}</span>
+                @if (startCompatibilityLabel(start); as label) {
+                  <span>{{ label }}</span>
+                }
               </button>
             }
           </div>

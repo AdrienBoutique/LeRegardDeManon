@@ -1,0 +1,195 @@
+.admin-promotions {
+  gap: 1rem;
+}
+
+.heading,
+.create-card,
+.offer-item,
+.error-box {
+  padding: 1rem;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-soft);
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  color: #5f4f42;
+  font-weight: 600;
+}
+
+input,
+textarea {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.62rem 0.72rem;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field-label {
+  margin: 0;
+  color: #5f4f42;
+  font-weight: 600;
+}
+
+.discount-pills {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.pill {
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #5f4f42;
+  min-width: 56px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+.pill.active {
+  border-color: var(--color-primary);
+  background: #fff4ea;
+  color: #4f392d;
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.check-row input {
+  width: auto;
+}
+
+.picker-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chips-wrap,
+.linked-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.service-chip {
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #5f4f42;
+  padding: 0.34rem 0.62rem;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.service-chip.active {
+  border-color: var(--color-primary);
+  background: #fff2e7;
+  color: #523c2e;
+}
+
+.service-chip.static {
+  cursor: default;
+}
+
+.preview-card {
+  border: 1px dashed #dbc7b7;
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  background: #fffcf9;
+}
+
+.preview-card ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.preview-card.mini {
+  background: #fff;
+}
+
+.overline {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b7a6d;
+}
+
+.discount-line,
+.discount-summary {
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+  color: #4d3627;
+}
+
+.offer-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.price-preview {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: #5a4a3d;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.edit-box {
+  margin-top: 0.8rem;
+  border-top: 1px solid #eadfd6;
+  padding-top: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.error-box {
+  color: #9f1f1f;
+}
+
+.two-cols {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -50,6 +50,17 @@
   white-space: nowrap;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.back-site-btn {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 @media (min-width: 900px) {
   .topbar-main {
     padding-inline: 2.5rem;

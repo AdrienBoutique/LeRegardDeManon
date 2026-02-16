@@ -32,6 +32,11 @@ export type PlanningResponse = {
     startTime: string;
     endTime: string;
   }>;
+  instituteAvailability?: Array<{
+    weekday: number;
+    startTime: string;
+    endTime: string;
+  }>;
   timeOff: Array<{
     id: string;
     staffId: string;

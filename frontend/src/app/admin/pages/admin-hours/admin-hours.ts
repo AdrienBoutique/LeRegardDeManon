@@ -10,6 +10,8 @@ type EditableDay = {
   endTime: string;
 };
 
+type HoursTarget = 'institute' | 'staff';
+
 const DAYS: Array<{ weekday: number; label: string }> = [
   { weekday: 0, label: 'Dimanche' },
   { weekday: 1, label: 'Lundi' },
@@ -31,14 +33,18 @@ export class AdminHours {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly loadingStaff = signal(false);
+  protected readonly loadingInstitute = signal(false);
   protected readonly loadingAvailability = signal(false);
   protected readonly saving = signal(false);
+  protected readonly savingInstitute = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly toastMessage = signal('');
+  protected readonly target = signal<HoursTarget>('institute');
 
   protected readonly staff = signal<AdminStaffItem[]>([]);
   protected readonly selectedStaffId = signal<string | null>(null);
   protected readonly days = signal<EditableDay[]>(this.getDefaultDays());
+  protected readonly instituteDays = signal<EditableDay[]>(this.getDefaultDays());
 
   protected readonly hasStaff = computed(() => this.staff().length > 0);
 
@@ -49,7 +55,12 @@ export class AdminHours {
       }
     });
 
+    this.fetchInstituteAvailability();
     this.fetchStaff();
+  }
+
+  protected setTarget(target: HoursTarget): void {
+    this.target.set(target);
   }
 
   protected selectStaff(staffId: string): void {
@@ -62,33 +73,25 @@ export class AdminHours {
   }
 
   protected toggleOff(weekday: number, off: boolean): void {
-    this.days.update((items) =>
-      items.map((item) =>
-        item.weekday === weekday
-          ? {
-              ...item,
-              off,
-              startTime: off ? item.startTime : item.startTime || '09:00',
-              endTime: off ? item.endTime : item.endTime || '18:00'
-            }
-          : item
-      )
-    );
+    this.toggleOffOnState(this.target() === 'institute' ? this.instituteDays : this.days, weekday, off);
   }
 
   protected updateTime(weekday: number, key: 'startTime' | 'endTime', value: string): void {
-    this.days.update((items) =>
-      items.map((item) => (item.weekday === weekday ? { ...item, [key]: value } : item))
-    );
+    this.updateTimeOnState(this.target() === 'institute' ? this.instituteDays : this.days, weekday, key, value);
   }
 
   protected save(): void {
+    if (this.target() === 'institute') {
+      this.saveInstitute();
+      return;
+    }
+
     const staffId = this.selectedStaffId();
     if (!staffId || this.saving()) {
       return;
     }
 
-    const validationError = this.validateDays();
+    const validationError = this.validateDays(this.days());
     if (validationError) {
       this.errorMessage.set(validationError);
       return;
@@ -116,6 +119,71 @@ export class AdminHours {
           this.errorMessage.set(error.error?.error ?? 'Impossible de sauvegarder les horaires.');
         }
       });
+  }
+
+  private saveInstitute(): void {
+    if (this.savingInstitute()) {
+      return;
+    }
+
+    const validationError = this.validateDays(this.instituteDays());
+    if (validationError) {
+      this.errorMessage.set(validationError);
+      return;
+    }
+
+    const payload = this.instituteDays().map((day) => ({
+      weekday: day.weekday,
+      off: day.off,
+      startTime: day.off ? undefined : day.startTime,
+      endTime: day.off ? undefined : day.endTime
+    }));
+
+    this.savingInstitute.set(true);
+    this.errorMessage.set('');
+
+    this.api
+      .updateInstituteAvailability(payload)
+      .pipe(finalize(() => this.savingInstitute.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.applyInstituteAvailability(response.days);
+          this.showToast('Horaires institut sauvegardes.');
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? "Impossible de sauvegarder l'horaire institut.");
+        }
+      });
+  }
+
+  private toggleOffOnState(
+    state: { update: (callback: (items: EditableDay[]) => EditableDay[]) => void },
+    weekday: number,
+    off: boolean
+  ): void {
+    state.update((items) =>
+      items.map((item) =>
+        item.weekday === weekday
+          ? {
+              ...item,
+              off,
+              startTime: off ? item.startTime : item.startTime || '09:00',
+              endTime: off ? item.endTime : item.endTime || '18:00'
+            }
+          : item
+      )
+    );
+  }
+
+  private updateTimeOnState(
+    state: { update: (callback: (items: EditableDay[]) => EditableDay[]) => void },
+    weekday: number,
+    key: 'startTime' | 'endTime',
+    value: string
+  ): void {
+    state.update((items) =>
+      items.map((item) => (item.weekday === weekday ? { ...item, [key]: value } : item))
+    );
   }
 
   private fetchStaff(): void {
@@ -146,6 +214,22 @@ export class AdminHours {
       });
   }
 
+  private fetchInstituteAvailability(): void {
+    this.loadingInstitute.set(true);
+    this.errorMessage.set('');
+
+    this.api
+      .getInstituteAvailability()
+      .pipe(finalize(() => this.loadingInstitute.set(false)))
+      .subscribe({
+        next: (items) => this.applyInstituteAvailability(items),
+        error: () => {
+          this.instituteDays.set(this.getDefaultDays());
+          this.errorMessage.set("Impossible de charger l'horaire institut.");
+        }
+      });
+  }
+
   private fetchAvailability(staffId: string): void {
     this.loadingAvailability.set(true);
     this.errorMessage.set('');
@@ -162,11 +246,23 @@ export class AdminHours {
       });
   }
 
+  private applyInstituteAvailability(
+    items: Array<{ weekday: number; off?: boolean; startTime: string | null; endTime: string | null }>
+  ): void {
+    this.instituteDays.set(this.toEditableDays(items));
+  }
+
   private applyAvailability(
     items: Array<{ weekday: number; off?: boolean; startTime: string | null; endTime: string | null }>
   ): void {
+    this.days.set(this.toEditableDays(items));
+  }
+
+  private toEditableDays(
+    items: Array<{ weekday: number; off?: boolean; startTime: string | null; endTime: string | null }>
+  ): EditableDay[] {
     const byWeekday = new Map(items.map((day) => [day.weekday, day]));
-    const next = DAYS.map((day) => {
+    return DAYS.map((day) => {
       const item = byWeekday.get(day.weekday);
       return {
         weekday: day.weekday,
@@ -176,11 +272,10 @@ export class AdminHours {
         endTime: item?.endTime ?? '18:00'
       };
     });
-    this.days.set(next);
   }
 
-  private validateDays(): string | null {
-    for (const day of this.days()) {
+  private validateDays(days: EditableDay[]): string | null {
+    for (const day of days) {
       if (day.off) {
         continue;
       }

@@ -4,12 +4,16 @@
 
     <nav class="top-nav" aria-label="Navigation admin">
       <a routerLink="/admin/services" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Services</a>
+      <a routerLink="/admin/promotions" routerLinkActive="active">Promotions</a>
       <a routerLink="/admin/staff" routerLinkActive="active">Praticiennes</a>
       <a routerLink="/admin/horaires" routerLinkActive="active">Horaires</a>
       <a routerLink="/admin/conges" routerLinkActive="active">Conges</a>
       <a routerLink="/admin/planning" routerLinkActive="active">Planning</a>
     </nav>
 
-    <button type="button" class="btn btn-ghost logout-btn" (click)="logout()">Logout</button>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost back-site-btn" routerLink="/">Retour au site</a>
+      <button type="button" class="btn btn-ghost logout-btn" (click)="logout()">Logout</button>
+    </div>
   </div>
 </header>

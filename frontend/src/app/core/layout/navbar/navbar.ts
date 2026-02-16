@@ -1,5 +1,6 @@
-﻿import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -9,6 +10,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 })
 export class Navbar {
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressTriggered = false;
 
@@ -61,10 +63,15 @@ export class Navbar {
 
   protected openAdminLogin(): void {
     this.closeProAccess();
-    this.router.navigateByUrl('/admin/login');
+    this.router.navigateByUrl('/admin');
   }
 
   private openProAccess(): void {
+    if (this.authService.isLoggedIn()) {
+      this.router.navigateByUrl('/admin');
+      return;
+    }
+
     this.closeMenu();
     this.proModalOpen.set(true);
 

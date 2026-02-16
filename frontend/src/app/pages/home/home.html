@@ -8,33 +8,71 @@
     <a routerLink="/rdv" class="btn btn-primary">Prendre rendez-vous</a>
     <a routerLink="/soins" class="btn btn-ghost">Voir les soins</a>
   </div>
-  <div class="anchors">
-    <a routerLink="/" fragment="soins">Soins populaires</a>
-    <a routerLink="/" fragment="apropos">A propos</a>
-    <a routerLink="/" fragment="avis">Avis</a>
-    <a routerLink="/" fragment="contact">Contact rapide</a>
-  </div>
 </section>
 
-<section class="panel" id="soins">
-  <h2>Soins populaires</h2>
+@if (activePromotions$ | async; as promotions) {
+  @if (promotions.length > 0) {
+    <section class="panel offers-panel" id="offres">
+      <app-section-title
+        title="Offres du moment"
+        subtitle="Editions limitees / promotions"
+      ></app-section-title>
 
-  @if (popularServices$ | async; as popularServices) {
-    <div class="cards-grid">
-      @for (service of popularServices; track service.id) {
-        <article class="card">
-          <p class="chip">{{ service.category }}</p>
-          <h3>{{ service.name }}</h3>
-          <p>{{ service.description }}</p>
-          <p class="meta">{{ service.durationMin }} min - {{ formatPrice(service.priceCents) }}</p>
-          <a [routerLink]="['/soins', service.id]" class="btn btn-ghost">Voir le detail</a>
-        </article>
-      }
-    </div>
+      <div class="offers-grid">
+        @for (promo of promotions; track promo.id) {
+          <article class="offer-card">
+            <div class="offer-head">
+              <span class="offer-badge limited">Edition limitee</span>
+              <span class="offer-badge discount">{{ promo.computedDiscountLabel }}</span>
+            </div>
+
+            <div class="offer-main">
+              <h3>{{ promo.title }}</h3>
+              @if (promo.subtitle) {
+                <p class="offer-subtitle">{{ promo.subtitle }}</p>
+              }
+              <p class="offer-deadline">{{ formatUntilDate(promo.endAt) }}</p>
+            </div>
+
+            @if (promo.services.length > 1) {
+              <p class="offer-count">{{ promo.services.length }} prestations incluses</p>
+            }
+
+            <ul class="offer-services">
+              @for (service of promo.services; track service.id) {
+                <li>
+                  <div class="service-head">
+                    <strong class="service-name">{{ service.name }}</strong>
+                    <span class="service-duration">{{ service.durationMin }} min</span>
+                  </div>
+
+                  <div class="service-foot">
+                    <div class="price-wrap">
+                      <s>{{ formatPrice(service.priceCents) }}</s>
+                      <strong>{{ formatPrice(service.discountedPriceCents) }}</strong>
+                    </div>
+
+                    <a
+                      routerLink="/rdv"
+                      [queryParams]="{ promoId: promo.id, serviceId: service.id }"
+                      class="btn btn-ghost btn-reserve"
+                    >
+                      Reserver
+                    </a>
+                  </div>
+                </li>
+              }
+            </ul>
+          </article>
+        }
+      </div>
+    </section>
   } @else {
-    <article class="card">Chargement des soins...</article>
+    <section class="panel offers-empty" id="offres">
+      <p>Aucune offre en cours.</p>
+    </section>
   }
-</section>
+}
 
 <section class="panel about" id="apropos">
   <div>
