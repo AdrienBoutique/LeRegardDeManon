@@ -38,7 +38,7 @@
       @if (conflictLoading()) {
         <p class="hint">Verification des conflits...</p>
       } @else if (conflict()?.conflict) {
-        <p class="error">Conflit detecte avec un autre rendez-vous.</p>
+        <p class="error">{{ conflictLabel() }}</p>
       } @else {
         <p class="hint">Aucun conflit detecte.</p>
       }
@@ -171,4 +171,3 @@
     }
   </footer>
 </section>
-

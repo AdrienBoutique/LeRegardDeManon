@@ -64,7 +64,7 @@ export class AppointmentWizardComponent {
   });
 
   protected readonly canSubmit = computed(() => {
-    return this.canGoStep2() && this.canGoStep3() && this.canGoStep4() && !this.conflict()?.conflict;
+    return this.canGoStep2() && this.canGoStep3() && this.canGoStep4() && !this.conflict()?.conflict && !this.conflictLoading();
   });
 
   constructor() {
@@ -245,6 +245,17 @@ export class AppointmentWizardComponent {
 
   protected formatMoney(value: number): string {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+
+  protected conflictLabel(): string {
+    const conflict = this.conflict();
+    if (!conflict?.conflictWith) {
+      return 'Conflit detecte avec un autre rendez-vous.';
+    }
+
+    const start = new Date(conflict.conflictWith.startAt);
+    const hour = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(start);
+    return `Conflit detecte (${hour}).`;
   }
 
   protected save(): void {
