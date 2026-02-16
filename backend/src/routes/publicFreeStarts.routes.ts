@@ -25,6 +25,11 @@ const listDayAvailabilityQuerySchema = z.object({
   durationMin: z.coerce.number().int().min(1),
 });
 
+const listMonthAvailabilityQuerySchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+  staffId: z.string().min(1).optional(),
+});
+
 type DayStartsItem = {
   startAt: string;
   maxFreeMin: number;
@@ -274,6 +279,65 @@ publicFreeStartsRouter.get("/public/availability/day", async (req, res) => {
     }
 
     console.error("[publicAvailabilityDay.list]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+publicFreeStartsRouter.get("/public/availability/month", async (req, res) => {
+  try {
+    const query = parseOrThrow(listMonthAvailabilityQuerySchema, req.query);
+    const monthStart = DateTime.fromFormat(query.month, "yyyy-MM", { zone: BRUSSELS_TIMEZONE }).startOf("month");
+
+    if (!monthStart.isValid) {
+      res.status(400).json({ error: "month must be a valid YYYY-MM" });
+      return;
+    }
+
+    const monthEnd = monthStart.endOf("month");
+    const dayMeta: Record<string, { level: "none" | "low" | "mid" | "high" }> = {};
+
+    for (let cursor = monthStart; cursor <= monthEnd; cursor = cursor.plus({ days: 1 })) {
+      const date = cursor.toFormat("yyyy-MM-dd");
+      const { starts, staffMissing } = await listDayStarts(date, query.staffId);
+
+      if (staffMissing) {
+        res.status(404).json({ error: "Staff not found" });
+        return;
+      }
+
+      if (starts.length === 0) {
+        dayMeta[date] = { level: "none" };
+        continue;
+      }
+
+      const maxFreeMin = starts.reduce((max, start) => Math.max(max, start.maxFreeMin), 0);
+      const startsCount = starts.length;
+
+      if (maxFreeMin >= 360 || startsCount >= 24) {
+        dayMeta[date] = { level: "high" };
+        continue;
+      }
+
+      if (maxFreeMin >= 120 || startsCount >= 8) {
+        dayMeta[date] = { level: "mid" };
+        continue;
+      }
+
+      dayMeta[date] = { level: "low" };
+    }
+
+    res.json({
+      month: query.month,
+      staffId: query.staffId ?? null,
+      dayMeta,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[publicAvailabilityMonth.list]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
