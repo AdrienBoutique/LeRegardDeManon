@@ -12,6 +12,16 @@ export class AdminTopbar {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
+  protected isEditionSection(): boolean {
+    const url = this.router.url;
+    return (
+      url.startsWith('/admin/edition') ||
+      url.startsWith('/admin/accueil') ||
+      url.startsWith('/admin/a-propos') ||
+      url.startsWith('/admin/contact')
+    );
+  }
+
   protected logout(): void {
     this.authService.logout();
     this.router.navigateByUrl('/admin/login');

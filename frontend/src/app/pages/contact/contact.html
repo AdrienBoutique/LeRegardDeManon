@@ -1,19 +1,46 @@
-﻿<section class="page">
-  <h1>Contact</h1>
-  <p><strong>Adresse:</strong> 12 rue des Lilas, 59000 Lille</p>
-  <p><strong>Telephone:</strong> 06 00 00 00 00</p>
-  <p><strong>Email:</strong> contact@leregarddemanon.fr</p>
-  <p><strong>Horaires:</strong> Lun-Sam, 9h30 - 19h00</p>
+<section class="page">
+  @if (errorMessage()) {
+    <article class="error-box">{{ errorMessage() }}</article>
+  }
 
-  <h2>FAQ</h2>
-  <div class="faq">
-    <article>
-      <h3>Annulation</h3>
-      <p>Merci de prevenir 24h a l'avance pour toute annulation.</p>
+  @if (isAdminLoggedIn()) {
+    <article class="admin-edit-link">
+      <p>Mode admin detecte.</p>
+      <a routerLink="/admin/contact" class="btn btn-ghost">Modifier cette page</a>
     </article>
-    <article>
-      <h3>Retard</h3>
-      <p>Au-dela de 10 minutes de retard, la prestation peut etre adaptee.</p>
-    </article>
-  </div>
+  }
+
+  @if (content().hero.visible) {
+    <h1>{{ content().hero.title }}</h1>
+  }
+
+  @if (content().info.visible) {
+    <p><strong>Adresse:</strong> {{ content().info.address }}</p>
+    <p><strong>Telephone:</strong> {{ content().info.phone }}</p>
+    <p><strong>Email:</strong> {{ content().info.email }}</p>
+    <p><strong>Horaires:</strong> {{ content().info.hoursLabel }}</p>
+
+    @if (showDetailedHours()) {
+      <ul class="hours-list">
+        @for (day of content().info.weeklyHours; track $index) {
+          <li>
+            <span class="hours-day">{{ day.day }}</span>
+            <span class="hours-value">{{ formatDayHours(day) }}</span>
+          </li>
+        }
+      </ul>
+    }
+  }
+
+  @if (content().faq.visible) {
+    <h2>{{ content().faq.title }}</h2>
+    <div class="faq">
+      @for (item of content().faq.items; track $index) {
+        <article>
+          <h3>{{ item.question }}</h3>
+          <p>{{ item.answer }}</p>
+        </article>
+      }
+    </div>
+  }
 </section>

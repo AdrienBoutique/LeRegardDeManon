@@ -171,7 +171,7 @@ export class AdminPlanning {
       const target = new Date(current);
       target.setDate(1);
       target.setMonth(target.getMonth() - 1);
-      return this.getMonday(target);
+      return this.getFirstMondayInMonth(target);
     });
     this.mobileDayIndex.set(0);
     this.fetchPlanning();
@@ -182,8 +182,14 @@ export class AdminPlanning {
       const target = new Date(current);
       target.setDate(1);
       target.setMonth(target.getMonth() + 1);
-      return this.getMonday(target);
+      return this.getFirstMondayInMonth(target);
     });
+    this.mobileDayIndex.set(0);
+    this.fetchPlanning();
+  }
+
+  protected goToCurrentWeek(): void {
+    this.weekStart.set(this.getMonday(new Date()));
     this.mobileDayIndex.set(0);
     this.fetchPlanning();
   }
@@ -477,6 +483,17 @@ export class AdminPlanning {
     copy.setHours(0, 0, 0, 0);
     copy.setDate(copy.getDate() + shift);
     return copy;
+  }
+
+  private getFirstMondayInMonth(date: Date): Date {
+    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+    const monday = this.getMonday(monthStart);
+
+    if (monday.getMonth() !== monthStart.getMonth()) {
+      monday.setDate(monday.getDate() + 7);
+    }
+
+    return monday;
   }
 
   private toYmd(date: Date): string {

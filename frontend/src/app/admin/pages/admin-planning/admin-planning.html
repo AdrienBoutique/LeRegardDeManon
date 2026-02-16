@@ -6,11 +6,36 @@
         <p class="month-label">{{ monthLabel() }}</p>
       </div>
 
-      <div class="week-nav">
-        <button type="button" class="btn btn-ghost" (click)="previousMonth()">Mois precedent</button>
-        <button type="button" class="btn btn-ghost" (click)="nextMonth()">Mois suivant</button>
-        <button type="button" class="btn btn-ghost" (click)="previousWeek()">Semaine precedente</button>
-        <button type="button" class="btn btn-ghost" (click)="nextWeek()">Semaine suivante</button>
+      <div class="calendar-nav" aria-label="Navigation du calendrier">
+        <div class="nav-group">
+          <span class="nav-label">Mois</span>
+          <div class="nav-actions">
+            <button type="button" class="nav-btn" (click)="previousMonth()" aria-label="Mois precedent">
+              <span class="nav-icon" aria-hidden="true">&#8249;</span>
+              <span>Precedent</span>
+            </button>
+            <button type="button" class="nav-btn" (click)="nextMonth()" aria-label="Mois suivant">
+              <span>Suivant</span>
+              <span class="nav-icon" aria-hidden="true">&#8250;</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-group">
+          <span class="nav-label">Semaine</span>
+          <div class="nav-actions">
+            <button type="button" class="nav-btn" (click)="previousWeek()" aria-label="Semaine precedente">
+              <span class="nav-icon" aria-hidden="true">&#8249;</span>
+              <span>Precedente</span>
+            </button>
+            <button type="button" class="nav-btn" (click)="nextWeek()" aria-label="Semaine suivante">
+              <span>Suivante</span>
+              <span class="nav-icon" aria-hidden="true">&#8250;</span>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="nav-btn nav-btn-today" (click)="goToCurrentWeek()">Aujourd'hui</button>
       </div>
     </div>
 

@@ -1,6 +1,11 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  defaultAboutPageContent,
+  defaultContactPageContent,
+  defaultHomeContent,
+} from "../src/lib/homeContent";
 
 const prisma = new PrismaClient();
 
@@ -317,8 +322,35 @@ async function main() {
     },
   });
 
+  await prisma.homeContent.upsert({
+    where: { slug: "home" },
+    update: {},
+    create: {
+      slug: "home",
+      content: defaultHomeContent(),
+    },
+  });
+
+  await prisma.homeContent.upsert({
+    where: { slug: "about" },
+    update: {},
+    create: {
+      slug: "about",
+      content: defaultAboutPageContent(),
+    },
+  });
+
+  await prisma.homeContent.upsert({
+    where: { slug: "contact" },
+    update: {},
+    create: {
+      slug: "contact",
+      content: defaultContactPageContent(),
+    },
+  });
+
   console.log(
-    "[seed] Done: admin, staff, categories, services, links, availability rules (staff+institute), promotions"
+    "[seed] Done: admin, staff, categories, services, links, availability rules (staff+institute), promotions, home content"
   );
 }
 

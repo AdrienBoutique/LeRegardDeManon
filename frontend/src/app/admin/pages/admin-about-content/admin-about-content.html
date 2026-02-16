@@ -1,0 +1,63 @@
+<section class="admin-page stack">
+  <header class="card heading">
+    <div class="heading-top">
+      <h1>Edition A propos</h1>
+      <a routerLink="/admin/edition" class="btn btn-ghost">Retour au choix d'edition</a>
+    </div>
+    <p>Vous pouvez modifier et cacher/afficher chaque bloc.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (toastMessage()) {
+    <article class="toast">{{ toastMessage() }}</article>
+  }
+
+  @if (loading()) {
+    <article class="card panel"><p>Chargement...</p></article>
+  } @else {
+    <article class="card panel" [class.hidden-block]="!content().hero.visible">
+      <div class="block-header">
+        <h2>Hero</h2>
+        <label><input type="checkbox" [checked]="content().hero.visible" (change)="patch('hero','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().hero.title" (input)="patch('hero','title',$any($event.target).value)" /></label>
+      <label>Introduction <textarea rows="3" [value]="content().hero.intro" (input)="patch('hero','intro',$any($event.target).value)"></textarea></label>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().approach.visible">
+      <div class="block-header">
+        <h2>Approche</h2>
+        <label><input type="checkbox" [checked]="content().approach.visible" (change)="patch('approach','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().approach.title" (input)="patch('approach','title',$any($event.target).value)" /></label>
+      <label>Texte <textarea rows="3" [value]="content().approach.text" (input)="patch('approach','text',$any($event.target).value)"></textarea></label>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().hygiene.visible">
+      <div class="block-header">
+        <h2>Hygiene</h2>
+        <label><input type="checkbox" [checked]="content().hygiene.visible" (change)="patch('hygiene','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().hygiene.title" (input)="patch('hygiene','title',$any($event.target).value)" /></label>
+      <label>Texte <textarea rows="3" [value]="content().hygiene.text" (input)="patch('hygiene','text',$any($event.target).value)"></textarea></label>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().trainee.visible">
+      <div class="block-header">
+        <h2>Stagiaire</h2>
+        <label><input type="checkbox" [checked]="content().trainee.visible" (change)="patch('trainee','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().trainee.title" (input)="patch('trainee','title',$any($event.target).value)" /></label>
+      <label>Texte <textarea rows="3" [value]="content().trainee.text" (input)="patch('trainee','text',$any($event.target).value)"></textarea></label>
+    </article>
+
+    <div class="save-bar">
+      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Enregistrement...' : 'Sauvegarder' }}
+      </button>
+    </div>
+  }
+</section>

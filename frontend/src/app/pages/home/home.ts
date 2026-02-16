@@ -1,7 +1,16 @@
 import { AsyncPipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { PublicPromotionsApi } from '../../core/api/public-promotions.api';
+import {
+  PublicPromotionItem,
+  PublicPromotionsApi
+} from '../../core/api/public-promotions.api';
+import {
+  defaultHomeContent,
+  HomeContentApi,
+  HomeContentPayload
+} from '../../core/api/home-content.api';
+import { AuthService } from '../../core/services/auth.service';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 
 @Component({
@@ -11,8 +20,32 @@ import { SectionTitle } from '../../shared/ui/section-title/section-title';
   styleUrl: './home.scss'
 })
 export class Home {
+  @ViewChild('offersRail') private offersRail?: ElementRef<HTMLElement>;
+
   private readonly publicPromotionsApi = inject(PublicPromotionsApi);
+  private readonly homeContentApi = inject(HomeContentApi);
+  private readonly authService = inject(AuthService);
+
   protected readonly activePromotions$ = this.publicPromotionsApi.getActivePromotions();
+  protected readonly content = signal<HomeContentPayload>(defaultHomeContent());
+  protected readonly contentError = signal('');
+  protected readonly isAdminLoggedIn = signal(this.authService.isLoggedIn());
+  protected readonly hasAboutImage = computed(() => this.content().about.images.length > 0);
+
+  constructor() {
+    this.homeContentApi.getPublicContent().subscribe({
+      next: (payload) => this.content.set(payload),
+      error: () => this.contentError.set("Impossible de charger le contenu d'accueil.")
+    });
+  }
+
+  protected stars(rating: number): string {
+    return '★'.repeat(Math.max(1, Math.min(5, Math.round(rating))));
+  }
+
+  protected firstAboutImage(): string | null {
+    return this.content().about.images[0] ?? null;
+  }
 
   protected formatPrice(priceCents: number): string {
     return new Intl.NumberFormat('fr-FR', {
@@ -28,5 +61,25 @@ export class Home {
       day: 'numeric',
       month: 'long'
     }).format(date)}`;
+  }
+
+  protected promoBaseTotal(promo: PublicPromotionItem): number {
+    return promo.services.reduce((sum, service) => sum + service.priceCents, 0);
+  }
+
+  protected promoDiscountedTotal(promo: PublicPromotionItem): number {
+    return promo.services.reduce((sum, service) => sum + service.discountedPriceCents, 0);
+  }
+
+  protected scrollOffers(direction: number): void {
+    const container = this.offersRail?.nativeElement;
+    if (!container) {
+      return;
+    }
+
+    const firstCard = container.querySelector<HTMLElement>('.offer-card');
+    const gap = 16;
+    const step = firstCard ? firstCard.offsetWidth + gap : Math.max(280, Math.round(container.clientWidth * 0.85));
+    container.scrollBy({ left: direction * step, behavior: 'smooth' });
   }
 }

@@ -1,24 +1,32 @@
-﻿<section class="page">
-  <h1>A propos</h1>
-  <p>
-    Le regard de Manon est ne d'une passion pour la precision du geste et l'elegance des resultats
-    naturels. Chaque rendez-vous commence par une ecoute attentive de vos attentes.
-  </p>
+<section class="page">
+  @if (errorMessage()) {
+    <article class="error-box">{{ errorMessage() }}</article>
+  }
 
-  <h2>Notre approche</h2>
-  <p>
-    Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils
-    simples pour prolonger les effets a la maison.
-  </p>
+  @if (isAdminLoggedIn()) {
+    <article class="admin-edit-link">
+      <p>Mode admin detecte.</p>
+      <a routerLink="/admin/a-propos" class="btn btn-ghost">Modifier cette page</a>
+    </article>
+  }
 
-  <h2>Hygiene et securite</h2>
-  <p>
-    Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.
-  </p>
+  @if (content().hero.visible) {
+    <h1>{{ content().hero.title }}</h1>
+    <p>{{ content().hero.intro }}</p>
+  }
 
-  <h2>Stagiaire</h2>
-  <p>
-    Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise
-    sans validation prealable et votre accord.
-  </p>
+  @if (content().approach.visible) {
+    <h2>{{ content().approach.title }}</h2>
+    <p>{{ content().approach.text }}</p>
+  }
+
+  @if (content().hygiene.visible) {
+    <h2>{{ content().hygiene.title }}</h2>
+    <p>{{ content().hygiene.text }}</p>
+  }
+
+  @if (content().trainee.visible) {
+    <h2>{{ content().trainee.title }}</h2>
+    <p>{{ content().trainee.text }}</p>
+  }
 </section>

@@ -1,0 +1,84 @@
+<section class="admin-page stack">
+  <header class="card heading">
+    <div class="heading-top">
+      <h1>Edition Contact</h1>
+      <a routerLink="/admin/edition" class="btn btn-ghost">Retour au choix d'edition</a>
+    </div>
+    <p>Vous pouvez modifier et cacher/afficher chaque bloc.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (toastMessage()) {
+    <article class="toast">{{ toastMessage() }}</article>
+  }
+
+  @if (loading()) {
+    <article class="card panel"><p>Chargement...</p></article>
+  } @else {
+    <article class="card panel" [class.hidden-block]="!content().hero.visible">
+      <div class="block-header">
+        <h2>Hero</h2>
+        <label><input type="checkbox" [checked]="content().hero.visible" (change)="patch('hero','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().hero.title" (input)="patch('hero','title',$any($event.target).value)" /></label>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().info.visible">
+      <div class="block-header">
+        <h2>Infos contact</h2>
+        <label><input type="checkbox" [checked]="content().info.visible" (change)="patch('info','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Adresse <input [value]="content().info.address" (input)="patch('info','address',$any($event.target).value)" /></label>
+      <label>Telephone <input [value]="content().info.phone" (input)="patch('info','phone',$any($event.target).value)" /></label>
+      <label>Email <input [value]="content().info.email" (input)="patch('info','email',$any($event.target).value)" /></label>
+
+      <div class="hours-editor">
+        <p class="hours-editor-title">Horaires par jour</p>
+        @for (day of content().info.weeklyHours; track $index) {
+          <article class="hours-row">
+            <p class="hours-day">{{ day.day }}</p>
+            <label class="hours-closed">
+              <input type="checkbox" [checked]="day.closed" (change)="patchWeeklyHour($index, 'closed', $any($event.target).checked)" />
+              Ferme
+            </label>
+            <label>
+              Ouverture
+              <input type="time" [value]="day.start" [disabled]="day.closed" (input)="patchWeeklyHour($index, 'start', $any($event.target).value)" />
+            </label>
+            <label>
+              Fermeture
+              <input type="time" [value]="day.end" [disabled]="day.closed" (input)="patchWeeklyHour($index, 'end', $any($event.target).value)" />
+            </label>
+          </article>
+        }
+      </div>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().faq.visible">
+      <div class="block-header">
+        <h2>FAQ</h2>
+        <label><input type="checkbox" [checked]="content().faq.visible" (change)="patch('faq','visible',$any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre FAQ <input [value]="content().faq.title" (input)="patch('faq','title',$any($event.target).value)" /></label>
+      <div class="stack items-editor">
+        @for (item of content().faq.items; track $index) {
+          <article class="item-editor">
+            <label>Question <input [value]="item.question" (input)="patchFaqItem($index, 'question', $any($event.target).value)" /></label>
+            <label>Reponse <textarea rows="2" [value]="item.answer" (input)="patchFaqItem($index, 'answer', $any($event.target).value)"></textarea></label>
+            <button type="button" class="btn btn-ghost" (click)="removeFaqItem($index)">Supprimer</button>
+          </article>
+        }
+      </div>
+      <button type="button" class="btn btn-ghost" (click)="addFaqItem()">Ajouter une question</button>
+    </article>
+
+    <div class="save-bar">
+      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Enregistrement...' : 'Sauvegarder' }}
+      </button>
+    </div>
+  }
+</section>

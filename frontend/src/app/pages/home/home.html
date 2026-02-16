@@ -1,136 +1,180 @@
-﻿<section class="hero" id="top">
-  <p class="badge">Institut de beaute du regard</p>
-  <h1>Le regard de Manon</h1>
-  <p class="lead">
-    Un institut dedie a la beaute du regard, avec une approche douce, precise et elegante.
-  </p>
-  <div class="actions">
-    <a routerLink="/rdv" class="btn btn-primary">Prendre rendez-vous</a>
-    <a routerLink="/soins" class="btn btn-ghost">Voir les soins</a>
-  </div>
-</section>
+@if (contentError()) {
+  <section class="panel offers-empty">
+    <p>{{ contentError() }}</p>
+  </section>
+}
+
+@if (isAdminLoggedIn()) {
+  <section class="admin-home-link panel">
+    <p>Mode admin detecte.</p>
+    <a routerLink="/admin/accueil" class="btn btn-ghost">Modifier la page d'accueil</a>
+  </section>
+}
+
+@if (content().hero.visible) {
+  <section class="hero" id="top">
+    <p class="badge">{{ content().hero.badge }}</p>
+    <h1>{{ content().hero.title }}</h1>
+    <p class="lead">{{ content().hero.lead }}</p>
+    <div class="actions">
+      <a routerLink="/rdv" class="btn btn-primary">{{ content().hero.primaryButtonLabel }}</a>
+      <a routerLink="/soins" class="btn btn-ghost">{{ content().hero.secondaryButtonLabel }}</a>
+    </div>
+  </section>
+}
 
 @if (activePromotions$ | async; as promotions) {
-  @if (promotions.length > 0) {
+  @if (content().offers.visible && promotions.length > 0) {
     <section class="panel offers-panel" id="offres">
-      <app-section-title
-        title="Offres du moment"
-        subtitle="Editions limitees / promotions"
-      ></app-section-title>
+      <app-section-title [title]="content().offers.title" [subtitle]="content().offers.subtitle"></app-section-title>
 
-      <div class="offers-grid">
-        @for (promo of promotions; track promo.id) {
-          <article class="offer-card">
-            <div class="offer-head">
-              <span class="offer-badge limited">Edition limitee</span>
-              <span class="offer-badge discount">{{ promo.computedDiscountLabel }}</span>
-            </div>
-
-            <div class="offer-main">
-              <h3>{{ promo.title }}</h3>
-              @if (promo.subtitle) {
-                <p class="offer-subtitle">{{ promo.subtitle }}</p>
-              }
-              <p class="offer-deadline">{{ formatUntilDate(promo.endAt) }}</p>
-            </div>
-
-            @if (promo.services.length > 1) {
-              <p class="offer-count">{{ promo.services.length }} prestations incluses</p>
-            }
-
-            <ul class="offer-services">
-              @for (service of promo.services; track service.id) {
-                <li>
-                  <div class="service-head">
-                    <strong class="service-name">{{ service.name }}</strong>
-                    <span class="service-duration">{{ service.durationMin }} min</span>
-                  </div>
-
-                  <div class="service-foot">
-                    <div class="price-wrap">
-                      <s>{{ formatPrice(service.priceCents) }}</s>
-                      <strong>{{ formatPrice(service.discountedPriceCents) }}</strong>
-                    </div>
-
-                    <a
-                      routerLink="/rdv"
-                      [queryParams]="{ promoId: promo.id, serviceId: service.id }"
-                      class="btn btn-ghost btn-reserve"
-                    >
-                      Reserver
-                    </a>
-                  </div>
-                </li>
-              }
-            </ul>
-          </article>
+      <div class="offers-rail-head">
+        @if (promotions.length > 1) {
+          <p class="offers-rail-hint">Faites glisser ou utilisez les fleches pour voir toutes les offres.</p>
         }
       </div>
+
+      <div class="offers-rail-wrap">
+        @if (promotions.length > 1) {
+          <button type="button" class="rail-btn rail-btn-left" (click)="scrollOffers(-1)" aria-label="Voir les offres precedentes">
+            <span aria-hidden="true">&#8249;</span>
+          </button>
+          <button type="button" class="rail-btn rail-btn-right" (click)="scrollOffers(1)" aria-label="Voir les offres suivantes">
+            <span aria-hidden="true">&#8250;</span>
+          </button>
+        }
+
+        <div class="offers-rail" #offersRail>
+          @for (promo of promotions; track promo.id) {
+            <article class="offer-card" [style.--offer-index]="$index">
+              <div class="offer-head">
+                <span class="offer-badge limited">Edition limitee</span>
+                <span class="offer-badge discount">{{ promo.computedDiscountLabel }}</span>
+              </div>
+
+              <div class="offer-main">
+                <h3>{{ promo.title }}</h3>
+                @if (promo.subtitle) {
+                  <p class="offer-subtitle">{{ promo.subtitle }}</p>
+                }
+                <p class="offer-deadline">{{ formatUntilDate(promo.endAt) }}</p>
+              </div>
+
+              @if (promo.services.length > 1) {
+                <p class="offer-count">{{ promo.services.length }} prestations incluses</p>
+              }
+
+              <ul class="offer-services">
+                @for (service of promo.services; track service.id) {
+                  <li>
+                    <div class="service-head">
+                      <strong class="service-name">{{ service.name }}</strong>
+                      <span class="service-duration">{{ service.durationMin }} min</span>
+                    </div>
+
+                    @if (promo.services.length === 1) {
+                      <div class="service-foot">
+                        <div class="price-wrap">
+                          <s>{{ formatPrice(service.priceCents) }}</s>
+                          <strong>{{ formatPrice(service.discountedPriceCents) }}</strong>
+                        </div>
+
+                        <a
+                          routerLink="/rdv"
+                          [queryParams]="{ promoId: promo.id, serviceId: service.id }"
+                          class="btn btn-ghost btn-reserve"
+                        >
+                          Reserver
+                        </a>
+                      </div>
+                    }
+                  </li>
+                }
+              </ul>
+
+              @if (promo.services.length > 1) {
+                <div class="offer-total">
+                  <span>Total offre</span>
+                  <div class="price-wrap">
+                    <s>{{ formatPrice(promoBaseTotal(promo)) }}</s>
+                    <strong>{{ formatPrice(promoDiscountedTotal(promo)) }}</strong>
+                  </div>
+                </div>
+
+                <a
+                  routerLink="/rdv"
+                  [queryParams]="{ promoId: promo.id }"
+                  class="btn btn-ghost btn-reserve btn-reserve-total"
+                >
+                  Reserver l'offre
+                </a>
+              }
+            </article>
+          }
+        </div>
+      </div>
     </section>
-  } @else {
+  } @else if (content().offers.visible) {
     <section class="panel offers-empty" id="offres">
       <p>Aucune offre en cours.</p>
     </section>
   }
 }
 
-<section class="panel about" id="apropos">
-  <div>
-    <h2>A propos</h2>
-    <p>
-      Manon vous accueille dans un espace calme et lumineux, avec un diagnostic personnalise pour
-      respecter votre visage et vos attentes.
-    </p>
-    <div class="actions">
-      <a routerLink="/a-propos" class="btn btn-ghost">En savoir plus</a>
+@if (content().about.visible) {
+  <section class="panel about" id="apropos">
+    <div>
+      <h2>{{ content().about.title }}</h2>
+      <p>{{ content().about.text }}</p>
+      <div class="actions">
+        <a routerLink="/a-propos" class="btn btn-ghost">{{ content().about.buttonLabel }}</a>
+      </div>
     </div>
-  </div>
-  <div class="photo" role="img" aria-label="Cabine de soins"></div>
-</section>
 
-<section class="panel">
-  <h2>Pourquoi nous choisir</h2>
-  <div class="cards-grid points">
-    <article class="card"><h3>Precision</h3><p>Des gestes minutieux pour un resultat net et naturel.</p></article>
-    <article class="card"><h3>Hygiene stricte</h3><p>Protocoles d'hygiene renforces a chaque prestation.</p></article>
-    <article class="card"><h3>Conseil personnalise</h3><p>Chaque soin est adapte a votre morphologie et votre rythme.</p></article>
-  </div>
-</section>
+    @if (firstAboutImage(); as imageUrl) {
+      <div class="photo photo-real">
+        <img [src]="imageUrl" alt="Photo de l'institut" />
+      </div>
+    } @else {
+      <div class="photo" role="img" aria-label="Cabine de soins"></div>
+    }
+  </section>
+}
 
-<section class="panel" id="avis">
-  <h2>Avis</h2>
-  <div class="cards-grid">
-    <article class="card testimonial">
-      <p class="rating">★★★★★</p>
-      <p>Accueil parfait et resultat tres naturel.</p>
-      <p class="meta">Camille</p>
-    </article>
-    <article class="card testimonial">
-      <p class="rating">★★★★★</p>
-      <p>Mon regard est sublime, je recommande.</p>
-      <p class="meta">Sarah</p>
-    </article>
-    <article class="card testimonial">
-      <p class="rating">★★★★★</p>
-      <p>Soin confortable et travail tres soigne.</p>
-      <p class="meta">Julie</p>
-    </article>
-  </div>
-</section>
+@if (content().reasons.visible) {
+  <section class="panel">
+    <h2>{{ content().reasons.title }}</h2>
+    <div class="cards-grid points">
+      @for (item of content().reasons.items; track $index) {
+        <article class="card">
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.text }}</p>
+        </article>
+      }
+    </div>
+  </section>
+}
 
-<section class="panel contact-quick" id="contact">
-  <h2>Contact rapide</h2>
-  <p class="item">12 rue des Lilas, 59000 Lille</p>
-  <p class="item">Lun-Sam: 9h30 - 19h00</p>
-  <div class="actions">
-    <a routerLink="/contact" class="btn btn-ghost">Page contact</a>
-    <a href="https://instagram.com" class="btn btn-ghost" target="_blank" rel="noreferrer">Instagram</a>
-  </div>
-</section>
+@if (content().testimonials.visible) {
+  <section class="panel" id="avis">
+    <h2>{{ content().testimonials.title }}</h2>
+    <div class="cards-grid">
+      @for (item of content().testimonials.items; track $index) {
+        <article class="card testimonial">
+          <p class="rating">{{ stars(item.rating) }}</p>
+          <p>{{ item.text }}</p>
+          <p class="meta">{{ item.name }}</p>
+        </article>
+      }
+    </div>
+  </section>
+}
 
-<section class="cta-final">
-  <h2>Prete a sublimer votre regard ?</h2>
-  <div class="actions" style="justify-content:center;">
-    <a routerLink="/rdv" class="btn btn-primary">Prendre RDV</a>
-  </div>
-</section>
+@if (content().ctaFinal.visible) {
+  <section class="cta-final">
+    <h2>{{ content().ctaFinal.title }}</h2>
+    <div class="actions" style="justify-content:center;">
+      <a routerLink="/rdv" class="btn btn-primary">{{ content().ctaFinal.buttonLabel }}</a>
+    </div>
+  </section>
+}

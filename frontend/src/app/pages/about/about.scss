@@ -1,9 +1,28 @@
-﻿.page {
+.page {
   margin-top: 1rem;
   border: 1px solid #e5dacf;
   border-radius: 18px;
   background: #fffdfb;
   padding: 1.35rem;
+}
+
+.admin-edit-link {
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.admin-edit-link p {
+  margin: 0;
+  color: #6d5d50;
+  font-weight: 600;
+}
+
+.error-box {
+  margin-bottom: 0.8rem;
+  color: #9f1f1f;
 }
 
 h1,

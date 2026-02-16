@@ -16,6 +16,10 @@ import { AdminPlanning } from './admin/pages/admin-planning/admin-planning';
 import { AdminHours } from './admin/pages/admin-hours/admin-hours';
 import { AdminTimeOff } from './admin/pages/admin-timeoff/admin-timeoff';
 import { AdminPromotions } from './admin/pages/promotions/admin-promotions';
+import { AdminHomeContent } from './admin/pages/admin-home-content/admin-home-content';
+import { AdminAboutContent } from './admin/pages/admin-about-content/admin-about-content';
+import { AdminContactContent } from './admin/pages/admin-contact-content/admin-contact-content';
+import { AdminContentHub } from './admin/pages/admin-content-hub/admin-content-hub';
 import { AdminLayout } from './admin/layout/admin-layout';
 import { adminGuard } from './core/guards/admin.guard';
 
@@ -28,6 +32,10 @@ export const routes: Routes = [
     children: [
       { path: 'services', component: AdminServices },
       { path: 'promotions', component: AdminPromotions },
+      { path: 'edition', component: AdminContentHub },
+      { path: 'accueil', component: AdminHomeContent },
+      { path: 'a-propos', component: AdminAboutContent },
+      { path: 'contact', component: AdminContactContent },
       { path: 'staff', component: AdminStaffList },
       { path: 'staff/:id', component: AdminStaffDetail },
       { path: 'praticiennes', redirectTo: 'staff', pathMatch: 'full' },

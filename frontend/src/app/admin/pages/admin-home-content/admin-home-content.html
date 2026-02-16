@@ -1,0 +1,127 @@
+<section class="admin-home stack">
+  <header class="card heading">
+    <div class="heading-top">
+      <h1>Edition Accueil</h1>
+      <a routerLink="/admin/edition" class="btn btn-ghost">Retour au choix d'edition</a>
+    </div>
+    <p>Vous pouvez modifier tous les blocs, y compris ceux caches.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (toastMessage()) {
+    <article class="toast">{{ toastMessage() }}</article>
+  }
+
+  @if (loading()) {
+    <article class="card panel"><p>Chargement...</p></article>
+  } @else {
+    <article class="card panel" [class.hidden-block]="!content().hero.visible">
+      <div class="block-header">
+        <h2>Hero</h2>
+        <label><input type="checkbox" [checked]="content().hero.visible" (change)="updateHero('visible', $any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Badge <input [value]="content().hero.badge" (input)="updateHero('badge', $any($event.target).value)" /></label>
+      <label>Titre <input [value]="content().hero.title" (input)="updateHero('title', $any($event.target).value)" /></label>
+      <label>Texte <textarea rows="3" [value]="content().hero.lead" (input)="updateHero('lead', $any($event.target).value)"></textarea></label>
+      <div class="grid two">
+        <label>Bouton principal <input [value]="content().hero.primaryButtonLabel" (input)="updateHero('primaryButtonLabel', $any($event.target).value)" /></label>
+        <label>Bouton secondaire <input [value]="content().hero.secondaryButtonLabel" (input)="updateHero('secondaryButtonLabel', $any($event.target).value)" /></label>
+      </div>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().offers.visible">
+      <div class="block-header">
+        <h2>Offres</h2>
+        <label><input type="checkbox" [checked]="content().offers.visible" (change)="updateOffers('visible', $any($event.target).checked)" /> Visible</label>
+      </div>
+      <div class="grid two">
+        <label>Titre <input [value]="content().offers.title" (input)="updateOffers('title', $any($event.target).value)" /></label>
+        <label>Sous-titre <input [value]="content().offers.subtitle" (input)="updateOffers('subtitle', $any($event.target).value)" /></label>
+      </div>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().about.visible">
+      <div class="block-header">
+        <h2>A propos</h2>
+        <label><input type="checkbox" [checked]="content().about.visible" (change)="updateAbout('visible', $any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().about.title" (input)="updateAbout('title', $any($event.target).value)" /></label>
+      <label>Texte <textarea rows="3" [value]="content().about.text" (input)="updateAbout('text', $any($event.target).value)"></textarea></label>
+      <label>Label bouton <input [value]="content().about.buttonLabel" (input)="updateAbout('buttonLabel', $any($event.target).value)" /></label>
+
+      <h3>Photos</h3>
+      <div class="row-add">
+        <input [value]="newAboutImageUrl()" (input)="newAboutImageUrl.set($any($event.target).value)" placeholder="URL image" />
+        <button type="button" class="btn btn-ghost" (click)="addAboutImage()">Ajouter</button>
+      </div>
+      <div class="images-list">
+        @for (img of content().about.images; track $index) {
+          <article class="img-row">
+            <img [src]="img" alt="Photo accueil" />
+            <p>{{ img }}</p>
+            <button type="button" class="btn btn-ghost" (click)="removeAboutImage($index)">Supprimer</button>
+          </article>
+        }
+      </div>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().reasons.visible">
+      <div class="block-header">
+        <h2>Pourquoi nous choisir</h2>
+        <label><input type="checkbox" [checked]="content().reasons.visible" (change)="updateReasons('visible', $any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().reasons.title" (input)="updateReasons('title', $any($event.target).value)" /></label>
+      <div class="stack items-editor">
+        @for (item of content().reasons.items; track $index) {
+          <article class="item-editor">
+            <label>Titre <input [value]="item.title" (input)="updateReasonItem($index, 'title', $any($event.target).value)" /></label>
+            <label>Texte <textarea rows="2" [value]="item.text" (input)="updateReasonItem($index, 'text', $any($event.target).value)"></textarea></label>
+            <button type="button" class="btn btn-ghost" (click)="removeReasonItem($index)">Supprimer</button>
+          </article>
+        }
+      </div>
+      <button type="button" class="btn btn-ghost" (click)="addReasonItem()">Ajouter un point</button>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().testimonials.visible">
+      <div class="block-header">
+        <h2>Avis</h2>
+        <label><input type="checkbox" [checked]="content().testimonials.visible" (change)="updateTestimonials('visible', $any($event.target).checked)" /> Visible</label>
+      </div>
+      <label>Titre <input [value]="content().testimonials.title" (input)="updateTestimonials('title', $any($event.target).value)" /></label>
+      <div class="stack items-editor">
+        @for (item of content().testimonials.items; track $index) {
+          <article class="item-editor">
+            <div class="grid three">
+              <label>Nom <input [value]="item.name" (input)="updateTestimonialItem($index, 'name', $any($event.target).value)" /></label>
+              <label>Note <input type="number" min="1" max="5" [value]="item.rating" (input)="updateTestimonialItem($index, 'rating', +$any($event.target).value || 1)" /></label>
+            </div>
+            <label>Avis <textarea rows="2" [value]="item.text" (input)="updateTestimonialItem($index, 'text', $any($event.target).value)"></textarea></label>
+            <button type="button" class="btn btn-ghost" (click)="removeTestimonialItem($index)">Supprimer</button>
+          </article>
+        }
+      </div>
+      <button type="button" class="btn btn-ghost" (click)="addTestimonialItem()">Ajouter un avis</button>
+    </article>
+
+    <article class="card panel" [class.hidden-block]="!content().ctaFinal.visible">
+      <div class="block-header">
+        <h2>CTA final</h2>
+        <label><input type="checkbox" [checked]="content().ctaFinal.visible" (change)="updateCtaFinal('visible', $any($event.target).checked)" /> Visible</label>
+      </div>
+      <div class="grid two">
+        <label>Titre <input [value]="content().ctaFinal.title" (input)="updateCtaFinal('title', $any($event.target).value)" /></label>
+        <label>Label bouton <input [value]="content().ctaFinal.buttonLabel" (input)="updateCtaFinal('buttonLabel', $any($event.target).value)" /></label>
+      </div>
+    </article>
+
+    <div class="save-bar">
+      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Enregistrement...' : 'Sauvegarder l\'accueil' }}
+      </button>
+    </div>
+  }
+</section>

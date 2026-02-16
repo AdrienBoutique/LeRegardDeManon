@@ -1,0 +1,43 @@
+.content-hub {
+  gap: 1rem;
+}
+
+.heading,
+.editor-card {
+  padding: 1rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.cards-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: 1fr;
+}
+
+.editor-card {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: #fff;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.editor-card p {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.editor-card .btn {
+  width: fit-content;
+}
+
+@media (min-width: 900px) {
+  .cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1,9 +1,28 @@
-﻿.page {
+.page {
   margin-top: 1rem;
   border: 1px solid #e5dacf;
   border-radius: 18px;
   background: #fffdfb;
   padding: 1.35rem;
+}
+
+.admin-edit-link {
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.admin-edit-link p {
+  margin: 0;
+  color: #6d5d50;
+  font-weight: 600;
+}
+
+.error-box {
+  margin-bottom: 0.8rem;
+  color: #9f1f1f;
 }
 
 h1,
@@ -20,6 +39,38 @@ p {
 
 h2 {
   margin-top: 1rem;
+}
+
+.hours-list {
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #eaded3;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hours-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.52rem 0.75rem;
+  border-bottom: 1px solid #f0e4da;
+  background: #fff;
+}
+
+.hours-list li:last-child {
+  border-bottom: none;
+}
+
+.hours-day {
+  font-weight: 700;
+  color: #4f4035;
+}
+
+.hours-value {
+  color: #6d5d50;
 }
 
 .faq {
