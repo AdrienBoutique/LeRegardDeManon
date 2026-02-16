@@ -1,0 +1,13 @@
+@if (isOpen()) {
+  <div class="drawer-overlay" (click)="close()"></div>
+}
+
+<aside class="drawer-panel" [class.open]="isOpen()" [attr.aria-hidden]="!isOpen()">
+  <header class="drawer-top">
+    <h2>{{ mode() === 'create' ? 'Nouveau rendez-vous' : 'Modifier le rendez-vous' }}</h2>
+    <button type="button" class="btn btn-ghost" (click)="close()">Fermer</button>
+  </header>
+
+  <app-appointment-wizard></app-appointment-wizard>
+</aside>
+

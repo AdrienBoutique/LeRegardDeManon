@@ -1,0 +1,174 @@
+<section class="wizard-shell">
+  <div class="wizard-steps">
+    <button type="button" class="step-pill" [class.active]="step() === 1" (click)="goToStep(1)">1. Creneau</button>
+    <button type="button" class="step-pill" [class.active]="step() === 2" [disabled]="!canGoStep2()" (click)="goToStep(2)">
+      2. Services
+    </button>
+    <button type="button" class="step-pill" [class.active]="step() === 3" [disabled]="!canGoStep3()" (click)="goToStep(3)">
+      3. Cliente
+    </button>
+    <button type="button" class="step-pill" [class.active]="step() === 4" [disabled]="!canGoStep4()" (click)="goToStep(4)">
+      4. Confirmation
+    </button>
+  </div>
+
+  @if (step() === 1) {
+    <section class="step-panel">
+      <h3>Creneau</h3>
+      <label>
+        Praticienne
+        <select [ngModel]="draft().practitionerId ?? ''" (ngModelChange)="setPractitioner($event)">
+          <option value="">Choisir...</option>
+          @for (person of practitioners(); track person.id) {
+            <option [value]="person.id">{{ person.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Date et heure
+        <input type="datetime-local" [ngModel]="startAtInputValue()" (ngModelChange)="setStartAt($event)" />
+      </label>
+
+      <label>
+        Duree (min)
+        <input type="number" [ngModel]="draft().durationMin" readonly />
+      </label>
+
+      @if (conflictLoading()) {
+        <p class="hint">Verification des conflits...</p>
+      } @else if (conflict()?.conflict) {
+        <p class="error">Conflit detecte avec un autre rendez-vous.</p>
+      } @else {
+        <p class="hint">Aucun conflit detecte.</p>
+      }
+    </section>
+  }
+
+  @if (step() === 2) {
+    <section class="step-panel">
+      <h3>Services</h3>
+      <div class="services-list">
+        @for (item of services(); track item.serviceId) {
+          <button
+            type="button"
+            class="service-item"
+            [class.selected]="isServiceSelected(item.serviceId)"
+            (click)="toggleService(item)"
+          >
+            <strong>{{ item.name }}</strong>
+            <span>{{ item.durationMin }} min</span>
+            <span>{{ formatMoney(item.price) }}</span>
+          </button>
+        }
+      </div>
+      <div class="totals">
+        <p><strong>Duree totale:</strong> {{ draft().durationMin }} min</p>
+        <p><strong>Total:</strong> {{ formatMoney(draft().priceTotal) }}</p>
+      </div>
+    </section>
+  }
+
+  @if (step() === 3) {
+    <section class="step-panel">
+      <h3>Cliente</h3>
+      <div class="mode-switch">
+        <button type="button" class="btn btn-ghost" [class.mode-active]="clientMode() === 'existing'" (click)="switchClientMode('existing')">
+          Cliente existante
+        </button>
+        <button type="button" class="btn btn-ghost" [class.mode-active]="clientMode() === 'new'" (click)="switchClientMode('new')">
+          Nouvelle cliente
+        </button>
+      </div>
+
+      @if (clientMode() === 'existing') {
+        <label>
+          Rechercher
+          <input [ngModel]="clientQuery()" (ngModelChange)="clientQuery.set($event)" placeholder="Nom cliente" />
+        </label>
+        <div class="clients-list">
+          @for (client of filteredClients(); track client.id) {
+            <button type="button" class="client-item" [class.selected]="draft().clientId === client.id" (click)="chooseClient(client)">
+              {{ client.firstName }} {{ client.lastName }}
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="client-form">
+          <label>
+            Prenom
+            <input
+              [ngModel]="draft().clientDraft?.firstName ?? ''"
+              (ngModelChange)="updateClientDraft('firstName', $event)"
+            />
+          </label>
+          <label>
+            Nom
+            <input
+              [ngModel]="draft().clientDraft?.lastName ?? ''"
+              (ngModelChange)="updateClientDraft('lastName', $event)"
+            />
+          </label>
+          <label>
+            Telephone
+            <input
+              [ngModel]="draft().clientDraft?.phone ?? ''"
+              (ngModelChange)="updateClientDraft('phone', $event)"
+            />
+          </label>
+          <label>
+            Email
+            <input
+              [ngModel]="draft().clientDraft?.email ?? ''"
+              (ngModelChange)="updateClientDraft('email', $event)"
+            />
+          </label>
+        </div>
+      }
+    </section>
+  }
+
+  @if (step() === 4) {
+    <section class="step-panel">
+      <h3>Confirmation</h3>
+      <div class="summary">
+        <p><strong>Praticienne:</strong> {{ draft().practitionerId || 'Non definie' }}</p>
+        <p><strong>Date:</strong> {{ draft().startAt || 'Non definie' }}</p>
+        <p><strong>Services:</strong> {{ draft().services.length }}</p>
+        <p><strong>Duree:</strong> {{ draft().durationMin }} min</p>
+        <p><strong>Total:</strong> {{ formatMoney(draft().priceTotal) }}</p>
+      </div>
+
+      <label>
+        Statut
+        <select [ngModel]="draft().status" (ngModelChange)="updateStatus($event)">
+          <option value="confirmed">Confirme</option>
+          <option value="pending">En attente</option>
+          <option value="blocked">Bloque</option>
+        </select>
+      </label>
+
+      <label>
+        Notes
+        <textarea rows="3" [ngModel]="draft().notes ?? ''" (ngModelChange)="updateNotes($event)"></textarea>
+      </label>
+    </section>
+  }
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+
+  <footer class="wizard-actions">
+    <button type="button" class="btn btn-ghost" [disabled]="step() === 1" (click)="previousStep()">Retour</button>
+
+    @if (step() < 4) {
+      <button type="button" class="btn btn-primary" (click)="nextStep()">Suivant</button>
+    } @else {
+      <button type="button" class="btn btn-primary" [disabled]="saving() || !canSubmit()" (click)="save()">
+        {{ saving() ? 'Enregistrement...' : mode() === 'create' ? 'Creer' : 'Enregistrer' }}
+      </button>
+    }
+  </footer>
+</section>
+
