@@ -87,6 +87,22 @@ export const aboutPageContentSchema = z.object({
     title: z.string().min(1),
     intro: z.string().min(1),
   }),
+  blocks: z.array(
+    z.object({
+      id: z.string().min(1),
+      visible: z.boolean(),
+      title: z.string().min(1),
+      text: z.string().min(1),
+    })
+  ).max(20),
+});
+
+const legacyAboutPageContentSchema = z.object({
+  hero: z.object({
+    visible: z.boolean(),
+    title: z.string().min(1),
+    intro: z.string().min(1),
+  }),
   approach: z.object({
     visible: z.boolean(),
     title: z.string().min(1),
@@ -102,6 +118,24 @@ export const aboutPageContentSchema = z.object({
     title: z.string().min(1),
     text: z.string().min(1),
   }),
+});
+
+export const normalizedAboutPageContentSchema = z.union([
+  aboutPageContentSchema,
+  legacyAboutPageContentSchema
+]).transform((value) => {
+  if ("blocks" in value) {
+    return value;
+  }
+
+  return {
+    hero: value.hero,
+    blocks: [
+      { id: "approach", ...value.approach },
+      { id: "hygiene", ...value.hygiene },
+      { id: "trainee", ...value.trainee },
+    ],
+  };
 });
 
 const contactInfoSchema = z.union([
@@ -149,7 +183,7 @@ export const contactPageContentSchema = z.object({
 });
 
 export type HomeContentPayload = z.infer<typeof homeContentSchema>;
-export type AboutPageContentPayload = z.infer<typeof aboutPageContentSchema>;
+export type AboutPageContentPayload = z.infer<typeof normalizedAboutPageContentSchema>;
 export type ContactPageContentPayload = z.infer<typeof contactPageContentSchema>;
 
 export type ManagedPageSlug = "home" | "about" | "contact";
@@ -239,21 +273,26 @@ export function defaultAboutPageContent(): AboutPageContentPayload {
       intro:
         "Le regard de Manon est ne d'une passion pour la precision du geste et l'elegance des resultats naturels. Chaque rendez-vous commence par une ecoute attentive de vos attentes.",
     },
-    approach: {
-      visible: true,
-      title: "Notre approche",
-      text: "Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils simples pour prolonger les effets a la maison.",
-    },
-    hygiene: {
-      visible: true,
-      title: "Hygiene et securite",
-      text: "Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.",
-    },
-    trainee: {
-      visible: true,
-      title: "Stagiaire",
-      text: "Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise sans validation prealable et votre accord.",
-    },
+    blocks: [
+      {
+        id: "approach",
+        visible: true,
+        title: "Notre approche",
+        text: "Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils simples pour prolonger les effets a la maison.",
+      },
+      {
+        id: "hygiene",
+        visible: true,
+        title: "Hygiene et securite",
+        text: "Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.",
+      },
+      {
+        id: "trainee",
+        visible: true,
+        title: "Stagiaire",
+        text: "Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise sans validation prealable et votre accord.",
+      },
+    ],
   };
 }
 
@@ -307,7 +346,7 @@ export function normalizePageContent(slug: ManagedPageSlug, input: unknown): Hom
   }
 
   if (slug === "about") {
-    const parsed = aboutPageContentSchema.safeParse(input);
+    const parsed = normalizedAboutPageContentSchema.safeParse(input);
     return parsed.success ? parsed.data : defaultAboutPageContent();
   }
 
@@ -321,7 +360,7 @@ export function pageSchemaForSlug(slug: ManagedPageSlug): z.ZodTypeAny {
   }
 
   if (slug === "about") {
-    return aboutPageContentSchema;
+    return normalizedAboutPageContentSchema;
   }
 
   return contactPageContentSchema;

@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import {
   AboutPageContent,
   defaultAboutPageContent,
+  normalizeAboutPageContent,
   PageContentApi
 } from '../../../core/api/page-content.api';
 
@@ -32,7 +33,7 @@ export class AdminAboutContent {
 
     this.api.getAdminContent<AboutPageContent>('about').subscribe({
       next: (payload) => {
-        this.content.set(payload);
+        this.content.set(normalizeAboutPageContent(payload));
         this.loading.set(false);
       },
       error: () => {
@@ -48,7 +49,7 @@ export class AdminAboutContent {
 
     this.api.updateAdminContent<AboutPageContent>('about', this.content()).subscribe({
       next: (payload) => {
-        this.content.set(payload);
+        this.content.set(normalizeAboutPageContent(payload));
         this.saving.set(false);
         this.toastMessage.set('Page A propos mise a jour.');
         setTimeout(() => this.toastMessage.set(''), 2200);
@@ -60,13 +61,44 @@ export class AdminAboutContent {
     });
   }
 
-  protected patch(section: keyof AboutPageContent, field: string, value: string | boolean): void {
+  protected patchHero(field: 'visible' | 'title' | 'intro', value: string | boolean): void {
     this.content.update((current) => ({
       ...current,
-      [section]: {
-        ...current[section],
+      hero: {
+        ...current.hero,
         [field]: value
       }
+    }));
+  }
+
+  protected patchBlock(index: number, field: 'visible' | 'title' | 'text', value: string | boolean): void {
+    this.content.update((current) => {
+      const blocks = current.blocks.map((block, currentIndex) =>
+        currentIndex === index ? { ...block, [field]: value } : block
+      );
+      return { ...current, blocks };
+    });
+  }
+
+  protected addBlock(): void {
+    this.content.update((current) => ({
+      ...current,
+      blocks: [
+        ...current.blocks,
+        {
+          id: `block-${Date.now()}`,
+          visible: true,
+          title: 'Nouveau bloc',
+          text: 'Texte du nouveau bloc.'
+        }
+      ]
+    }));
+  }
+
+  protected removeBlock(index: number): void {
+    this.content.update((current) => ({
+      ...current,
+      blocks: current.blocks.filter((_, currentIndex) => currentIndex !== index)
     }));
   }
 }

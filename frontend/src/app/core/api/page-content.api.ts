@@ -11,6 +11,20 @@ export type AboutPageContent = {
     title: string;
     intro: string;
   };
+  blocks: Array<{
+    id: string;
+    visible: boolean;
+    title: string;
+    text: string;
+  }>;
+};
+
+type LegacyAboutPageContent = {
+  hero: {
+    visible: boolean;
+    title: string;
+    intro: string;
+  };
   approach: {
     visible: boolean;
     title: string;
@@ -68,21 +82,46 @@ export function defaultAboutPageContent(): AboutPageContent {
       intro:
         "Le regard de Manon est ne d'une passion pour la precision du geste et l'elegance des resultats naturels. Chaque rendez-vous commence par une ecoute attentive de vos attentes."
     },
-    approach: {
-      visible: true,
-      title: 'Notre approche',
-      text: 'Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils simples pour prolonger les effets a la maison.'
-    },
-    hygiene: {
-      visible: true,
-      title: 'Hygiene et securite',
-      text: 'Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.'
-    },
-    trainee: {
-      visible: true,
-      title: 'Stagiaire',
-      text: "Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise sans validation prealable et votre accord."
-    }
+    blocks: [
+      {
+        id: 'approach',
+        visible: true,
+        title: 'Notre approche',
+        text: 'Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils simples pour prolonger les effets a la maison.'
+      },
+      {
+        id: 'hygiene',
+        visible: true,
+        title: 'Hygiene et securite',
+        text: 'Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.'
+      },
+      {
+        id: 'trainee',
+        visible: true,
+        title: 'Stagiaire',
+        text: "Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise sans validation prealable et votre accord."
+      }
+    ]
+  };
+}
+
+export function normalizeAboutPageContent(value: AboutPageContent | LegacyAboutPageContent | null | undefined): AboutPageContent {
+  if (!value) {
+    return defaultAboutPageContent();
+  }
+
+  if ('blocks' in value && Array.isArray(value.blocks)) {
+    return value as AboutPageContent;
+  }
+
+  const legacy = value as LegacyAboutPageContent;
+  return {
+    hero: legacy.hero,
+    blocks: [
+      { id: 'approach', ...legacy.approach },
+      { id: 'hygiene', ...legacy.hygiene },
+      { id: 'trainee', ...legacy.trainee }
+    ]
   };
 }
 

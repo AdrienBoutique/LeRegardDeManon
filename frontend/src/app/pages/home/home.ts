@@ -41,7 +41,7 @@ export class Home {
   }
 
   protected firstAboutImage(): string | null {
-    return this.content().about.images[0] ?? null;
+    return '/assets/bgManon2.jpg?v=2';
   }
 
   protected formatPrice(priceCents: number): string {

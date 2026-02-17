@@ -15,18 +15,10 @@
     <p>{{ content().hero.intro }}</p>
   }
 
-  @if (content().approach.visible) {
-    <h2>{{ content().approach.title }}</h2>
-    <p>{{ content().approach.text }}</p>
-  }
-
-  @if (content().hygiene.visible) {
-    <h2>{{ content().hygiene.title }}</h2>
-    <p>{{ content().hygiene.text }}</p>
-  }
-
-  @if (content().trainee.visible) {
-    <h2>{{ content().trainee.title }}</h2>
-    <p>{{ content().trainee.text }}</p>
+  @for (block of content().blocks; track block.id) {
+    @if (block.visible) {
+      <h2>{{ block.title }}</h2>
+      <p>{{ block.text }}</p>
+    }
   }
 </section>

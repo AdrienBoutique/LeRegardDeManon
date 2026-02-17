@@ -21,38 +21,29 @@
     <article class="card panel" [class.hidden-block]="!content().hero.visible">
       <div class="block-header">
         <h2>Hero</h2>
-        <label><input type="checkbox" [checked]="content().hero.visible" (change)="patch('hero','visible',$any($event.target).checked)" /> Visible</label>
+        <label><input type="checkbox" [checked]="content().hero.visible" (change)="patchHero('visible',$any($event.target).checked)" /> Visible</label>
       </div>
-      <label>Titre <input [value]="content().hero.title" (input)="patch('hero','title',$any($event.target).value)" /></label>
-      <label>Introduction <textarea rows="3" [value]="content().hero.intro" (input)="patch('hero','intro',$any($event.target).value)"></textarea></label>
+      <label>Titre <input [value]="content().hero.title" (input)="patchHero('title',$any($event.target).value)" /></label>
+      <label>Introduction <textarea rows="3" [value]="content().hero.intro" (input)="patchHero('intro',$any($event.target).value)"></textarea></label>
     </article>
 
-    <article class="card panel" [class.hidden-block]="!content().approach.visible">
-      <div class="block-header">
-        <h2>Approche</h2>
-        <label><input type="checkbox" [checked]="content().approach.visible" (change)="patch('approach','visible',$any($event.target).checked)" /> Visible</label>
-      </div>
-      <label>Titre <input [value]="content().approach.title" (input)="patch('approach','title',$any($event.target).value)" /></label>
-      <label>Texte <textarea rows="3" [value]="content().approach.text" (input)="patch('approach','text',$any($event.target).value)"></textarea></label>
-    </article>
+    @for (block of content().blocks; track block.id; let index = $index) {
+      <article class="card panel" [class.hidden-block]="!block.visible">
+        <div class="block-header">
+          <h2>Bloc {{ index + 1 }}</h2>
+          <div class="block-actions">
+            <label><input type="checkbox" [checked]="block.visible" (change)="patchBlock(index,'visible',$any($event.target).checked)" /> Visible</label>
+            <button type="button" class="btn btn-ghost btn-remove" (click)="removeBlock(index)">Supprimer</button>
+          </div>
+        </div>
+        <label>Titre <input [value]="block.title" (input)="patchBlock(index,'title',$any($event.target).value)" /></label>
+        <label>Texte <textarea rows="3" [value]="block.text" (input)="patchBlock(index,'text',$any($event.target).value)"></textarea></label>
+      </article>
+    }
 
-    <article class="card panel" [class.hidden-block]="!content().hygiene.visible">
-      <div class="block-header">
-        <h2>Hygiene</h2>
-        <label><input type="checkbox" [checked]="content().hygiene.visible" (change)="patch('hygiene','visible',$any($event.target).checked)" /> Visible</label>
-      </div>
-      <label>Titre <input [value]="content().hygiene.title" (input)="patch('hygiene','title',$any($event.target).value)" /></label>
-      <label>Texte <textarea rows="3" [value]="content().hygiene.text" (input)="patch('hygiene','text',$any($event.target).value)"></textarea></label>
-    </article>
-
-    <article class="card panel" [class.hidden-block]="!content().trainee.visible">
-      <div class="block-header">
-        <h2>Stagiaire</h2>
-        <label><input type="checkbox" [checked]="content().trainee.visible" (change)="patch('trainee','visible',$any($event.target).checked)" /> Visible</label>
-      </div>
-      <label>Titre <input [value]="content().trainee.title" (input)="patch('trainee','title',$any($event.target).value)" /></label>
-      <label>Texte <textarea rows="3" [value]="content().trainee.text" (input)="patch('trainee','text',$any($event.target).value)"></textarea></label>
-    </article>
+    <div class="block-add">
+      <button type="button" class="btn btn-ghost" (click)="addBlock()">+ Ajouter un bloc</button>
+    </div>
 
     <div class="save-bar">
       <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">

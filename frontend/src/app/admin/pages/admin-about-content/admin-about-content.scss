@@ -65,6 +65,23 @@ textarea {
   width: auto;
 }
 
+.block-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.block-add {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn-remove {
+  border-color: #dbbdb7;
+  color: #7a3e35;
+}
+
 .hidden-block {
   opacity: 0.72;
   border-style: dashed;

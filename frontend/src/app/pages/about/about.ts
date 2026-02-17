@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import {
   AboutPageContent,
   defaultAboutPageContent,
+  normalizeAboutPageContent,
   PageContentApi
 } from '../../core/api/page-content.api';
 import { AuthService } from '../../core/services/auth.service';
@@ -23,7 +24,7 @@ export class About {
 
   constructor() {
     this.pageContentApi.getPublicContent<AboutPageContent>('about').subscribe({
-      next: (payload) => this.content.set(payload),
+      next: (payload) => this.content.set(normalizeAboutPageContent(payload)),
       error: () => this.errorMessage.set("Impossible de charger la page A propos.")
     });
   }
