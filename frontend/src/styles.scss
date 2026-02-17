@@ -138,3 +138,125 @@ a {
   border-color: #c8b2a0;
   background: #fffcf8;
 }
+
+.why {
+  padding: 90px 0;
+}
+
+.why-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 42px;
+  margin: 0 0 40px;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.why-item {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  padding: 28px;
+  border: 1px solid rgba(120, 80, 55, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  text-align: center;
+}
+
+.why-item:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.07);
+}
+
+.why-icon {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin: 14px auto 14px;
+  opacity: 0.9;
+  display: block;
+  transform: scale(3);
+  transform-origin: center;
+}
+
+.why-item-title {
+  display: block;
+  font-size: 22px;
+  margin: 0;
+  color: #3a2a1f;
+}
+
+.why-item p {
+  margin: 0 auto;
+  color: rgba(58, 42, 31, 0.75);
+  line-height: 1.6;
+  font-size: 15px;
+  max-width: 34ch;
+}
+
+.shine-underline {
+  position: relative;
+  display: block;
+  width: 88%;
+  margin: 8px auto 14px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.shine-underline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7px;
+  width: 100%;
+  height: 2px;
+  border-radius: 99px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(58, 42, 31, 0.28) 0%,
+      rgba(58, 42, 31, 0.78) 45%,
+      rgba(236, 215, 196, 0.95) 50%,
+      rgba(58, 42, 31, 0.78) 55%,
+      rgba(58, 42, 31, 0.28) 100%
+    );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  box-shadow: 6px 0 0 rgba(58, 42, 31, 0.12);
+  animation: underlineSheen 6s ease-in-out infinite;
+}
+
+@keyframes underlineSheen {
+  0%,
+  68% {
+    background-position: 100% 50%;
+  }
+
+  85% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine-underline::before {
+    animation: none;
+  }
+}
+
+
+@media (max-width: 900px) {
+  .why-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .why-title {
+    font-size: 34px;
+  }
+}

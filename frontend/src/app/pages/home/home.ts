@@ -79,4 +79,9 @@ export class Home {
     const step = firstCard ? firstCard.offsetWidth + gap : Math.max(280, Math.round(container.clientWidth * 0.85));
     container.scrollBy({ left: direction * step, behavior: 'smooth' });
   }
+
+  protected reasonIcon(index: number): string {
+    const iconNumber = (index % 3) + 1;
+    return `/assets/choisir${iconNumber}.png`;
+  }
 }

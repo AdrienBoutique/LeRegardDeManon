@@ -9,6 +9,11 @@
     <div class="hero-overlay"></div>
 
     <div class="hero-content">
+      <div class="hero-text">
+        <h1>Le regard de Manon</h1>
+        <p class="subtitle">Beaute et bien-etre</p>
+      </div>
+
       <div class="hero-buttons">
         <button type="button" class="btn-primary" routerLink="/rdv">Prendre rendez-vous</button>
         <button type="button" class="btn-secondary" routerLink="/soins">Voir les soins</button>
@@ -40,7 +45,13 @@
 
         <div class="offers-rail" #offersRail>
           @for (promo of promotions; track promo.id) {
-            <article class="offer-card" [style.--offer-index]="$index">
+            <article
+              class="offer-card"
+              [class.offer-card-single]="promo.services.length === 1"
+              [class.offer-card-two]="promo.services.length === 2"
+              [class.offer-card-multi]="promo.services.length > 1"
+              [style.--offer-index]="$index"
+            >
               <div class="offer-head">
                 <span class="offer-badge limited">Edition limitee</span>
                 <span class="offer-badge discount">{{ promo.computedDiscountLabel }}</span>
@@ -136,12 +147,15 @@
 }
 
 @if (content().reasons.visible) {
-  <section class="panel">
-    <h2>{{ content().reasons.title }}</h2>
-    <div class="cards-grid points">
+  <section class="why">
+    <h2 class="why-title">{{ content().reasons.title }}</h2>
+
+    <div class="why-grid">
       @for (item of content().reasons.items; track $index) {
-        <article class="card">
-          <h3>{{ item.title }}</h3>
+        <article class="why-item">
+          <h3 class="why-item-title">{{ item.title }}</h3>
+          <span class="shine-underline" aria-hidden="true"></span>
+          <img class="why-icon" [src]="reasonIcon($index)" [alt]="item.title" />
           <p>{{ item.text }}</p>
         </article>
       }
