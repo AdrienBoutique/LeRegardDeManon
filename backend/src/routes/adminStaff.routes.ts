@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { authRequired, requireRole } from "../middlewares/auth";
 import { authAdmin } from "../middlewares/authAdmin";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
@@ -77,9 +79,7 @@ function computeEffectivePrice(
 
 export const adminStaffRouter = Router();
 
-adminStaffRouter.use(authAdmin);
-
-adminStaffRouter.get("/", async (_req, res) => {
+adminStaffRouter.get("/", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (_req, res) => {
   try {
     const staff = await prisma.staffMember.findMany({
       orderBy: { createdAt: "desc" },
@@ -104,7 +104,7 @@ adminStaffRouter.get("/", async (_req, res) => {
   }
 });
 
-adminStaffRouter.post("/", async (req, res) => {
+adminStaffRouter.post("/", ...authAdmin, async (req, res) => {
   try {
     const payload = parseOrThrow(createStaffSchema, req.body);
     const { firstName, lastName } = splitName(payload.name);
@@ -145,14 +145,15 @@ adminStaffRouter.post("/", async (req, res) => {
   }
 });
 
-adminStaffRouter.patch("/:id", async (req, res) => {
+adminStaffRouter.patch("/:id", ...authAdmin, async (req, res) => {
   try {
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const payload = parseOrThrow(updateStaffSchema, req.body);
 
     const nameParts = payload.name ? splitName(payload.name) : null;
 
     const updated = await prisma.staffMember.update({
-      where: { id: req.params.id },
+      where: { id: staffId },
       data: {
         firstName: nameParts?.firstName,
         lastName: nameParts?.lastName,
@@ -193,11 +194,12 @@ adminStaffRouter.patch("/:id", async (req, res) => {
   }
 });
 
-adminStaffRouter.get("/:id/services", async (req, res) => {
+adminStaffRouter.get("/:id/services", ...authAdmin, async (req, res) => {
   try {
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const links = await prisma.serviceStaff.findMany({
       where: {
-        staffMemberId: req.params.id,
+        staffMemberId: staffId,
       },
       orderBy: { createdAt: "desc" },
       select: {
@@ -243,13 +245,14 @@ adminStaffRouter.get("/:id/services", async (req, res) => {
   }
 });
 
-adminStaffRouter.post("/:id/services", async (req, res) => {
+adminStaffRouter.post("/:id/services", ...authAdmin, async (req, res) => {
   try {
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const payload = parseOrThrow(assignStaffServiceSchema, req.body);
 
     const created = await prisma.serviceStaff.create({
       data: {
-        staffMemberId: req.params.id,
+        staffMemberId: staffId,
         serviceId: payload.serviceId,
         priceCentsOverride: payload.priceCentsOverride ?? null,
         discountPercentOverride: payload.discountPercentOverride ?? null,
@@ -283,10 +286,11 @@ adminStaffRouter.post("/:id/services", async (req, res) => {
   }
 });
 
-adminStaffRouter.delete("/:id", async (req, res) => {
+adminStaffRouter.delete("/:id", ...authAdmin, async (req, res) => {
   try {
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     await prisma.staffMember.update({
-      where: { id: req.params.id },
+      where: { id: staffId },
       data: { isActive: false },
     });
 

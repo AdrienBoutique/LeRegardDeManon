@@ -23,8 +23,15 @@ export class AdminLogin {
   });
 
   constructor() {
-    if (this.authService.isLoggedIn()) {
-      this.router.navigateByUrl('/admin/services');
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      if (user.mustChangePassword) {
+        this.router.navigateByUrl('/change-password');
+      } else if (user.role === 'ADMIN') {
+        this.router.navigateByUrl('/espace-pro/services');
+      } else {
+        this.router.navigateByUrl('/admin/planning');
+      }
     }
   }
 
@@ -40,9 +47,15 @@ export class AdminLogin {
     const { email, password } = this.form.getRawValue();
 
     this.authService.login(email, password).subscribe({
-      next: () => {
+      next: (user) => {
         this.loading.set(false);
-        this.router.navigateByUrl('/admin/services');
+        if (user.mustChangePassword) {
+          this.router.navigateByUrl('/change-password');
+        } else if (user.role === 'ADMIN') {
+          this.router.navigateByUrl('/espace-pro/services');
+        } else {
+          this.router.navigateByUrl('/admin/planning');
+        }
       },
       error: () => {
         this.loading.set(false);

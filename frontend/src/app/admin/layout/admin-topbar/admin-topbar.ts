@@ -12,13 +12,25 @@ export class AdminTopbar {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
+  protected isAdminUser(): boolean {
+    return this.authService.getCurrentUser()?.role === 'ADMIN';
+  }
+
+  protected isStaffUser(): boolean {
+    return this.authService.getCurrentUser()?.role === 'STAFF';
+  }
+
   protected isEditionSection(): boolean {
     const url = this.router.url;
     return (
       url.startsWith('/admin/edition') ||
+      url.startsWith('/espace-pro/edition') ||
       url.startsWith('/admin/accueil') ||
+      url.startsWith('/espace-pro/accueil') ||
       url.startsWith('/admin/a-propos') ||
-      url.startsWith('/admin/contact')
+      url.startsWith('/espace-pro/a-propos') ||
+      url.startsWith('/admin/contact') ||
+      url.startsWith('/espace-pro/contact')
     );
   }
 

@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { AuthenticatedRequest, authRequired, requireRole } from "../middlewares/auth";
 import { authAdmin } from "../middlewares/authAdmin";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
@@ -133,12 +135,29 @@ function formatWeeklyDays(
 
 export const adminAvailabilityRouter = Router();
 
-adminAvailabilityRouter.use(authAdmin);
+async function getLinkedPractitionerId(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { practitioner: { select: { id: true } } },
+  });
+  return user?.practitioner?.id ?? null;
+}
 
-adminAvailabilityRouter.get("/staff/:id/availability", async (req, res) => {
+adminAvailabilityRouter.get("/staff/:id/availability", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
   try {
+    const auth = (req as AuthenticatedRequest).user;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    if (auth.role === Role.STAFF) {
+      const linkedPractitionerId = await getLinkedPractitionerId(auth.id);
+      if (!linkedPractitionerId || linkedPractitionerId !== staffId) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+
     const rules = await prisma.availabilityRule.findMany({
-      where: { staffMemberId: req.params.id },
+      where: { staffMemberId: staffId },
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
 
@@ -147,7 +166,7 @@ adminAvailabilityRouter.get("/staff/:id/availability", async (req, res) => {
       const rule = ruleByWeekday.get(weekday);
       return {
         id: rule?.id ?? null,
-        staffId: req.params.id,
+        staffId,
         weekday,
         off: !rule,
         startTime: rule?.startTime ?? null,
@@ -165,10 +184,19 @@ adminAvailabilityRouter.get("/staff/:id/availability", async (req, res) => {
   }
 });
 
-adminAvailabilityRouter.put("/staff/:id/availability", async (req, res) => {
+adminAvailabilityRouter.put("/staff/:id/availability", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
   try {
+    const auth = (req as AuthenticatedRequest).user;
     const payload = parseOrThrow(putWeeklyAvailabilitySchema, req.body);
-    const staffId = req.params.id;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    if (auth.role === Role.STAFF) {
+      const linkedPractitionerId = await getLinkedPractitionerId(auth.id);
+      if (!linkedPractitionerId || linkedPractitionerId !== staffId) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
 
     const byWeekday = new Map(payload.days.map((day) => [day.weekday, day]));
 
@@ -228,13 +256,14 @@ adminAvailabilityRouter.put("/staff/:id/availability", async (req, res) => {
   }
 });
 
-adminAvailabilityRouter.post("/staff/:id/availability", async (req, res) => {
+adminAvailabilityRouter.post("/staff/:id/availability", ...authAdmin, async (req, res) => {
   try {
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const payload = parseOrThrow(createAvailabilitySchema, req.body);
 
     const created = await prisma.availabilityRule.create({
       data: {
-        staffMemberId: req.params.id,
+        staffMemberId: staffId,
         dayOfWeek: payload.weekday,
         startTime: payload.startTime,
         endTime: payload.endTime,
@@ -263,7 +292,7 @@ adminAvailabilityRouter.post("/staff/:id/availability", async (req, res) => {
   }
 });
 
-adminAvailabilityRouter.get("/availability/institute", async (_req, res) => {
+adminAvailabilityRouter.get("/availability/institute", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (_req, res) => {
   try {
     const rules = await prisma.instituteAvailabilityRule.findMany({
       where: { isActive: true },
@@ -292,7 +321,7 @@ adminAvailabilityRouter.get("/availability/institute", async (_req, res) => {
   }
 });
 
-adminAvailabilityRouter.put("/availability/institute", async (req, res) => {
+adminAvailabilityRouter.put("/availability/institute", ...authAdmin, async (req, res) => {
   try {
     const payload = parseOrThrow(putWeeklyAvailabilitySchema, req.body);
     const byWeekday = new Map(payload.days.map((day) => [day.weekday, day]));
@@ -343,12 +372,13 @@ adminAvailabilityRouter.put("/availability/institute", async (req, res) => {
   }
 });
 
-adminAvailabilityRouter.patch("/availability/:id", async (req, res) => {
+adminAvailabilityRouter.patch("/availability/:id", ...authAdmin, async (req, res) => {
   try {
+    const availabilityId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const payload = parseOrThrow(updateAvailabilitySchema, req.body);
 
     const existing = await prisma.availabilityRule.findUnique({
-      where: { id: req.params.id },
+      where: { id: availabilityId },
       select: { startTime: true, endTime: true },
     });
 
@@ -366,7 +396,7 @@ adminAvailabilityRouter.patch("/availability/:id", async (req, res) => {
     }
 
     const updated = await prisma.availabilityRule.update({
-      where: { id: req.params.id },
+      where: { id: availabilityId },
       data: {
         dayOfWeek: payload.weekday,
         startTime: payload.startTime,
@@ -395,10 +425,11 @@ adminAvailabilityRouter.patch("/availability/:id", async (req, res) => {
   }
 });
 
-adminAvailabilityRouter.delete("/availability/:id", async (req, res) => {
+adminAvailabilityRouter.delete("/availability/:id", ...authAdmin, async (req, res) => {
   try {
+    const availabilityId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     await prisma.availabilityRule.delete({
-      where: { id: req.params.id },
+      where: { id: availabilityId },
     });
 
     res.json({ ok: true });

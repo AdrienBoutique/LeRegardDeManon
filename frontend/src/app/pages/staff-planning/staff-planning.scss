@@ -1,0 +1,59 @@
+.staff-planning {
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.heading {
+  padding: 1rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+h1 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+input,
+select {
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.52rem 0.62rem;
+}
+
+.appointments-grid {
+  grid-template-columns: 1fr;
+}
+
+.appointment-card {
+  padding: 1rem;
+}
+
+.appointment-card h3 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.appointment-card p {
+  margin: 0.45rem 0 0;
+}
+
+.error-box {
+  padding: 1rem;
+  color: #9f1f1f;
+}
+
+@media (min-width: 860px) {
+  .appointments-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

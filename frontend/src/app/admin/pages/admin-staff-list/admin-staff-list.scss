@@ -170,6 +170,36 @@ input {
   margin-bottom: 0.75rem;
 }
 
+.temp-password-box {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #fffaf4;
+  padding: 0.75rem;
+}
+
+.temp-password-title {
+  margin: 0;
+  color: #47392e;
+  font-weight: 700;
+}
+
+.temp-password-row {
+  margin-top: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.temp-password-row code {
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: #f3e8dc;
+  color: #3e3127;
+  border: 1px solid var(--color-border);
+}
+
 @media (min-width: 860px) {
   .two-cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -27,11 +27,17 @@ enum DiscountType {
   FIXED
 }
 
+enum Role {
+  ADMIN
+  STAFF
+}
+
 model StaffMember {
   id                String             @id @default(cuid())
   firstName         String
   lastName          String
   email             String             @unique
+  userId            String?            @unique
   phone             String?
   role              String
   isActive          Boolean            @default(true)
@@ -40,11 +46,24 @@ model StaffMember {
   defaultDiscountPercent Int?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  user              User?              @relation(fields: [userId], references: [id])
   serviceLinks      ServiceStaff[]
   appointments      Appointment[]
   availabilityRules AvailabilityRule[]
   timeOffs          TimeOff[]
   notificationLogs  NotificationLog[]
+}
+
+model User {
+  id                 String      @id @default(cuid())
+  email              String      @unique
+  passwordHash       String
+  role               Role        @default(STAFF)
+  isActive           Boolean     @default(true)
+  mustChangePassword Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  practitioner       StaffMember?
 }
 
 model Service {

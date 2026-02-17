@@ -11,6 +11,7 @@ import { adminPromotionsRouter } from "./routes/adminPromotions.routes";
 import { adminHomeContentRouter } from "./routes/adminHomeContent.routes";
 import { adminPageContentRouter } from "./routes/adminPageContent.routes";
 import { adminClientsRouter } from "./routes/adminClients.routes";
+import { adminPractitionersRouter } from "./routes/adminPractitioners.routes";
 import { publicAppointmentsRouter } from "./routes/publicAppointments.routes";
 import { publicEligibleServicesRouter } from "./routes/publicEligibleServices.routes";
 import { publicFreeStartsRouter } from "./routes/publicFreeStarts.routes";
@@ -20,6 +21,8 @@ import { publicServicesRouter } from "./routes/publicServices.routes";
 import { publicStaffRouter } from "./routes/publicStaff.routes";
 import { publicSlotsRouter } from "./routes/publicSlots.routes";
 import { publicPageContentRouter } from "./routes/publicPageContent.routes";
+import { authRouter } from "./routes/auth.routes";
+import { staffPlanningRouter } from "./routes/staffPlanning.routes";
 
 export const app = express();
 
@@ -31,8 +34,10 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/admin/auth", adminAuthRouter);
+app.use("/api/auth", authRouter);
 app.use("/api/admin", adminAvailabilityRouter);
 app.use("/api/admin", adminPlanningRouter);
+app.use("/api/admin/practitioners", adminPractitionersRouter);
 app.use("/api/admin", adminTimeOffRouter);
 app.use("/api/admin/services", adminServicesRouter);
 app.use("/api/admin/promotions", adminPromotionsRouter);
@@ -50,3 +55,4 @@ app.use("/api", publicEligibleServicesRouter);
 app.use("/api", publicSlotsRouter);
 app.use("/api", publicFreeStartsRouter);
 app.use("/api", publicAppointmentsRouter);
+app.use("/api", staffPlanningRouter);

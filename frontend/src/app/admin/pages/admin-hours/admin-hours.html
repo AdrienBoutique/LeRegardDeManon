@@ -14,24 +14,28 @@
 
   <article class="card panel">
     <h2>Mode</h2>
-    <div class="target-picker" role="radiogroup" aria-label="Choisir le type d'horaire">
-      <button
-        type="button"
-        class="chip"
-        [class.active-chip]="target() === 'institute'"
-        (click)="setTarget('institute')"
-      >
-        Institut
-      </button>
-      <button
-        type="button"
-        class="chip"
-        [class.active-chip]="target() === 'staff'"
-        (click)="setTarget('staff')"
-      >
-        Praticienne
-      </button>
-    </div>
+    @if (isStaffUser()) {
+      <p class="muted">Modification de vos horaires personnels.</p>
+    } @else {
+      <div class="target-picker" role="radiogroup" aria-label="Choisir le type d'horaire">
+        <button
+          type="button"
+          class="chip"
+          [class.active-chip]="target() === 'institute'"
+          (click)="setTarget('institute')"
+        >
+          Institut
+        </button>
+        <button
+          type="button"
+          class="chip"
+          [class.active-chip]="target() === 'staff'"
+          (click)="setTarget('staff')"
+        >
+          Praticienne
+        </button>
+      </div>
+    }
   </article>
 
   @if (target() === 'institute') {

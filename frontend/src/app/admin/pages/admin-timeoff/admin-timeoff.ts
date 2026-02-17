@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { finalize, firstValueFrom } from 'rxjs';
 import { AdminInstituteApiService, AdminStaffItem, AdminTimeOffItem } from '../../../core/services/admin-institute-api.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-admin-timeoff',
@@ -11,6 +12,7 @@ import { AdminInstituteApiService, AdminStaffItem, AdminTimeOffItem } from '../.
 })
 export class AdminTimeOff {
   private readonly api = inject(AdminInstituteApiService);
+  private readonly authService = inject(AuthService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -25,7 +27,8 @@ export class AdminTimeOff {
   protected readonly timeOff = signal<AdminTimeOffItem[]>([]);
   protected readonly globalTimeOff = signal<AdminTimeOffItem[]>([]);
 
-  protected readonly hasStaff = computed(() => this.staff().length > 0);
+  protected readonly hasStaff = computed(() => this.staff().length > 0 || this.selectedStaffId() === 'institut');
+  protected readonly isStaffUser = computed(() => this.authService.getCurrentUser()?.role === 'STAFF');
   protected readonly upcomingTimeOff = computed(() => {
     const now = Date.now();
     return this.timeOff()
@@ -49,7 +52,12 @@ export class AdminTimeOff {
       }
     });
 
-    this.fetchStaff();
+    if (this.isStaffUser()) {
+      this.selectedStaffId.set('institut');
+      this.fetchTimeOff('institut');
+    } else {
+      this.fetchStaff();
+    }
   }
 
   protected selectStaff(staffId: string): void {
@@ -300,7 +308,10 @@ export class AdminTimeOff {
           this.fetchTimeOff('institut');
         },
         error: () => {
-          this.errorMessage.set('Impossible de charger les praticiennes.');
+          this.staff.set([]);
+          this.selectedStaffId.set('institut');
+          this.fetchTimeOff('institut');
+          this.errorMessage.set("Liste praticiennes indisponible. Affichage des conges institut uniquement.");
         }
       });
   }

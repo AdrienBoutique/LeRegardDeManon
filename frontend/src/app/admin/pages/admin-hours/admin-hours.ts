@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { AdminInstituteApiService, AdminStaffItem } from '../../../core/services/admin-institute-api.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 type EditableDay = {
   weekday: number;
@@ -29,6 +30,7 @@ const DAYS: Array<{ weekday: number; label: string }> = [
 })
 export class AdminHours {
   private readonly api = inject(AdminInstituteApiService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -47,6 +49,7 @@ export class AdminHours {
   protected readonly instituteDays = signal<EditableDay[]>(this.getDefaultDays());
 
   protected readonly hasStaff = computed(() => this.staff().length > 0);
+  protected readonly isStaffUser = computed(() => this.authService.getCurrentUser()?.role === 'STAFF');
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -56,7 +59,19 @@ export class AdminHours {
     });
 
     this.fetchInstituteAvailability();
-    this.fetchStaff();
+    if (!this.isStaffUser()) {
+      this.fetchStaff();
+    } else {
+      const practitionerId = this.authService.getCurrentUser()?.practitionerId ?? null;
+      if (!practitionerId) {
+        this.errorMessage.set('Aucune praticienne liee a votre compte staff.');
+        return;
+      }
+
+      this.selectedStaffId.set(practitionerId);
+      this.target.set('staff');
+      this.fetchAvailability(practitionerId);
+    }
   }
 
   protected setTarget(target: HoursTarget): void {

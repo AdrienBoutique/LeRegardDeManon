@@ -34,6 +34,7 @@
         </div>
 
         <p>{{ member.email }}</p>
+        <p class="muted">Acces planning: {{ member.hasAccount ? 'Oui' : 'Non' }}</p>
         @if (member.defaultDiscountPercent !== null) {
           <p class="muted">Reduction par defaut: {{ member.defaultDiscountPercent }}%</p>
         }
@@ -80,6 +81,11 @@
 
           <div class="grid three-cols">
             <label class="check-row">
+              <input type="checkbox" formControlName="accessPlanning" />
+              Acces planning
+            </label>
+
+            <label class="check-row">
               <input type="checkbox" formControlName="active" />
               Active
             </label>
@@ -94,6 +100,10 @@
               <input type="number" min="0" max="100" formControlName="defaultDiscountPercent" />
             </label>
           </div>
+
+          <p class="muted">
+            La praticienne devra changer son mot de passe au 1er login.
+          </p>
 
           <div class="color-row">
             <label class="color-label">
@@ -117,6 +127,18 @@
           <button type="submit" class="btn btn-primary" [disabled]="saving()">
             {{ saving() ? 'Creation...' : 'Ajouter' }}
           </button>
+
+          @if (tempPassword()) {
+            <article class="temp-password-box">
+              <p class="temp-password-title">Mot de passe temporaire</p>
+              <div class="temp-password-row">
+                <code>{{ tempPassword() }}</code>
+                <button type="button" class="btn btn-ghost btn-compact" (click)="copyTempPassword()">
+                  Copier
+                </button>
+              </div>
+            </article>
+          }
         </form>
       </article>
     </div>

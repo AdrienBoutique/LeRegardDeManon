@@ -1,10 +1,10 @@
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, Role } from "@prisma/client";
 import { DateTime } from "luxon";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { BRUSSELS_TIMEZONE } from "../lib/time";
-import { authAdmin } from "../middlewares/authAdmin";
+import { authRequired, requireRole } from "../middlewares/auth";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -53,7 +53,7 @@ function mapStatus(status: AppointmentStatus): "BOOKED" | "DONE" | "NO_SHOW" {
 
 export const adminPlanningRouter = Router();
 
-adminPlanningRouter.use(authAdmin);
+adminPlanningRouter.use(authRequired, requireRole(Role.ADMIN, Role.STAFF));
 
 adminPlanningRouter.get("/planning", async (req, res) => {
   try {

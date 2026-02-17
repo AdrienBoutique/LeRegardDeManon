@@ -21,32 +21,48 @@ import { AdminAboutContent } from './admin/pages/admin-about-content/admin-about
 import { AdminContactContent } from './admin/pages/admin-contact-content/admin-contact-content';
 import { AdminContentHub } from './admin/pages/admin-content-hub/admin-content-hub';
 import { AdminLayout } from './admin/layout/admin-layout';
-import { adminGuard } from './core/guards/admin.guard';
 import { AdminClients } from './admin/pages/admin-clients/admin-clients';
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { ChangePassword } from './pages/change-password/change-password';
+
+const adminChildren: Routes = [
+  { path: 'services', component: AdminServices, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'promotions', component: AdminPromotions, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'clients', component: AdminClients, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'edition', component: AdminContentHub, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'accueil', component: AdminHomeContent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'a-propos', component: AdminAboutContent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'contact', component: AdminContactContent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'staff', component: AdminStaffList, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'staff/:id', component: AdminStaffDetail, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'praticiennes', redirectTo: 'staff', pathMatch: 'full' },
+  { path: 'praticiennes/:id', redirectTo: 'staff/:id' },
+  { path: 'horaires', component: AdminHours, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'conges', component: AdminTimeOff, canActivate: [roleGuard], data: { roles: ['STAFF', 'ADMIN'] } },
+  { path: 'planning', component: AdminPlanning, canActivate: [roleGuard], data: { roles: ['STAFF', 'ADMIN'] } },
+  { path: '', pathMatch: 'full', redirectTo: 'planning' }
+];
 
 export const routes: Routes = [
   { path: 'admin/login', component: AdminLogin },
+  { path: 'change-password', component: ChangePassword, canActivate: [authGuard] },
   {
     path: 'admin',
     component: AdminLayout,
-    canActivate: [adminGuard],
-    children: [
-      { path: 'services', component: AdminServices },
-      { path: 'promotions', component: AdminPromotions },
-      { path: 'clients', component: AdminClients },
-      { path: 'edition', component: AdminContentHub },
-      { path: 'accueil', component: AdminHomeContent },
-      { path: 'a-propos', component: AdminAboutContent },
-      { path: 'contact', component: AdminContactContent },
-      { path: 'staff', component: AdminStaffList },
-      { path: 'staff/:id', component: AdminStaffDetail },
-      { path: 'praticiennes', redirectTo: 'staff', pathMatch: 'full' },
-      { path: 'praticiennes/:id', redirectTo: 'staff/:id' },
-      { path: 'horaires', component: AdminHours },
-      { path: 'conges', component: AdminTimeOff },
-      { path: 'planning', component: AdminPlanning },
-      { path: '', pathMatch: 'full', redirectTo: 'services' }
-    ]
+    canActivate: [authGuard],
+    children: adminChildren
+  },
+  {
+    path: 'espace-pro',
+    component: AdminLayout,
+    canActivate: [authGuard],
+    children: adminChildren
+  },
+  {
+    path: 'planning',
+    pathMatch: 'full',
+    redirectTo: 'admin/planning'
   },
   { path: '', component: Home },
   { path: 'soins', component: Services },

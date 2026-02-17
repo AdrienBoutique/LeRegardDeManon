@@ -1,8 +1,9 @@
-﻿import jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+import { Role } from "@prisma/client";
 
-export type AdminJwtPayload = {
-  id: string;
-  email: string;
+export type AuthJwtPayload = {
+  sub: string;
+  role: Role;
 };
 
 function getJwtSecret(): string {
@@ -15,22 +16,26 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signAdminToken(payload: AdminJwtPayload): string {
+export function signAuthToken(payload: AuthJwtPayload): string {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 }
 
-export function verifyAdminToken(token: string): AdminJwtPayload {
+export function verifyAuthToken(token: string): AuthJwtPayload {
   const decoded = jwt.verify(token, getJwtSecret());
 
   if (!decoded || typeof decoded === "string") {
     throw new Error("Invalid token payload");
   }
 
-  const { id, email } = decoded as { id?: unknown; email?: unknown };
+  const { sub, role } = decoded as { sub?: unknown; role?: unknown };
 
-  if (typeof id !== "string" || typeof email !== "string") {
+  if (typeof sub !== "string") {
     throw new Error("Invalid token payload shape");
   }
 
-  return { id, email };
+  if (role !== "ADMIN" && role !== "STAFF") {
+    throw new Error("Invalid token role");
+  }
+
+  return { sub, role };
 }

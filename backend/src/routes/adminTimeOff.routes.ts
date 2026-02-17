@@ -1,9 +1,10 @@
 import { DateTime } from "luxon";
 import { Router } from "express";
 import { z } from "zod";
+import { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { BRUSSELS_TIMEZONE } from "../lib/time";
-import { authAdmin } from "../middlewares/authAdmin";
+import { authRequired, requireRole } from "../middlewares/auth";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const createTimeOffSchema = z
@@ -60,7 +61,7 @@ const createTimeOffSchema = z
 
 export const adminTimeOffRouter = Router();
 
-adminTimeOffRouter.use(authAdmin);
+adminTimeOffRouter.use(authRequired, requireRole(Role.ADMIN, Role.STAFF));
 
 function encodeGlobalTimeOffId(startsAt: Date, endsAt: Date, reason: string | null): string {
   const key = `${startsAt.toISOString()}|${endsAt.toISOString()}|${reason ?? ""}`;

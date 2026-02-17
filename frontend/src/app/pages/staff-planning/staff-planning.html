@@ -1,0 +1,45 @@
+<section class="staff-planning stack">
+  <header class="card heading">
+    <h1>Mon planning</h1>
+    <label>
+      Date
+      <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" />
+    </label>
+    @if (isAdmin()) {
+      <label>
+        Praticienne
+        <select
+          [value]="filterForm.controls.practitionerId.value"
+          (change)="onPractitionerChange($any($event.target).value)"
+        >
+          @for (item of practitioners(); track item.id) {
+            <option [value]="item.id">{{ item.name }}</option>
+          }
+        </select>
+      </label>
+    }
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  <section class="grid appointments-grid">
+    @if (loading()) {
+      <article class="card appointment-card">Chargement...</article>
+    }
+
+    @for (item of appointments(); track item.id) {
+      <article class="card appointment-card">
+        <h3>{{ formatHour(item.startAt) }} - {{ formatHour(item.endAt) }}</h3>
+        <p><strong>Cliente:</strong> {{ item.clientName }}</p>
+        <p><strong>Soins:</strong> {{ item.services }}</p>
+        <p><strong>Statut:</strong> {{ item.status }}</p>
+      </article>
+    }
+
+    @if (!loading() && appointments().length === 0) {
+      <article class="card appointment-card">Aucun rendez-vous pour cette date.</article>
+    }
+  </section>
+</section>
