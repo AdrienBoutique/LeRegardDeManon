@@ -82,29 +82,29 @@ export class BookingApiService {
   private readonly http = inject(HttpClient);
 
   listServices(): Observable<BookingServiceItem[]> {
-    return this.http.get<BookingServiceItem[]>(`${environment.apiBaseUrl}/api/services`);
+    return this.http.get<BookingServiceItem[]>(`${environment.apiUrl}/api/services`);
   }
 
   listStaff(): Observable<BookingStaffItem[]> {
-    return this.http.get<BookingStaffItem[]>(`${environment.apiBaseUrl}/api/staff`);
+    return this.http.get<BookingStaffItem[]>(`${environment.apiUrl}/api/staff`);
   }
 
   getFreeStarts(date: string, staffId?: string): Observable<FreeStartsResponse> {
     const staffParam = staffId ? `&staffId=${encodeURIComponent(staffId)}` : '';
     return this.http.get<FreeStartsResponse>(
-      `${environment.apiBaseUrl}/api/free-starts?date=${encodeURIComponent(date)}${staffParam}`
+      `${environment.apiUrl}/api/free-starts?date=${encodeURIComponent(date)}${staffParam}`
     );
   }
 
   getEligibleServices(startAt: string, staffId?: string): Observable<EligibleServicesResponse> {
     const staffParam = staffId ? `&staffId=${encodeURIComponent(staffId)}` : '';
     return this.http.get<EligibleServicesResponse>(
-      `${environment.apiBaseUrl}/api/eligible-services?startAt=${encodeURIComponent(startAt)}${staffParam}`
+      `${environment.apiUrl}/api/eligible-services?startAt=${encodeURIComponent(startAt)}${staffParam}`
     );
   }
 
   createAppointment(payload: CreateAppointmentPayload): Observable<CreateAppointmentResponse> {
-    return this.http.post<CreateAppointmentResponse>(`${environment.apiBaseUrl}/api/appointments`, payload);
+    return this.http.post<CreateAppointmentResponse>(`${environment.apiUrl}/api/appointments`, payload);
   }
 
   getMonthlyAvailability(month: string, staffId?: string): Observable<MonthDayMeta> {
@@ -113,7 +113,7 @@ export class BookingApiService {
       .get<{
         dayMeta?: MonthDayMeta;
         days?: Array<{ date: string; level: AvailabilityLevel }>;
-      }>(`${environment.apiBaseUrl}/api/public/availability/month?month=${encodeURIComponent(month)}${staffParam}`)
+      }>(`${environment.apiUrl}/api/public/availability/month?month=${encodeURIComponent(month)}${staffParam}`)
       .pipe(
         map((response) => {
           if (response.dayMeta && typeof response.dayMeta === 'object') {

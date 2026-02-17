@@ -71,7 +71,7 @@ export type AdminStaffServiceItem = {
 @Injectable({ providedIn: 'root' })
 export class AdminInstituteApiService {
   private readonly http = inject(HttpClient);
-  private readonly adminBaseUrl = `${environment.apiBaseUrl}/api/admin`;
+  private readonly adminBaseUrl = `${environment.apiUrl}/api/admin`;
 
   listStaff(): Observable<AdminStaffItem[]> {
     return this.http.get<AdminStaffItem[]>(`${this.adminBaseUrl}/staff`);

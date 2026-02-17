@@ -119,7 +119,7 @@ export function defaultHomeContent(): HomeContentPayload {
 @Injectable({ providedIn: 'root' })
 export class HomeContentApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api`;
+  private readonly baseUrl = `${environment.apiUrl}/api`;
 
   getPublicContent(): Observable<HomeContentPayload> {
     return this.http.get<HomeContentPayload>(`${this.baseUrl}/public/home-content`);

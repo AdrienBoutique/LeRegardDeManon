@@ -32,7 +32,7 @@ export type CreatePractitionerResponse = AdminPractitionerItem & {
 @Injectable({ providedIn: 'root' })
 export class AdminPractitionersApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/admin/practitioners`;
+  private readonly baseUrl = `${environment.apiUrl}/api/admin/practitioners`;
 
   listPractitioners(): Observable<AdminPractitionerItem[]> {
     return this.http.get<AdminPractitionerItem[]>(this.baseUrl);

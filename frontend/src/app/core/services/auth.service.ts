@@ -36,7 +36,7 @@ export class AuthService {
 
   login(email: string, password: string): Observable<AuthUser> {
     return this.http
-      .post<LoginResponse>(`${environment.apiBaseUrl}/api/auth/login`, { email, password })
+      .post<LoginResponse>(`${environment.apiUrl}/api/auth/login`, { email, password })
       .pipe(
         tap((response) => this.persistAuth(this.toAuthUser(response), response.token)),
         map((response) => this.toAuthUser(response))
@@ -53,7 +53,7 @@ export class AuthService {
       .get<{
         user: { id: string; email: string; role: AuthRole; mustChangePassword: boolean };
         practitionerId?: string | null;
-      }>(`${environment.apiBaseUrl}/api/auth/me`)
+      }>(`${environment.apiUrl}/api/auth/me`)
       .pipe(
         map((response) => ({
           ...response.user,
@@ -72,7 +72,7 @@ export class AuthService {
 
   changePassword(currentPassword: string | undefined, newPassword: string): Observable<AuthUser> {
     return this.http
-      .post<LoginResponse>(`${environment.apiBaseUrl}/api/auth/change-password`, {
+      .post<LoginResponse>(`${environment.apiUrl}/api/auth/change-password`, {
         currentPassword,
         newPassword,
       })

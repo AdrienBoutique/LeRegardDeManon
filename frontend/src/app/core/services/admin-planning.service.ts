@@ -52,7 +52,7 @@ export type PlanningResponse = {
 @Injectable({ providedIn: 'root' })
 export class AdminPlanningService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/admin/planning`;
+  private readonly baseUrl = `${environment.apiUrl}/api/admin/planning`;
 
   getPlanning(start: string, end: string): Observable<PlanningResponse> {
     return this.http.get<PlanningResponse>(`${this.baseUrl}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);

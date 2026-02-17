@@ -161,7 +161,7 @@ export function defaultContactPageContent(): ContactPageContent {
 @Injectable({ providedIn: 'root' })
 export class PageContentApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api`;
+  private readonly baseUrl = `${environment.apiUrl}/api`;
 
   getPublicContent<T>(slug: ManagedPageSlug): Observable<T> {
     return this.http.get<T>(`${this.baseUrl}/public/page-content/${slug}`);

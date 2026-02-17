@@ -25,8 +25,8 @@ function addMinutes(iso: string, minutes: number): string {
 @Injectable({ providedIn: 'root' })
 export class AppointmentsApiService {
   private readonly http = inject(HttpClient);
-  private readonly adminBaseUrl = `${environment.apiBaseUrl}/api/admin/appointments`;
-  private readonly publicBaseUrl = `${environment.apiBaseUrl}/api/appointments`;
+  private readonly adminBaseUrl = `${environment.apiUrl}/api/admin/appointments`;
+  private readonly publicBaseUrl = `${environment.apiUrl}/api/appointments`;
 
   private fallbackAppointments: Appointment[] = [];
 

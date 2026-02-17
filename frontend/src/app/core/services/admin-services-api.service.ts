@@ -1,4 +1,4 @@
-﻿import { inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -39,7 +39,7 @@ export type UpdateAdminServicePayload = Partial<CreateAdminServicePayload>;
 @Injectable({ providedIn: 'root' })
 export class AdminServicesApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/admin/services`;
+  private readonly baseUrl = `${environment.apiUrl}/api/admin/services`;
 
   list(): Observable<AdminServiceItem[]> {
     return this.http.get<AdminServiceItem[]>(this.baseUrl);

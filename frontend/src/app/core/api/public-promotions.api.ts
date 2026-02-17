@@ -26,7 +26,7 @@ export type PublicPromotionItem = {
 @Injectable({ providedIn: 'root' })
 export class PublicPromotionsApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/public/promotions`;
+  private readonly baseUrl = `${environment.apiUrl}/api/public/promotions`;
 
   getActivePromotions(): Observable<PublicPromotionItem[]> {
     return this.http.get<PublicPromotionItem[]>(`${this.baseUrl}/active`);

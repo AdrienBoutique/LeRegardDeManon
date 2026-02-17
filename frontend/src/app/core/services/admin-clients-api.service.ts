@@ -27,7 +27,7 @@ export type UpdateAdminClientPayload = Partial<CreateAdminClientPayload>;
 @Injectable({ providedIn: 'root' })
 export class AdminClientsApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/admin/clients`;
+  private readonly baseUrl = `${environment.apiUrl}/api/admin/clients`;
 
   list(search?: string): Observable<AdminClientItem[]> {
     const q = search?.trim() ?? '';

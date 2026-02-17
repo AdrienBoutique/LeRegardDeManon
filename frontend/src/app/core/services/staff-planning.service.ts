@@ -42,6 +42,6 @@ export class StaffPlanningService {
     if (practitionerId) {
       params = params.set('practitionerId', practitionerId);
     }
-    return this.http.get<StaffPlanningResponse>(`${environment.apiBaseUrl}/api/staff/me/planning`, { params });
+    return this.http.get<StaffPlanningResponse>(`${environment.apiUrl}/api/staff/me/planning`, { params });
   }
 }

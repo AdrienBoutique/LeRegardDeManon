@@ -56,7 +56,7 @@ export type UpdateAdminPromotionPayload = {
 @Injectable({ providedIn: 'root' })
 export class AdminPromotionsApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/admin/promotions`;
+  private readonly baseUrl = `${environment.apiUrl}/api/admin/promotions`;
 
   listPromotions(): Observable<AdminPromotionItem[]> {
     return this.http.get<AdminPromotionItem[]>(this.baseUrl);

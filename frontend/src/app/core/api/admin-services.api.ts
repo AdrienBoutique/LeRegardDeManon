@@ -14,7 +14,7 @@ export type AdminServiceLiteItem = {
 @Injectable({ providedIn: 'root' })
 export class AdminServicesApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/admin/services`;
+  private readonly baseUrl = `${environment.apiUrl}/api/admin/services`;
 
   listServices(): Observable<AdminServiceLiteItem[]> {
     return this.http.get<AdminServiceLiteItem[]>(this.baseUrl);

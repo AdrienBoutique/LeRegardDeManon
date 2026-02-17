@@ -26,11 +26,38 @@ import { staffPlanningRouter } from "./routes/staffPlanning.routes";
 
 export const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = [
+  "http://localhost:4200",
+  "https://leregarddemanon.com",
+  "https://www.leregarddemanon.com",
+  "https://le-regard-de-manon.vercel.app",
+];
+
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const isAllowedExact = allowedOrigins.includes(origin);
+      const isAllowedVercelPreview = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+
+      if (isAllowedExact || isAllowedVercelPreview) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
+  })
+);
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, ts: Date.now() });
+  res.json({ ok: true });
 });
 
 app.use("/api/admin/auth", adminAuthRouter);
