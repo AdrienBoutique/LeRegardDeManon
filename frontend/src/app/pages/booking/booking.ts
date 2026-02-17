@@ -1,8 +1,8 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { catchError, combineLatest, finalize, of, startWith } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, startWith, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 import {
   BookingApiService,
@@ -14,6 +14,7 @@ import {
   MonthDayMeta
 } from '../../core/services/booking-api.service';
 import { BookingCalendar } from './components/booking-calendar/booking-calendar';
+import { PublicPromotionItem, PublicPromotionsApi } from '../../core/api/public-promotions.api';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -41,6 +42,16 @@ type BookingState = {
   totalPriceCents: number;
 };
 
+type PromoBookingContext = {
+  promoId: string;
+  title: string;
+  startYmd: string;
+  endYmd: string;
+  serviceIds: string[];
+  lockMode: 'fixed' | 'auto';
+  minDurationMin: number;
+};
+
 function contactValidator(control: AbstractControl): ValidationErrors | null {
   const email = (control.get('email')?.value as string | null)?.trim();
   const phone = (control.get('phone')?.value as string | null)?.trim();
@@ -56,7 +67,9 @@ function contactValidator(control: AbstractControl): ValidationErrors | null {
 })
 export class Booking {
   private readonly bookingApi = inject(BookingApiService);
+  private readonly publicPromotionsApi = inject(PublicPromotionsApi);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly currentStep = signal<Step>(1);
@@ -84,6 +97,8 @@ export class Booking {
   protected readonly selectedCategoryId = signal<string>('all');
   protected readonly confirmation = signal<CreateAppointmentResponse | null>(null);
   protected readonly selectedServices = signal<BookingSelectedService[]>([]);
+  protected readonly promoContext = signal<PromoBookingContext | null>(null);
+  protected readonly promoError = signal('');
   protected readonly maxSelectedServices = 4;
   protected readonly stepItems = [
     { id: 1, label: 'Praticienne, date & horaire' },
@@ -151,6 +166,15 @@ export class Booking {
 
   protected readonly totalDurationMin = computed(() => this.bookingState().totalDurationMin);
   protected readonly totalPriceCents = computed(() => this.bookingState().totalPriceCents);
+  protected readonly isPromoBooking = computed(() => this.promoContext() !== null);
+  protected readonly promoRangeLabel = computed(() => {
+    const context = this.promoContext();
+    if (!context) {
+      return '';
+    }
+
+    return `Offre valable du ${this.formatYmd(context.startYmd)} au ${this.formatYmd(context.endYmd)}`;
+  });
 
   protected readonly filteredEligibleServices = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
@@ -182,7 +206,7 @@ export class Booking {
   });
 
   protected readonly slotCompatibilityByStart = computed(() => {
-    const requiredMin = this.totalDurationMin();
+    const requiredMin = this.requiredDurationMinForSlots();
     const map = new Map<string, { compatible: boolean; label: string }>();
 
     for (const start of this.freeStarts()) {
@@ -195,6 +219,14 @@ export class Booking {
     }
 
     return map;
+  });
+  protected readonly requiredDurationMinForSlots = computed(() => {
+    const selectedDuration = this.totalDurationMin();
+    if (selectedDuration > 0) {
+      return selectedDuration;
+    }
+
+    return this.promoContext()?.minDurationMin ?? 0;
   });
 
   protected readonly completedSteps = computed(() => {
@@ -215,6 +247,7 @@ export class Booking {
   });
 
   constructor() {
+    this.bindPromoContextFromQuery();
     this.loadStaff();
     this.loadCatalog();
 
@@ -226,8 +259,10 @@ export class Booking {
       .subscribe(([staffId, date]) => {
         this.resetAfterDateOrStaffChange();
 
-        if (date) {
+        if (date && this.isDateAllowedByPromo(date)) {
           this.loadFreeStarts(date, staffId || undefined);
+        } else if (date) {
+          this.startsError.set('Cette date est hors periode de promotion.');
         }
       });
 
@@ -259,11 +294,20 @@ export class Booking {
   protected onMonthChange(direction: 'prev' | 'next'): void {
     const next = new Date(this.monthDate());
     next.setMonth(next.getMonth() + (direction === 'next' ? 1 : -1));
+
+    if (!this.isMonthAllowedByPromo(next)) {
+      return;
+    }
+
     this.monthDate.set(this.startOfMonth(next));
     this.loadMonthMeta(this.monthDate(), this.form.controls.staffId.value || undefined);
   }
 
   protected onDaySelect(dayYmd: string): void {
+    if (!this.isDateAllowedByPromo(dayYmd)) {
+      return;
+    }
+
     this.form.controls.date.setValue(dayYmd);
     const selectedDate = this.parseYmdToLocalDate(dayYmd);
     if (
@@ -328,6 +372,10 @@ export class Booking {
   }
 
   protected removeService(serviceId: string): void {
+    if (this.isPromoBooking()) {
+      return;
+    }
+
     this.selectedServices.update((services) => services.filter((service) => service.id !== serviceId));
     this.selectionError.set('');
     if (this.selectedServices().length === 0 && this.currentStep() > 2) {
@@ -433,7 +481,10 @@ export class Booking {
       basket.length > 1
         ? `Panier soins: ${basket.map((service) => `${service.name} (${service.durationMin} min)`).join(', ')}`
         : '';
-    const mergedNotes = [notes, basketNotes].filter((value) => value.length > 0).join('\n');
+    const promoNotes = this.promoContext()
+      ? `Promotion: ${this.promoContext()!.title} (${this.promoContext()!.promoId})`
+      : '';
+    const mergedNotes = [notes, basketNotes, promoNotes].filter((value) => value.length > 0).join('\n');
 
     this.bookingApi
       .createAppointment({
@@ -546,7 +597,12 @@ export class Booking {
   }
 
   protected canAddService(service: EligibleServiceItem): boolean {
-    return service.eligible && !this.isServiceInSelection(service.id) && this.selectedServices().length < this.maxSelectedServices;
+    return (
+      !this.isPromoBooking() &&
+      service.eligible &&
+      !this.isServiceInSelection(service.id) &&
+      this.selectedServices().length < this.maxSelectedServices
+    );
   }
 
   protected selectedServicesSummary(): string {
@@ -681,6 +737,12 @@ export class Booking {
   }
 
   private loadFreeStarts(date: string, staffId?: string): void {
+    if (!this.isDateAllowedByPromo(date)) {
+      this.freeStarts.set([]);
+      this.startsError.set('Cette date est hors periode de promotion.');
+      return;
+    }
+
     this.loadingStarts.set(true);
     this.startsError.set('');
 
@@ -722,6 +784,7 @@ export class Booking {
       .subscribe({
         next: (response) => {
           this.eligibleServices.set(response.services);
+          this.applyPromoSelection(response.services);
 
           if (response.services.length === 0) {
             this.eligibleError.set('Aucun soin disponible sur ce depart.');
@@ -748,17 +811,20 @@ export class Booking {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((meta) => {
-        this.dayMeta.set(meta);
-        this.ensureDateSelectionFromMeta(meta, monthDate);
+        const constrainedMeta = this.applyPromoWindowToMeta(meta);
+        this.dayMeta.set(constrainedMeta);
+        this.ensureDateSelectionFromMeta(constrainedMeta, monthDate);
       });
   }
 
   private ensureInitialDateSelected(): void {
-    if (this.form.controls.date.value) {
+    const currentValue = this.form.controls.date.value;
+    if (currentValue && this.isDateAllowedByPromo(currentValue)) {
       return;
     }
 
-    this.form.controls.date.setValue(this.toYmd(new Date()));
+    const fallback = this.getPreferredPromoDate() ?? this.toYmd(new Date());
+    this.form.controls.date.setValue(fallback);
   }
 
   private ensureDateSelectionFromMeta(meta: MonthDayMeta, monthDate: Date): void {
@@ -771,8 +837,10 @@ export class Booking {
 
     const monthPrefix = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}-`;
     const todayYmd = this.toYmd(new Date());
+    const promo = this.promoContext();
     const availableDays = Object.entries(meta)
       .filter(([ymd, item]) => ymd.startsWith(monthPrefix) && item.level !== 'none')
+      .filter(([ymd]) => !promo || this.isDateInsidePromoWindow(ymd, promo))
       .map(([ymd]) => ymd)
       .sort((a, b) => a.localeCompare(b));
 
@@ -831,7 +899,7 @@ export class Booking {
   }
 
   private isStep2Valid(): boolean {
-    return this.canShowStep3() && this.selectedServices().length > 0;
+    return this.canShowStep3() && this.selectedServices().length > 0 && this.isPromoSelectionComplete();
   }
 
   private isStep3Valid(): boolean {
@@ -917,6 +985,194 @@ export class Booking {
     }
 
     return result;
+  }
+
+  private bindPromoContextFromQuery(): void {
+    this.route.queryParamMap
+      .pipe(
+        map((params) => ({
+          promoId: (params.get('promoId') || '').trim(),
+          serviceId: (params.get('serviceId') || '').trim()
+        })),
+        switchMap(({ promoId, serviceId }) => {
+          if (!promoId) {
+            this.promoError.set('');
+            return of<PromoBookingContext | null>(null);
+          }
+
+          return this.publicPromotionsApi.getActivePromotions().pipe(
+            map((promotions) => {
+              const context = this.toPromoContext(promotions, promoId, serviceId);
+              this.promoError.set(context ? '' : "Cette promotion n'est plus disponible.");
+              return context;
+            }),
+            catchError(() => {
+              this.promoError.set("Impossible de charger la promotion selectionnee.");
+              return of<PromoBookingContext | null>(null);
+            })
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((context) => {
+        this.promoContext.set(context);
+        this.ensureInitialDateSelected();
+        const preferredDate = this.form.controls.date.value;
+        if (preferredDate) {
+          this.monthDate.set(this.startOfMonth(this.parseYmdToLocalDate(preferredDate)));
+          this.loadMonthMeta(this.monthDate(), this.form.controls.staffId.value || undefined);
+        }
+      });
+  }
+
+  private toPromoContext(
+    promotions: PublicPromotionItem[],
+    promoId: string,
+    requestedServiceId: string
+  ): PromoBookingContext | null {
+    const promo = promotions.find((item) => item.id === promoId);
+    if (!promo) {
+      return null;
+    }
+
+    const promoServiceIds = promo.services.map((service) => service.id);
+    const hasFixedService = requestedServiceId && promoServiceIds.includes(requestedServiceId);
+    const targetServiceIds = hasFixedService ? [requestedServiceId] : promoServiceIds;
+
+    return {
+      promoId: promo.id,
+      title: promo.title,
+      startYmd: this.toYmd(new Date(promo.startAt)),
+      endYmd: this.toYmd(new Date(promo.endAt)),
+      serviceIds: targetServiceIds,
+      lockMode: hasFixedService ? 'fixed' : 'auto',
+      minDurationMin: Math.min(
+        ...promo.services
+          .filter((service) => targetServiceIds.includes(service.id))
+          .map((service) => service.durationMin)
+      )
+    };
+  }
+
+  private applyPromoSelection(services: EligibleServiceItem[]): void {
+    const context = this.promoContext();
+    if (!context) {
+      return;
+    }
+
+    const byId = new Map(services.map((service) => [service.id, service]));
+    let chosen: EligibleServiceItem | null = null;
+
+    if (context.lockMode === 'fixed') {
+      const fixed = byId.get(context.serviceIds[0]);
+      if (fixed?.eligible) {
+        chosen = fixed;
+      }
+    } else {
+      chosen =
+        context.serviceIds
+          .map((id) => byId.get(id))
+          .find((service): service is EligibleServiceItem => Boolean(service?.eligible)) ?? null;
+    }
+
+    if (!chosen) {
+      this.selectedServices.set([]);
+      this.selectionError.set(
+        "L'offre selectionnee est indisponible sur cet horaire. Choisissez un autre creneau dans la periode de promotion."
+      );
+      return;
+    }
+
+    this.selectionError.set('');
+    this.selectedServices.set([
+      {
+        id: chosen.id,
+        name: chosen.name,
+        durationMin: chosen.durationMin,
+        priceCents: chosen.effectivePriceCents,
+        staffPricingVariant: this.isDiscountedService(chosen) ? 'trainee' : 'standard'
+      }
+    ]);
+  }
+
+  private applyPromoWindowToMeta(meta: MonthDayMeta): MonthDayMeta {
+    const context = this.promoContext();
+    if (!context) {
+      return meta;
+    }
+
+    const constrained: MonthDayMeta = {};
+    for (const [ymd, value] of Object.entries(meta)) {
+      constrained[ymd] = this.isDateInsidePromoWindow(ymd, context) ? value : { level: 'none' };
+    }
+
+    return constrained;
+  }
+
+  private isDateAllowedByPromo(ymd: string): boolean {
+    const context = this.promoContext();
+    if (!context) {
+      return true;
+    }
+
+    return this.isDateInsidePromoWindow(ymd, context);
+  }
+
+  private isDateInsidePromoWindow(ymd: string, context: PromoBookingContext): boolean {
+    return ymd >= context.startYmd && ymd <= context.endYmd;
+  }
+
+  private isMonthAllowedByPromo(monthDate: Date): boolean {
+    const context = this.promoContext();
+    if (!context) {
+      return true;
+    }
+
+    const monthKey = monthDate.getFullYear() * 12 + monthDate.getMonth();
+    const minDate = this.parseYmdToLocalDate(context.startYmd);
+    const maxDate = this.parseYmdToLocalDate(context.endYmd);
+    const minKey = minDate.getFullYear() * 12 + minDate.getMonth();
+    const maxKey = maxDate.getFullYear() * 12 + maxDate.getMonth();
+    return monthKey >= minKey && monthKey <= maxKey;
+  }
+
+  private getPreferredPromoDate(): string | null {
+    const context = this.promoContext();
+    if (!context) {
+      return null;
+    }
+
+    const todayYmd = this.toYmd(new Date());
+    if (todayYmd < context.startYmd) {
+      return context.startYmd;
+    }
+    if (todayYmd > context.endYmd) {
+      return context.endYmd;
+    }
+    return todayYmd;
+  }
+
+  private isPromoSelectionComplete(): boolean {
+    const context = this.promoContext();
+    if (!context) {
+      return true;
+    }
+
+    if (context.lockMode === 'fixed') {
+      const selected = this.selectedServices();
+      return selected.length === 1 && selected[0]?.id === context.serviceIds[0];
+    }
+
+    const selected = this.selectedServices();
+    return selected.length === 1 && context.serviceIds.includes(selected[0]?.id ?? '');
+  }
+
+  private formatYmd(ymd: string): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(this.parseYmdToLocalDate(ymd));
   }
 
   private toYmd(date: Date): string {

@@ -117,8 +117,8 @@ export class Services {
         return;
       }
 
-      if (!current || !groups.some((group) => group.id === current)) {
-        this.openCategoryId.set(groups[0].id);
+      if (current && !groups.some((group) => group.id === current)) {
+        this.openCategoryId.set(null);
       }
     });
   }

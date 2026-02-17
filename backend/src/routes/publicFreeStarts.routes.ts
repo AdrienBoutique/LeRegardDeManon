@@ -14,6 +14,10 @@ import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 const STEP_MIN = 15;
 const STEP_MS = STEP_MIN * 60_000;
 
+function alignUpToStep(ms: number): number {
+  return Math.ceil(ms / STEP_MS) * STEP_MS;
+}
+
 const listFreeStartsQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   staffId: z.string().min(1).optional(),
@@ -171,7 +175,11 @@ async function listDayStarts(
     const freeIntervals = subtractIntervals(workIntervals, blockedIntervals);
 
     for (const freeInterval of freeIntervals) {
-      for (let cursorMs = freeInterval.startMs; cursorMs < freeInterval.endMs; cursorMs += STEP_MS) {
+      for (
+        let cursorMs = alignUpToStep(freeInterval.startMs);
+        cursorMs < freeInterval.endMs;
+        cursorMs += STEP_MS
+      ) {
         const maxFreeMin = Math.floor((freeInterval.endMs - cursorMs) / 60_000);
         if (maxFreeMin <= 0) {
           continue;
@@ -287,6 +295,7 @@ publicFreeStartsRouter.get("/public/availability/month", async (req, res) => {
   try {
     const query = parseOrThrow(listMonthAvailabilityQuerySchema, req.query);
     const monthStart = DateTime.fromFormat(query.month, "yyyy-MM", { zone: BRUSSELS_TIMEZONE }).startOf("month");
+    const todayLocal = DateTime.now().setZone(BRUSSELS_TIMEZONE).startOf("day");
 
     if (!monthStart.isValid) {
       res.status(400).json({ error: "month must be a valid YYYY-MM" });
@@ -298,6 +307,12 @@ publicFreeStartsRouter.get("/public/availability/month", async (req, res) => {
 
     for (let cursor = monthStart; cursor <= monthEnd; cursor = cursor.plus({ days: 1 })) {
       const date = cursor.toFormat("yyyy-MM-dd");
+
+      if (cursor < todayLocal) {
+        dayMeta[date] = { level: "none" };
+        continue;
+      }
+
       const { starts, staffMissing } = await listDayStarts(date, query.staffId);
 
       if (staffMissing) {

@@ -3,6 +3,21 @@
   subtitle="Choisissez votre praticienne, votre horaire, puis le soin adapte"
 ></app-section-title>
 
+@if (isPromoBooking()) {
+  <section class="card promo-context">
+    <p class="hint">
+      Offre preselectionnee: <strong>{{ promoContext()!.title }}</strong>.
+      {{ promoRangeLabel() }}.
+    </p>
+  </section>
+}
+
+@if (promoError()) {
+  <section class="card promo-context">
+    <p class="error">{{ promoError() }}</p>
+  </section>
+}
+
 <section class="booking card">
   <ol class="steps" aria-label="Etapes de reservation">
     @for (item of stepItems; track item.id) {
@@ -91,9 +106,6 @@
                     (click)="selectStart(start.startAt)"
                   >
                     <strong>{{ formatHour(start.startAt) }}</strong>
-                    @if (startCompatibilityLabel(start); as label) {
-                      <span>{{ label }}</span>
-                    }
                   </button>
                 }
               </div>
@@ -105,7 +117,9 @@
           <section class="step-card">
             <header>
               <h2>Choix du soin</h2>
-              @if (selectedStart()) {
+              @if (isPromoBooking()) {
+                <p class="chip">Offre verrouillee</p>
+              } @else if (selectedStart()) {
                 <p class="chip">{{ formatDateTime(selectedStart()!.startAt) }}</p>
               }
             </header>
@@ -116,7 +130,9 @@
               <section class="selection-cart" aria-label="Votre selection">
                 <header>
                   <h3>Votre selection</h3>
-                  <span class="chip">Max {{ maxSelectedServices }} soins</span>
+                  @if (!isPromoBooking()) {
+                    <span class="chip">Max {{ maxSelectedServices }} soins</span>
+                  }
                 </header>
 
                 @if (selectedServices().length === 0) {
@@ -129,7 +145,9 @@
                           <strong>{{ item.name }}</strong>
                           <span>{{ item.durationMin }} min - {{ formatPrice(item.priceCents) }}</span>
                         </div>
-                        <button type="button" class="btn btn-ghost btn-sm" (click)="removeService(item.id)">Retirer</button>
+                        @if (!isPromoBooking()) {
+                          <button type="button" class="btn btn-ghost btn-sm" (click)="removeService(item.id)">Retirer</button>
+                        }
                       </li>
                     }
                   </ul>
@@ -141,83 +159,91 @@
                 }
               </section>
 
-              <div class="category-filter" role="radiogroup" aria-label="Filtrer par categorie">
-                @for (category of categoryChoices(); track category.id) {
-                  <button
-                    type="button"
-                    class="category-chip"
-                    [class.active]="selectedCategoryId() === category.id"
-                    (click)="selectCategory(category.id)"
-                  >
-                    {{ category.label }}
-                  </button>
-                }
-              </div>
-
-              <label>
-                Rechercher un soin
-                <input
-                  type="search"
-                  [value]="searchTerm()"
-                  (input)="setSearch($any($event.target).value)"
-                  placeholder="Nom du soin"
-                />
-              </label>
-
-              @if (loadingEligibleServices() || loadingCatalog()) {
-                <div class="service-grid">
-                  @for (_ of [1, 2, 3]; track $index) {
-                    <article class="service-card skeleton-card"></article>
-                  }
-                </div>
-              } @else if (eligibleError()) {
-                <p class="error">{{ eligibleError() }}</p>
-              } @else {
+              @if (isPromoBooking()) {
                 @if (selectionError()) {
                   <p class="error">{{ selectionError() }}</p>
+                } @else {
+                  <p class="hint">Les soins de l'offre sont ajoutes automatiquement selon le creneau choisi.</p>
                 }
-                <div class="service-grid">
-                  @for (service of filteredEligibleServices(); track service.id) {
-                    <article class="service-card" [class.disabled]="!service.eligible" [class.selected]="isSelectedService(service.id)">
-                      <div class="service-top">
-                        <h3>{{ service.name }}</h3>
-                        <p class="duration">{{ service.durationMin }} min</p>
-                      </div>
-                      <p class="chip">{{ getServiceCategoryLabel(service) }}</p>
-
-                      <p class="description">{{ getServiceDescription(service.id) }}</p>
-                      <div class="price-row">
-                        <p class="price">{{ formatPrice(service.effectivePriceCents) }}</p>
-                        @if (isDiscountedService(service)) {
-                          <span class="discount-badge">Tarif stagiaire -{{ discountPercent(service) }}%</span>
-                        }
-                      </div>
-                      @if (isDiscountedService(service)) {
-                        <p class="price-base">Prix standard: {{ formatPrice(service.basePriceCents) }}</p>
-                      }
-
-                      @if (!service.eligible) {
-                        <p class="reason">{{ service.reason ?? 'Non disponible' }}</p>
-                      }
-
-                      <div class="service-actions">
-                        <button type="button" class="btn btn-primary" [disabled]="!canAddService(service)" (click)="addService(service)">
-                          @if (isSelectedService(service.id)) {
-                            Ajoute
-                          } @else if (!service.eligible) {
-                            Indisponible
-                          } @else {
-                            Ajouter
-                          }
-                        </button>
-                        <a class="btn btn-ghost" [routerLink]="['/soins', service.id]">Voir detail</a>
-                      </div>
-                    </article>
+              } @else {
+                <div class="category-filter" role="radiogroup" aria-label="Filtrer par categorie">
+                  @for (category of categoryChoices(); track category.id) {
+                    <button
+                      type="button"
+                      class="category-chip"
+                      [class.active]="selectedCategoryId() === category.id"
+                      (click)="selectCategory(category.id)"
+                    >
+                      {{ category.label }}
+                    </button>
                   }
                 </div>
 
-                @if (filteredEligibleServices().length === 0) {
-                  <p class="hint">Aucun soin ne correspond a votre recherche.</p>
+                <label>
+                  Rechercher un soin
+                  <input
+                    type="search"
+                    [value]="searchTerm()"
+                    (input)="setSearch($any($event.target).value)"
+                    placeholder="Nom du soin"
+                  />
+                </label>
+
+                @if (loadingEligibleServices() || loadingCatalog()) {
+                  <div class="service-grid">
+                    @for (_ of [1, 2, 3]; track $index) {
+                      <article class="service-card skeleton-card"></article>
+                    }
+                  </div>
+                } @else if (eligibleError()) {
+                  <p class="error">{{ eligibleError() }}</p>
+                } @else {
+                  @if (selectionError()) {
+                    <p class="error">{{ selectionError() }}</p>
+                  }
+                  <div class="service-grid">
+                    @for (service of filteredEligibleServices(); track service.id) {
+                      <article class="service-card" [class.disabled]="!service.eligible" [class.selected]="isSelectedService(service.id)">
+                        <div class="service-top">
+                          <h3>{{ service.name }}</h3>
+                          <p class="duration">{{ service.durationMin }} min</p>
+                        </div>
+                        <p class="chip">{{ getServiceCategoryLabel(service) }}</p>
+
+                        <p class="description">{{ getServiceDescription(service.id) }}</p>
+                        <div class="price-row">
+                          <p class="price">{{ formatPrice(service.effectivePriceCents) }}</p>
+                          @if (isDiscountedService(service)) {
+                            <span class="discount-badge">Tarif stagiaire -{{ discountPercent(service) }}%</span>
+                          }
+                        </div>
+                        @if (isDiscountedService(service)) {
+                          <p class="price-base">Prix standard: {{ formatPrice(service.basePriceCents) }}</p>
+                        }
+
+                        @if (!service.eligible) {
+                          <p class="reason">{{ service.reason ?? 'Non disponible' }}</p>
+                        }
+
+                        <div class="service-actions">
+                          <button type="button" class="btn btn-primary" [disabled]="!canAddService(service)" (click)="addService(service)">
+                            @if (isSelectedService(service.id)) {
+                              Ajoute
+                            } @else if (!service.eligible) {
+                              Indisponible
+                            } @else {
+                              Ajouter
+                            }
+                          </button>
+                          <a class="btn btn-ghost" [routerLink]="['/soins', service.id]">Voir detail</a>
+                        </div>
+                      </article>
+                    }
+                  </div>
+
+                  @if (filteredEligibleServices().length === 0) {
+                    <p class="hint">Aucun soin ne correspond a votre recherche.</p>
+                  }
                 }
               }
             }
