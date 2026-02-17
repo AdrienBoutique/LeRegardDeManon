@@ -90,100 +90,157 @@
   @if (loading()) {
     <article class="card panel">Chargement du planning...</article>
   } @else {
-    <section class="card planner-shell">
-      <div class="planning-header" [style.gridTemplateColumns]="gridTemplateColumns()">
-        <div class="corner-cell">Heure</div>
-        @for (day of visibleDays(); track day.key) {
-          <div class="day-head" [class.current-day]="isToday(day.key)">{{ day.shortLabel }}</div>
-        }
-      </div>
-
-      <div class="planning-body" [style.gridTemplateColumns]="gridTemplateColumns()">
-        <div class="hours-col">
-          @for (slot of timeSlots(); track slot.minuteFromStart) {
-            <div class="hour-cell">{{ slot.label }}</div>
+    @if (isMobile()) {
+      <section class="card mobile-planner">
+        <div class="mobile-days">
+          @for (day of weekDays(); track day.key) {
+            <button
+              type="button"
+              class="mobile-day-chip"
+              [class.active]="mobileSelectedDay().key === day.key"
+              [class.current-day]="isToday(day.key)"
+              (click)="setMobileDay($index)"
+            >
+              <span>{{ day.shortLabel }}</span>
+            </button>
           }
         </div>
 
-        @for (day of visibleDays(); track day.key) {
-          <div class="day-col" [style.height.px]="gridHeight()" [class.current-day]="isToday(day.key)">
-            @for (slot of timeSlots(); track slot.minuteFromStart) {
-              <button
-                type="button"
-                class="lane-line lane-slot"
-                (dblclick)="onCellDblClick(day.key, slot.label)"
-                [attr.aria-label]="'Creer un rendez-vous le ' + day.label + ' a ' + slot.label"
-              ></button>
-            }
-
-            @if (getDayShadingStyle(day.key); as shade) {
-              <div class="off-overlay off-overlay-top" [style.height]="shade.topHeight"></div>
-              <div
-                class="off-overlay off-overlay-bottom"
-                [style.top]="shade.bottomTop"
-                [style.height]="shade.bottomHeight"
-              ></div>
-            }
-
-            @for (leave of getTimeOffForDay(day.key); track leave.id) {
-              <div
-                class="timeoff-overlay"
-                [style.top]="leave.top"
-                [style.height]="leave.height"
-                [style.--timeOffBg]="leave.bg"
-                [style.--timeOffBorder]="leave.border"
-                [style.--timeOffText]="leave.text"
-                [title]="leave.staffName + (leave.reason ? ' - ' + leave.reason : '')"
-              >
-                <span class="timeoff-label">{{ leave.staffName }}</span>
-              </div>
-            }
-
-            @if (showNowLine(day.key)) {
-              <div class="now-line" [style.top.px]="getNowLineTop()">
-                <span class="now-dot"></span>
-              </div>
-            }
-
-            @for (appointment of getAppointmentsForDay(day.key); track appointment.id) {
-              <button
-                type="button"
-                class="appt-block"
-                [class.is-booked]="appointment.status === 'BOOKED'"
-                [class.is-done]="appointment.status === 'DONE'"
-                [class.is-no-show]="appointment.status === 'NO_SHOW'"
-                [ngStyle]="getAppointmentStyle(appointment)"
-                (click)="openAppointmentEditor(appointment)"
-                [attr.aria-label]="
-                  'Cliente: ' +
-                  appointment.clientName +
-                  ', praticienne: ' +
-                  appointment.staffName +
-                  ', ' +
-                  appointment.serviceName +
-                  ', debut ' +
-                  formatDateTime(appointment.startAt) +
-                  ', fin ' +
-                  formatDateTime(appointment.endAt) +
-                  ', ' +
-                  statusLabel(appointment.status)
-                "
-              >
-                <strong class="appt-client">{{ appointment.clientName }}</strong>
-                <span class="appt-practitioner">{{ appointment.staffName }}</span>
-                <div class="appt-meta">
-                  <span class="service-name">
-                    <span class="service-dot"></span>
-                    {{ appointment.serviceName }}
-                  </span>
-                  <small class="appt-time">{{ formatHour(appointment.startAt) }} - {{ formatHour(appointment.endAt) }}</small>
+        <section class="mobile-timeline" aria-label="Planning horaire de la journee">
+          @for (row of mobileSlotRows(); track row.label) {
+            <article class="mobile-slot-row" [class.busy]="row.appointments.length > 0">
+              <span class="mobile-slot-time">{{ row.label }}</span>
+              @if (row.appointments.length === 0) {
+                <span class="mobile-slot-free">Libre</span>
+              } @else {
+                <div class="mobile-slot-appointments">
+                  <button type="button" class="mobile-slot-main" (click)="openAppointmentEditor(row.appointments[0])">
+                    <strong>{{ row.appointments[0].clientName }}</strong>
+                    <span>{{ row.appointments[0].serviceName }}</span>
+                  </button>
+                  @if (row.appointments.length > 1) {
+                    <span class="mobile-slot-count">+{{ row.appointments.length - 1 }}</span>
+                  }
                 </div>
-              </button>
+              }
+            </article>
+          }
+        </section>
+
+        @if (mobileDayTimeOff().length > 0) {
+          <section class="mobile-timeoff-list" aria-label="Conges et indisponibilites">
+            @for (leave of mobileDayTimeOff(); track leave.id) {
+              <article class="mobile-timeoff-item" [style.borderLeftColor]="leave.colorHex">
+                <strong>{{ leave.staffName }}</strong>
+                <span>{{ formatTimeRange(leave.startsAt, leave.endsAt) }}</span>
+                @if (leave.reason) {
+                  <p>{{ leave.reason }}</p>
+                }
+              </article>
+            }
+          </section>
+        }
+
+        @if (mobileDayAppointments().length === 0) {
+          <p class="hint mobile-empty">Aucun rendez-vous sur cette journee.</p>
+        }
+      </section>
+    } @else {
+      <section class="card planner-shell">
+        <div class="planning-header" [style.gridTemplateColumns]="gridTemplateColumns()">
+          <div class="corner-cell">Heure</div>
+          @for (day of visibleDays(); track day.key) {
+            <div class="day-head" [class.current-day]="isToday(day.key)">{{ day.shortLabel }}</div>
+          }
+        </div>
+
+        <div class="planning-body" [style.gridTemplateColumns]="gridTemplateColumns()">
+          <div class="hours-col">
+            @for (slot of timeSlots(); track slot.minuteFromStart) {
+              <div class="hour-cell">{{ slot.label }}</div>
             }
           </div>
-        }
-      </div>
-    </section>
+
+          @for (day of visibleDays(); track day.key) {
+            <div class="day-col" [style.height.px]="gridHeight()" [class.current-day]="isToday(day.key)">
+              @for (slot of timeSlots(); track slot.minuteFromStart) {
+                <button
+                  type="button"
+                  class="lane-line lane-slot"
+                  (dblclick)="onCellDblClick(day.key, slot.label)"
+                  [attr.aria-label]="'Creer un rendez-vous le ' + day.label + ' a ' + slot.label"
+                ></button>
+              }
+
+              @if (getDayShadingStyle(day.key); as shade) {
+                <div class="off-overlay off-overlay-top" [style.height]="shade.topHeight"></div>
+                <div
+                  class="off-overlay off-overlay-bottom"
+                  [style.top]="shade.bottomTop"
+                  [style.height]="shade.bottomHeight"
+                ></div>
+              }
+
+              @for (leave of getTimeOffForDay(day.key); track leave.id) {
+                <div
+                  class="timeoff-overlay"
+                  [style.top]="leave.top"
+                  [style.height]="leave.height"
+                  [style.--timeOffBg]="leave.bg"
+                  [style.--timeOffBorder]="leave.border"
+                  [style.--timeOffText]="leave.text"
+                  [title]="leave.staffName + (leave.reason ? ' - ' + leave.reason : '')"
+                >
+                  <span class="timeoff-label">{{ leave.staffName }}</span>
+                </div>
+              }
+
+              @if (showNowLine(day.key)) {
+                <div class="now-line" [style.top.px]="getNowLineTop()">
+                  <span class="now-dot"></span>
+                </div>
+              }
+
+              @for (appointment of getAppointmentsForDay(day.key); track appointment.id) {
+                <button
+                  type="button"
+                  class="appt-block"
+                  [class.is-booked]="appointment.status === 'BOOKED'"
+                  [class.is-done]="appointment.status === 'DONE'"
+                  [class.is-no-show]="appointment.status === 'NO_SHOW'"
+                  [ngStyle]="getAppointmentStyle(appointment)"
+                  (click)="openAppointmentEditor(appointment)"
+                  [attr.aria-label]="
+                    'Cliente: ' +
+                    appointment.clientName +
+                    ', praticienne: ' +
+                    appointment.staffName +
+                    ', ' +
+                    appointment.serviceName +
+                    ', debut ' +
+                    formatDateTime(appointment.startAt) +
+                    ', fin ' +
+                    formatDateTime(appointment.endAt) +
+                    ', ' +
+                    statusLabel(appointment.status)
+                  "
+                >
+                  <strong class="appt-client">{{ appointment.clientName }}</strong>
+                  <span class="appt-practitioner">{{ appointment.staffName }}</span>
+                  <div class="appt-meta">
+                    <span class="service-name">
+                      <span class="service-dot"></span>
+                      {{ appointment.serviceName }}
+                    </span>
+                    <small class="appt-time">{{ formatHour(appointment.startAt) }} - {{ formatHour(appointment.endAt) }}</small>
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
   }
 </section>
 

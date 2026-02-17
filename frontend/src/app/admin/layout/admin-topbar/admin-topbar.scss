@@ -66,3 +66,59 @@
     padding-inline: 2.5rem;
   }
 }
+
+@media (max-width: 899px) {
+  .topbar-main {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .brand {
+    font-size: 1.05rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .top-nav {
+    order: 3;
+    flex: 1 1 100%;
+    display: flex;
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 0.4rem;
+    padding-bottom: 0.15rem;
+  }
+
+  .topbar-actions {
+    order: 2;
+    margin-left: auto;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+
+  .topbar-actions .btn {
+    min-height: 36px;
+    padding-inline: 0.7rem;
+    font-size: 0.84rem;
+  }
+
+  .top-nav a {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar-actions {
+    flex: 1 1 100%;
+    justify-content: stretch;
+    gap: 0.4rem;
+  }
+
+  .topbar-actions .btn,
+  .topbar-actions .back-site-btn {
+    flex: 1 1 0;
+    text-align: center;
+    justify-content: center;
+  }
+}

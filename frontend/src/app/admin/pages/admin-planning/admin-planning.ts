@@ -85,6 +85,56 @@ export class AdminPlanning {
 
     return [days[this.mobileDayIndex()]];
   });
+  protected readonly mobileSelectedDay = computed(() => this.weekDays()[this.mobileDayIndex()]);
+  protected readonly mobileDayAppointments = computed(() => {
+    const selectedDay = this.mobileSelectedDay();
+    if (!selectedDay) {
+      return [];
+    }
+
+    return this.getAppointmentsForDay(selectedDay.key)
+      .slice()
+      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+  });
+  protected readonly mobileDayTimeOff = computed(() => {
+    const selectedDay = this.mobileSelectedDay();
+    if (!selectedDay) {
+      return [];
+    }
+
+    const dayStart = new Date(`${selectedDay.key}T00:00:00`);
+    const dayEnd = new Date(dayStart.getTime() + DAY_MS);
+
+    return this.filteredTimeOff()
+      .filter((item) => new Date(item.startsAt) < dayEnd && new Date(item.endsAt) > dayStart)
+      .map((item) => ({
+        id: item.id,
+        staffName: item.staffName,
+        reason: item.reason,
+        startsAt: item.startsAt,
+        endsAt: item.endsAt,
+        colorHex: this.sanitizeHex(item.staffColorHex, this.fallbackStaffColor)
+      }))
+      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  });
+  protected readonly mobileSlotRows = computed(() => {
+    const selectedDayAppointments = this.mobileDayAppointments();
+
+    return this.timeSlots().map((slot) => {
+      const slotStartMin = START_HOUR * 60 + slot.minuteFromStart;
+      const slotEndMin = slotStartMin + SLOT_MIN;
+      const appointments = selectedDayAppointments.filter((item) => {
+        const startMin = this.minutesFromIso(item.startAt);
+        const endMin = this.minutesFromIso(item.endAt);
+        return startMin < slotEndMin && endMin > slotStartMin;
+      });
+
+      return {
+        label: slot.label,
+        appointments
+      };
+    });
+  });
 
   protected readonly staffFilters = computed(() => [
     { id: 'all', label: 'Toutes' },
@@ -226,6 +276,10 @@ export class AdminPlanning {
 
   protected nextDay(): void {
     this.mobileDayIndex.update((index) => Math.min(6, index + 1));
+  }
+
+  protected setMobileDay(index: number): void {
+    this.mobileDayIndex.set(Math.max(0, Math.min(6, index)));
   }
 
   protected setStaffFilter(value: string): void {
@@ -447,6 +501,10 @@ export class AdminPlanning {
     }).format(new Date(value));
   }
 
+  protected formatTimeRange(startIso: string, endIso: string): string {
+    return `${this.formatHour(startIso)} - ${this.formatHour(endIso)}`;
+  }
+
   protected weekLabel(): string {
     const days = this.weekDays();
     return `${days[0].label} - ${days[6].label}`;
@@ -609,6 +667,11 @@ export class AdminPlanning {
   private timeToMinutes(value: string): number {
     const [hours, minutes] = value.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  private minutesFromIso(value: string): number {
+    const date = new Date(value);
+    return date.getHours() * 60 + date.getMinutes();
   }
 
   private pickTextColor(hexColor: string): string {
