@@ -36,6 +36,6 @@ export function verifyAuthToken(token: string): AuthJwtPayload {
   if (role !== "ADMIN" && role !== "STAFF") {
     throw new Error("Invalid token role");
   }
-
+//d
   return { sub, role };
 }
