@@ -155,22 +155,28 @@
                 [ngStyle]="getAppointmentStyle(appointment)"
                 (click)="openAppointmentEditor(appointment)"
                 [attr.aria-label]="
+                  'Cliente: ' +
                   appointment.clientName +
+                  ', praticienne: ' +
+                  appointment.staffName +
                   ', ' +
                   appointment.serviceName +
-                  ', ' +
-                  formatRange(appointment.startAt, appointment.endAt) +
+                  ', debut ' +
+                  formatDateTime(appointment.startAt) +
+                  ', fin ' +
+                  formatDateTime(appointment.endAt) +
                   ', ' +
                   statusLabel(appointment.status)
                 "
               >
-                <strong>{{ appointment.clientName }}</strong>
+                <strong class="appt-client">{{ appointment.clientName }}</strong>
+                <span class="appt-practitioner">{{ appointment.staffName }}</span>
                 <div class="appt-meta">
                   <span class="service-name">
                     <span class="service-dot"></span>
                     {{ appointment.serviceName }}
                   </span>
-                  <small>{{ shortStatus(appointment.status) }} | {{ formatHour(appointment.startAt) }}</small>
+                  <small class="appt-time">{{ formatHour(appointment.startAt) }} - {{ formatHour(appointment.endAt) }}</small>
                 </div>
               </button>
             }

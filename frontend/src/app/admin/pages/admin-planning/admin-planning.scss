@@ -272,6 +272,8 @@ p {
 }
 
 .lane-slot {
+  display: block;
+  height: 40px;
   width: 100%;
   padding: 0;
   border: none;
@@ -397,6 +399,19 @@ p {
   text-overflow: ellipsis;
 }
 
+.appt-client {
+  font-weight: 700;
+}
+
+.appt-practitioner {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .appt-meta {
   display: flex;
   align-items: center;
@@ -438,6 +453,10 @@ p {
   border-radius: 999px;
   border: 1px solid rgba(42, 33, 27, 0.2);
   padding: 0.03rem 0.26rem;
+}
+
+.appt-time {
+  flex-shrink: 0;
 }
 
 .appt-block.is-done {

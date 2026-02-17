@@ -389,18 +389,6 @@ export class AdminPlanning {
     return 'is-booked';
   }
 
-  protected shortStatus(status: PlanningAppointmentItem['status']): string {
-    if (status === 'DONE') {
-      return 'Fait';
-    }
-
-    if (status === 'NO_SHOW') {
-      return 'Abs';
-    }
-
-    return 'Res';
-  }
-
   protected showNowLine(dayKey: string): boolean {
     return this.isToday(dayKey) && this.getNowLineTop() !== null;
   }
@@ -449,8 +437,14 @@ export class AdminPlanning {
     return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
   }
 
-  protected formatRange(start: string, end: string): string {
-    return `${this.formatHour(start)} - ${this.formatHour(end)}`;
+  protected formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(value));
   }
 
   protected weekLabel(): string {
