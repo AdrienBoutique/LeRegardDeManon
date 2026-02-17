@@ -1,10 +1,11 @@
+import { NgIf } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NgIf],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss'
 })
@@ -16,6 +17,9 @@ export class Navbar {
 
   protected readonly menuOpen = signal(false);
   protected readonly proModalOpen = signal(false);
+  protected get isAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'ADMIN';
+  }
 
   protected toggleMenu(): void {
     this.menuOpen.update((value) => !value);
@@ -64,6 +68,10 @@ export class Navbar {
   protected openAdminLogin(): void {
     this.closeProAccess();
     this.router.navigateByUrl('/admin');
+  }
+
+  protected editHomepage(): void {
+    this.router.navigateByUrl('/admin/accueil');
   }
 
   private openProAccess(): void {

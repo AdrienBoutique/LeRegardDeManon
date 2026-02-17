@@ -4,21 +4,15 @@
   </section>
 }
 
-@if (isAdminLoggedIn()) {
-  <section class="admin-home-link panel">
-    <p>Mode admin detecte.</p>
-    <a routerLink="/admin/accueil" class="btn btn-ghost">Modifier la page d'accueil</a>
-  </section>
-}
-
 @if (content().hero.visible) {
   <section class="hero" id="top">
-    <p class="badge">{{ content().hero.badge }}</p>
-    <h1>{{ content().hero.title }}</h1>
-    <p class="lead">{{ content().hero.lead }}</p>
-    <div class="actions">
-      <a routerLink="/rdv" class="btn btn-primary">{{ content().hero.primaryButtonLabel }}</a>
-      <a routerLink="/soins" class="btn btn-ghost">{{ content().hero.secondaryButtonLabel }}</a>
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+      <div class="hero-buttons">
+        <button type="button" class="btn-primary" routerLink="/rdv">Prendre rendez-vous</button>
+        <button type="button" class="btn-secondary" routerLink="/soins">Voir les soins</button>
+      </div>
     </div>
   </section>
 }

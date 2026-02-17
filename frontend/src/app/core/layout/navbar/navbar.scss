@@ -37,6 +37,7 @@
 .brand:focus-visible,
 .links a:focus-visible,
 .links .cta:focus-visible,
+.admin-btn:focus-visible,
 .burger:focus-visible {
   outline: 2px solid #8c6a52;
   outline-offset: 3px;
@@ -84,6 +85,8 @@
 
 .links {
   grid-column: 1 / -1;
+  margin: 0;
+  list-style: none;
   display: grid;
   gap: 0.7rem;
   max-height: 0;
@@ -95,6 +98,10 @@
   border: 1px solid transparent;
   border-radius: 16px;
   background: #fffdfc;
+}
+
+.links li {
+  display: flex;
 }
 
 .links.open {
@@ -144,6 +151,23 @@
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(103, 70, 46, 0.29);
   background: linear-gradient(135deg, #a37d62 0%, #936f56 72%);
+}
+
+.admin-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  opacity: 0.4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  color: var(--color-text-soft);
+}
+
+.admin-btn:hover {
+  opacity: 1;
+  transform: rotate(15deg);
 }
 
 .pro-overlay {

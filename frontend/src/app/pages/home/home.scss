@@ -1,4 +1,8 @@
-﻿.hero,
+:host {
+  display: block;
+  margin-top: -1.2rem;
+}
+
 .panel,
 .cta-final {
   margin-top: var(--space-5);
@@ -9,37 +13,50 @@
 }
 
 .hero {
-  padding: clamp(1.2rem, 3.2vw, 2.4rem);
-  background:
-    radial-gradient(circle at 100% 0%, rgba(232, 213, 193, 0.55), transparent 38%),
-    var(--color-surface);
-}
-
-.badge {
-  display: inline-flex;
+  position: relative;
+  width: 100vw;
+  height: calc(100svh - 78px);
+  min-height: 460px;
+  margin-top: 0;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  background: url('/assets/bgManon.png') center 24% / cover no-repeat;
+  display: flex;
   align-items: center;
-  margin: 0;
-  padding: 0.35rem 0.7rem;
-  border-radius: var(--radius-pill);
-  background: #f0e1d4;
-  color: #6f4f3b;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  justify-content: center;
 }
 
-h1,
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.22), rgba(230, 220, 210, 0.46));
+}
+
+.hero-content {
+  position: absolute;
+  top: 66%;
+  left: clamp(7rem, 11vw, 12rem);
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: auto;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 20px;
+}
+
 h2,
 h3 {
   margin: 0;
   font-family: 'Playfair Display', Georgia, serif;
-}
-
-h1 {
-  margin-top: 0.65rem;
-  font-size: clamp(2.15rem, 4vw, 3.6rem);
-  line-height: 1.08;
 }
 
 h2 {
@@ -50,10 +67,33 @@ h3 {
   font-size: 1.16rem;
 }
 
-.lead {
-  margin: 0.9rem 0 0;
-  max-width: 60ch;
-  color: var(--color-text-soft);
+.btn-primary {
+  background: #8b5e3c;
+  color: #fff;
+  padding: 14px 32px;
+  border-radius: 40px;
+  border: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #6f472e;
+  transform: translateY(-3px);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid #8b5e3c;
+  color: #8b5e3c;
+  padding: 14px 32px;
+  border-radius: 40px;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #8b5e3c;
+  color: #fff;
 }
 
 .actions {
@@ -61,6 +101,34 @@ h3 {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    height: calc(100svh - 78px);
+    min-height: 380px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .hero-content {
+    top: 72%;
+    left: 3.75rem;
+    transform: translateY(-50%);
+  }
+
+  .hero {
+    background-position: center 30%;
+  }
+}
+
+@media (min-width: 900px) {
+  :host {
+    margin-top: -1.6rem;
+  }
 }
 
 .panel {

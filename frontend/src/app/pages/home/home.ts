@@ -10,7 +10,6 @@ import {
   HomeContentApi,
   HomeContentPayload
 } from '../../core/api/home-content.api';
-import { AuthService } from '../../core/services/auth.service';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 
 @Component({
@@ -24,12 +23,10 @@ export class Home {
 
   private readonly publicPromotionsApi = inject(PublicPromotionsApi);
   private readonly homeContentApi = inject(HomeContentApi);
-  private readonly authService = inject(AuthService);
 
   protected readonly activePromotions$ = this.publicPromotionsApi.getActivePromotions();
   protected readonly content = signal<HomeContentPayload>(defaultHomeContent());
   protected readonly contentError = signal('');
-  protected readonly isAdminLoggedIn = signal(this.authService.isLoggedIn());
   protected readonly hasAboutImage = computed(() => this.content().about.images.length > 0);
 
   constructor() {
