@@ -11,14 +11,21 @@
   }
 
   @if (content().hero.visible) {
-    <h1>{{ content().hero.title }}</h1>
-    <p>{{ content().hero.intro }}</p>
+    <header class="hero-copy">
+      <p class="hero-kicker">Notre signature</p>
+      <h1>{{ content().hero.title }}</h1>
+      <p class="hero-intro">{{ content().hero.intro }}</p>
+    </header>
   }
 
-  @for (block of content().blocks; track block.id) {
-    @if (block.visible) {
-      <h2>{{ block.title }}</h2>
-      <p>{{ block.text }}</p>
+  <div class="about-blocks">
+    @for (block of content().blocks; track block.id) {
+      @if (block.visible) {
+        <article class="about-block">
+          <h2>{{ block.title }}</h2>
+          <p>{{ block.text }}</p>
+        </article>
+      }
     }
-  }
+  </div>
 </section>
