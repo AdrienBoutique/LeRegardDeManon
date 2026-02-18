@@ -120,7 +120,7 @@ authRouter.post("/login", async (req, res) => {
       },
     });
 
-    if (!user) {
+    if (!user || !user.isActive || !(await comparePassword(password, user.passwordHash))) {
       const provisioned = await findOrProvisionUserFromAdmin(normalizedEmail, password);
       if (!provisioned) {
         res.status(401).json({ error: "Invalid credentials" });
@@ -129,17 +129,6 @@ authRouter.post("/login", async (req, res) => {
 
       const payload = await buildLoginResult(provisioned.id);
       res.json(payload);
-      return;
-    }
-
-    if (!user.isActive) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    const valid = await comparePassword(password, user.passwordHash);
-    if (!valid) {
-      res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
