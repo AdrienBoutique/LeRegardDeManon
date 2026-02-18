@@ -8,6 +8,37 @@
     <article class="card error-box">{{ errorMessage() }}</article>
   }
 
+  <section class="card display-settings-card">
+    <h2>Affichage accueil</h2>
+    <p>Choisissez le titre affiche dans la section promotions de la page d'accueil.</p>
+
+    @if (displaySettingsMessage()) {
+      <p class="hint">{{ displaySettingsMessage() }}</p>
+    }
+
+    @if (displaySettingsLoading()) {
+      <p>Chargement...</p>
+    } @else {
+      <form class="stack" [formGroup]="displayForm" (ngSubmit)="saveDisplaySettings()">
+        <div class="grid two-cols">
+          <label>
+            Titre section
+            <input type="text" formControlName="title" placeholder="Ex: Offres du moment" />
+          </label>
+          <label>
+            Sous-titre section
+            <input type="text" formControlName="subtitle" placeholder="Ex: Editions limitees / promotions" />
+          </label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" [disabled]="displaySettingsSaving()">
+            {{ displaySettingsSaving() ? 'Sauvegarde...' : 'Sauvegarder le titre' }}
+          </button>
+        </div>
+      </form>
+    }
+  </section>
+
   <section class="card create-card">
     <h2>Creer une offre</h2>
 

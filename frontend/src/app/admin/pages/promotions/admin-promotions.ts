@@ -6,6 +6,7 @@ import {
   AdminPromotionsApi
 } from '../../../core/api/admin-promotions.api';
 import { AdminServiceLiteItem, AdminServicesApi } from '../../../core/api/admin-services.api';
+import { HomeContentApi, HomeContentPayload } from '../../../core/api/home-content.api';
 
 type DiscountType = 'PERCENT' | 'FIXED';
 
@@ -18,16 +19,26 @@ type DiscountType = 'PERCENT' | 'FIXED';
 export class AdminPromotions {
   private readonly promotionsApi = inject(AdminPromotionsApi);
   private readonly servicesApi = inject(AdminServicesApi);
+  private readonly homeContentApi = inject(HomeContentApi);
   private readonly formBuilder = inject(FormBuilder);
 
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly displaySettingsLoading = signal(false);
+  protected readonly displaySettingsSaving = signal(false);
+  protected readonly displaySettingsMessage = signal('');
   protected readonly promotions = signal<AdminPromotionItem[]>([]);
   protected readonly services = signal<AdminServiceLiteItem[]>([]);
   protected readonly createSearch = signal('');
   protected readonly editSearch = signal('');
   protected readonly editingId = signal<string | null>(null);
+  private homeContentSnapshot: HomeContentPayload | null = null;
+
+  protected readonly displayForm = this.formBuilder.nonNullable.group({
+    title: ['', [Validators.required]],
+    subtitle: ['', [Validators.required]]
+  });
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
     title: ['', [Validators.required]],
@@ -67,6 +78,78 @@ export class AdminPromotions {
   constructor() {
     this.loadServices();
     this.loadPromotions();
+    this.loadDisplaySettings();
+  }
+
+  protected loadDisplaySettings(): void {
+    this.displaySettingsLoading.set(true);
+    this.displaySettingsMessage.set('');
+
+    this.homeContentApi.getAdminContent().subscribe({
+      next: (content) => {
+        this.homeContentSnapshot = content;
+        this.displayForm.reset({
+          title: content.offers.title,
+          subtitle: content.offers.subtitle
+        });
+        this.displaySettingsLoading.set(false);
+      },
+      error: (error: { error?: { error?: string } }) => {
+        this.displaySettingsLoading.set(false);
+        this.errorMessage.set(error.error?.error ?? "Impossible de charger l'affichage des promotions.");
+      }
+    });
+  }
+
+  protected saveDisplaySettings(): void {
+    if (this.displaySettingsSaving()) {
+      return;
+    }
+
+    const snapshot = this.homeContentSnapshot;
+    if (!snapshot) {
+      this.errorMessage.set("Contenu d'accueil introuvable.");
+      return;
+    }
+
+    const raw = this.displayForm.getRawValue();
+    const title = raw.title.trim();
+    const subtitle = raw.subtitle.trim();
+
+    if (!title || !subtitle) {
+      this.errorMessage.set('Renseignez un titre et un sous-titre.');
+      return;
+    }
+
+    this.displaySettingsSaving.set(true);
+    this.displaySettingsMessage.set('');
+    this.errorMessage.set('');
+
+    this.homeContentApi
+      .updateAdminContent({
+        ...snapshot,
+        offers: {
+          ...snapshot.offers,
+          title,
+          subtitle
+        }
+      })
+      .subscribe({
+        next: (content) => {
+          this.homeContentSnapshot = content;
+          this.displayForm.reset({
+            title: content.offers.title,
+            subtitle: content.offers.subtitle
+          });
+          this.displaySettingsSaving.set(false);
+          this.displaySettingsMessage.set('Titre des promotions mis a jour.');
+          setTimeout(() => this.displaySettingsMessage.set(''), 2200);
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.displaySettingsSaving.set(false);
+          this.errorMessage.set(error.error?.error ?? 'Sauvegarde impossible du titre des promotions.');
+        }
+      });
   }
 
   protected loadPromotions(): void {
