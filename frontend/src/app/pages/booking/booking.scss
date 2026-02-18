@@ -107,6 +107,16 @@ label {
   color: #5f4f42;
 }
 
+.check-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.check-line input {
+  width: auto;
+}
+
 .calendar-wrap {
   display: grid;
   gap: 0.35rem;

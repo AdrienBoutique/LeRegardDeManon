@@ -24,6 +24,8 @@ export const prisma = basePrisma.$extends({
         if (data) {
           if (Object.prototype.hasOwnProperty.call(data, "startsAt")) {
             data.reminder24hEmailSentAt = null;
+            data.reminder24hSmsSentAt = null;
+            data.reminder2hSmsSentAt = null;
           }
 
           const statusValue = extractStatusValue(data.status);
@@ -40,6 +42,8 @@ export const prisma = basePrisma.$extends({
         if (data) {
           if (Object.prototype.hasOwnProperty.call(data, "startsAt")) {
             data.reminder24hEmailSentAt = null;
+            data.reminder24hSmsSentAt = null;
+            data.reminder2hSmsSentAt = null;
           }
 
           const statusValue = extractStatusValue(data.status);

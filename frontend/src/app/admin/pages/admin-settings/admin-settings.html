@@ -1,0 +1,43 @@
+<section class="admin-settings stack">
+  <header class="card panel">
+    <h1>Reglages</h1>
+    <p>Mode de validation des demandes de rendez-vous.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card panel error-box">{{ errorMessage() }}</article>
+  }
+  @if (successMessage()) {
+    <article class="card panel success-box">{{ successMessage() }}</article>
+  }
+
+  <article class="card panel">
+    @if (loading()) {
+      <p>Chargement...</p>
+    } @else {
+      <div class="mode-grid">
+        <button
+          type="button"
+          class="mode-card"
+          [class.active]="bookingMode() === 'MANUAL'"
+          [disabled]="saving()"
+          (click)="save('MANUAL')"
+        >
+          <h2>Validation manuelle</h2>
+          <p>Toute demande arrive en attente puis est validee par l'administration.</p>
+        </button>
+
+        <button
+          type="button"
+          class="mode-card"
+          [class.active]="bookingMode() === 'AUTO_INTELLIGENT'"
+          [disabled]="saving()"
+          (click)="save('AUTO_INTELLIGENT')"
+        >
+          <h2>Auto-confirmation intelligente</h2>
+          <p>Confirmation automatique si creneau disponible, sinon la demande passe en attente.</p>
+        </button>
+      </div>
+    }
+  </article>
+</section>

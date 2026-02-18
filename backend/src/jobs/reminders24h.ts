@@ -6,11 +6,16 @@ import {
   sendReminder24hEmailIfNeeded,
 } from "../services/email/appointmentEmails";
 import { isEmailConfigured } from "../services/email/mailer";
+import {
+  findReminder24hSmsCandidates,
+  sendReminder24hSmsIfNeeded,
+} from "../services/sms/appointmentSms";
+import { isSmsConfigAvailable, isSmsEnabled } from "../services/sms/ovhSms";
 
 let isRunning = false;
 
 export async function runReminders24hOnce(): Promise<void> {
-  if (!isEmailConfigured()) {
+  if (!isEmailConfigured() && !(isSmsEnabled() && isSmsConfigAvailable())) {
     return;
   }
 
@@ -23,6 +28,7 @@ export async function runReminders24hOnce(): Promise<void> {
   const runStartedAt = Date.now();
 
   try {
+    console.log("[jobs.reminders24h] tick");
     const nowBrussels = DateTime.now().setZone(BRUSSELS_TIMEZONE);
     const windowStartUtc = nowBrussels
       .plus({ hours: 24 })
@@ -35,20 +41,29 @@ export async function runReminders24hOnce(): Promise<void> {
       .toUTC()
       .toJSDate();
 
-    const candidateIds = await findReminder24hCandidates(windowStartUtc, windowEndUtc);
+    const [emailCandidateIds, smsCandidateIds] = await Promise.all([
+      findReminder24hCandidates(windowStartUtc, windowEndUtc),
+      findReminder24hSmsCandidates(windowStartUtc, windowEndUtc),
+    ]);
+    const candidateIds = Array.from(new Set([...emailCandidateIds, ...smsCandidateIds]));
 
     let sentCount = 0;
     let skippedCount = 0;
     let failedCount = 0;
 
     for (const appointmentId of candidateIds) {
-      const result = await sendReminder24hEmailIfNeeded(appointmentId);
-      if (result === "sent") {
-        sentCount += 1;
-      } else if (result === "failed") {
-        failedCount += 1;
-      } else {
-        skippedCount += 1;
+      const [emailResult, smsResult] = await Promise.all([
+        sendReminder24hEmailIfNeeded(appointmentId),
+        sendReminder24hSmsIfNeeded(appointmentId),
+      ]);
+      for (const result of [emailResult, smsResult]) {
+        if (result === "sent") {
+          sentCount += 1;
+        } else if (result === "failed") {
+          failedCount += 1;
+        } else {
+          skippedCount += 1;
+        }
       }
     }
 
@@ -63,8 +78,8 @@ export async function runReminders24hOnce(): Promise<void> {
 }
 
 export function startReminders24hScheduler(): void {
-  if (!isEmailConfigured()) {
-    console.log("[jobs.reminders24h] scheduler disabled: EMAIL_USER/EMAIL_PASS missing");
+  if (!isEmailConfigured() && !(isSmsEnabled() && isSmsConfigAvailable())) {
+    console.log("[jobs.reminders24h] scheduler disabled: no email/sms channel configured");
     return;
   }
 

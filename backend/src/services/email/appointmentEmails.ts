@@ -2,20 +2,21 @@ import { AppointmentStatus, NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { isEmailConfigured, sendMail } from "./mailer";
 import {
-  buildConfirmationEmail,
+  buildConfirmedEmail,
+  buildRejectedEmail,
   buildReminder24hEmail,
   InstituteEmailInfo,
   AppointmentEmailInfo,
 } from "./templates";
-
-type AppointmentEmailKind = "confirmation" | "reminder24h";
 
 const appointmentEmailSelect = {
   id: true,
   startsAt: true,
   status: true,
   canceledAt: true,
+  rejectedReason: true,
   confirmationEmailSentAt: true,
+  rejectedEmailSentAt: true,
   reminder24hEmailSentAt: true,
   notes: true,
   clientId: true,
@@ -132,7 +133,7 @@ export async function sendConfirmationEmailIfNeeded(appointmentId: string): Prom
     select: appointmentEmailSelect,
   });
 
-  if (!appointment || isCancelled(appointment)) {
+  if (!appointment || isCancelled(appointment) || appointment.status !== AppointmentStatus.CONFIRMED) {
     return "skipped";
   }
 
@@ -143,7 +144,7 @@ export async function sendConfirmationEmailIfNeeded(appointmentId: string): Prom
 
   const institute = getInstituteEmailInfo();
   const details = mapAppointmentInfo(appointment);
-  const message = buildConfirmationEmail(details, institute);
+  const message = buildConfirmedEmail(details, institute);
   const reservationTime = new Date();
 
   const reservation = await prisma.appointment.updateMany({
@@ -207,6 +208,95 @@ export async function sendConfirmationEmailIfNeeded(appointmentId: string): Prom
   }
 }
 
+export async function sendConfirmedIfNeeded(appointmentId: string): Promise<"sent" | "skipped" | "failed"> {
+  return sendConfirmationEmailIfNeeded(appointmentId);
+}
+
+export async function sendRejectedIfNeeded(appointmentId: string): Promise<"sent" | "skipped" | "failed"> {
+  if (!isEmailConfigured()) {
+    return "skipped";
+  }
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    select: appointmentEmailSelect,
+  });
+
+  if (!appointment || appointment.status !== AppointmentStatus.REJECTED) {
+    return "skipped";
+  }
+
+  const recipient = appointment.client.email?.trim().toLowerCase();
+  if (!recipient || appointment.rejectedEmailSentAt) {
+    return "skipped";
+  }
+
+  const institute = getInstituteEmailInfo();
+  const details = mapAppointmentInfo(appointment);
+  const message = buildRejectedEmail(details, institute, appointment.rejectedReason);
+  const reservationTime = new Date();
+
+  const reservation = await prisma.appointment.updateMany({
+    where: {
+      id: appointment.id,
+      rejectedEmailSentAt: null,
+    },
+    data: {
+      rejectedEmailSentAt: reservationTime,
+    },
+  });
+
+  if (reservation.count === 0) {
+    return "skipped";
+  }
+
+  try {
+    const sent = await sendMail({
+      to: recipient,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+    });
+
+    await logNotificationEvent({
+      appointmentId: appointment.id,
+      clientId: appointment.clientId,
+      recipient,
+      type: NotificationType.CANCELLATION,
+      status: "SENT",
+      subject: message.subject,
+      messageId: sent.messageId,
+    });
+
+    console.log(`EMAIL_REJECTED_SENT appointmentId=${appointment.id} recipient=${recipient}`);
+    return "sent";
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : "Unknown email failure";
+    console.error(`EMAIL_REJECTED_FAILED appointmentId=${appointment.id} recipient=${recipient}`, error);
+    await prisma.appointment.updateMany({
+      where: {
+        id: appointment.id,
+        rejectedEmailSentAt: reservationTime,
+      },
+      data: {
+        rejectedEmailSentAt: null,
+      },
+    });
+
+    await logNotificationEvent({
+      appointmentId: appointment.id,
+      clientId: appointment.clientId,
+      recipient,
+      type: NotificationType.CANCELLATION,
+      status: "FAILED",
+      subject: message.subject,
+      errorMessage: messageText,
+    });
+
+    return "failed";
+  }
+}
+
 export async function sendReminder24hEmailIfNeeded(appointmentId: string): Promise<"sent" | "skipped" | "failed"> {
   if (!isEmailConfigured()) {
     return "skipped";
@@ -217,7 +307,7 @@ export async function sendReminder24hEmailIfNeeded(appointmentId: string): Promi
     select: appointmentEmailSelect,
   });
 
-  if (!appointment || isCancelled(appointment)) {
+  if (!appointment || isCancelled(appointment) || appointment.status !== AppointmentStatus.CONFIRMED) {
     return "skipped";
   }
 
@@ -300,7 +390,7 @@ export async function findReminder24hCandidates(windowStartUtc: Date, windowEndU
         lte: windowEndUtc,
       },
       status: {
-        not: AppointmentStatus.CANCELLED,
+        equals: AppointmentStatus.CONFIRMED,
       },
       canceledAt: null,
       reminder24hEmailSentAt: null,

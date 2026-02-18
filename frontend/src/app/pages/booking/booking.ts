@@ -116,6 +116,7 @@ export class Booking {
       lastName: ['', [Validators.required]],
       email: ['', [Validators.email]],
       phone: [''],
+      smsConsent: [false],
       notes: ['']
     },
     { validators: [contactValidator] }
@@ -497,6 +498,7 @@ export class Booking {
           email: raw.email.trim() || undefined,
           phone: raw.phone.trim() || undefined
         },
+        smsConsent: raw.smsConsent === true,
         notes: mergedNotes || undefined
       })
       .pipe(
@@ -685,6 +687,7 @@ export class Booking {
       lastName: '',
       email: '',
       phone: '',
+      smsConsent: false,
       notes: ''
     });
 

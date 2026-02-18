@@ -1,4 +1,4 @@
-import { AppointmentStatus, Prisma } from "@prisma/client";
+import { AppointmentStatus, BookingMode, Prisma } from "@prisma/client";
 import { DateTime } from "luxon";
 import { Router } from "express";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import {
 import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 import { sendConfirmationEmailIfNeeded } from "../services/email/appointmentEmails";
+import { sendConfirmationSmsIfNeeded } from "../services/sms/appointmentSms";
 
 class HttpError extends Error {
   constructor(
@@ -62,6 +63,7 @@ const createAppointmentSchema = z.object({
       }
     }),
   notes: optionalString,
+  smsConsent: z.boolean().optional(),
 }).superRefine((value, ctx) => {
   if ((!value.services || value.services.length === 0) && !value.serviceId) {
     ctx.addIssue({
@@ -350,7 +352,7 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
           blockedIntervalsByStaff.set(appointment.staffMemberId, intervals);
         }
 
-        const eligibleCandidates = Array.from(candidateById.values())
+        const candidatesWithAvailability = Array.from(candidateById.values())
           .map((candidate) => {
             const freeIntervals = subtractIntervals(
               workIntervalsByStaff.get(candidate.id) ?? [],
@@ -368,16 +370,13 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
               maxFreeMin,
               eligible: maxFreeMin >= candidate.totalDurationMin,
             };
-          })
-          .filter((candidate) => candidate.eligible);
+          });
 
-        if (eligibleCandidates.length === 0) {
-          throw new HttpError(409, "Selected slot is no longer available");
-        }
+        const eligibleCandidates = candidatesWithAvailability.filter((candidate) => candidate.eligible);
 
         const selectedStaff = payload.staffId
-          ? eligibleCandidates.find((candidate) => candidate.id === payload.staffId)
-          : eligibleCandidates.sort((a, b) => {
+          ? candidatesWithAvailability.find((candidate) => candidate.id === payload.staffId)
+          : (eligibleCandidates.length > 0 ? eligibleCandidates : candidatesWithAvailability).sort((a, b) => {
               if (a.totalPriceCents !== b.totalPriceCents) {
                 return a.totalPriceCents - b.totalPriceCents;
               }
@@ -390,8 +389,17 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
             })[0];
 
         if (!selectedStaff) {
-          throw new HttpError(409, "Selected slot is no longer available");
+          throw new HttpError(400, "No staff can perform the selected services");
         }
+
+        const settings = await tx.instituteSettings.findFirst({
+          orderBy: { createdAt: "asc" },
+          select: { bookingMode: true },
+        });
+        const bookingMode = settings?.bookingMode ?? BookingMode.MANUAL;
+        const selectedAvailability = candidatesWithAvailability.find((candidate) => candidate.id === selectedStaff.id);
+        const canAutoConfirm = bookingMode === BookingMode.AUTO_INTELLIGENT && Boolean(selectedAvailability?.eligible);
+        const nextStatus = canAutoConfirm ? AppointmentStatus.CONFIRMED : AppointmentStatus.PENDING;
 
         const startAtUtc = startAtLocal.toUTC();
         const endAtUtc = startAtUtc.plus({ minutes: selectedStaff.totalDurationMin });
@@ -439,13 +447,17 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
             staffMemberId: selectedStaff.id,
             startsAt: startAt,
             endsAt: endAt,
-            status: AppointmentStatus.CONFIRMED,
+            status: nextStatus,
+            clientPhone: phone ?? client.phone ?? null,
+            smsConsent: payload.smsConsent === true,
+            confirmedAt: nextStatus === AppointmentStatus.CONFIRMED ? new Date() : null,
             notes: payload.notes,
           },
           select: {
             id: true,
             startsAt: true,
             endsAt: true,
+            status: true,
           },
         });
 
@@ -461,6 +473,7 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
 
         return {
           appointment,
+          bookingMode,
           staffName: `${selectedStaff.firstName} ${selectedStaff.lastName}`.trim(),
           serviceName: selectedStaff.itemSnapshots.map((item) => item.serviceName).join(" + "),
         };
@@ -472,11 +485,19 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
       appointmentId: created.appointment.id,
       startAt: created.appointment.startsAt,
       endAt: created.appointment.endsAt,
+      status: created.appointment.status,
+      message:
+        created.appointment.status === AppointmentStatus.CONFIRMED
+          ? "Votre rendez-vous est confirme. Un email vient d'etre envoye."
+          : "Votre demande a ete envoyee. Vous recevrez une confirmation de validation.",
       staffName: created.staffName,
       serviceName: created.serviceName,
     });
 
-    void sendConfirmationEmailIfNeeded(created.appointment.id);
+    if (created.appointment.status === AppointmentStatus.CONFIRMED) {
+      void sendConfirmationEmailIfNeeded(created.appointment.id);
+      void sendConfirmationSmsIfNeeded(created.appointment.id);
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: zodErrorToMessage(error) });

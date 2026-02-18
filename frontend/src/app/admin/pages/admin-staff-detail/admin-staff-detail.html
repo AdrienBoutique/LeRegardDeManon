@@ -80,7 +80,17 @@
 
     @if (tab() === 'services') {
       <article class="card panel">
-        <h2>Services et prix</h2>
+        <div class="services-head">
+          <h2>Services et prix</h2>
+          <button
+            type="button"
+            class="btn btn-ghost btn-small"
+            [disabled]="saving() || allServicesSelected()"
+            (click)="selectAllServices()"
+          >
+            {{ allServicesSelected() ? 'Tous selectionnes' : 'Tout selectionner' }}
+          </button>
+        </div>
 
         <section class="service-grid">
           @for (row of serviceRows(); track row.service.id) {

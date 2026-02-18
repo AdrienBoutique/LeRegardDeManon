@@ -286,6 +286,11 @@
                 </label>
               </div>
 
+              <label class="check-line">
+                <input type="checkbox" formControlName="smsConsent" />
+                J'accepte de recevoir des SMS de confirmation et de rappel (optionnel).
+              </label>
+
               <label>
                 Notes (optionnel)
                 <textarea rows="3" formControlName="notes" placeholder="Informations utiles pour votre rendez-vous"></textarea>
@@ -309,8 +314,8 @@
         @case (4) {
           <section class="step-card confirmation">
             @if (confirmation(); as done) {
-              <h2>Rendez-vous confirme</h2>
-              <p>Merci, votre reservation est bien prise en compte.</p>
+              <h2>{{ done.status === 'CONFIRMED' ? 'Rendez-vous confirme' : 'Demande envoyee' }}</h2>
+              <p>{{ done.message }}</p>
 
               <dl>
                 <div>

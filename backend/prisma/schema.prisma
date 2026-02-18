@@ -10,6 +10,7 @@ datasource db {
 enum AppointmentStatus {
   PENDING
   CONFIRMED
+  REJECTED
   CANCELLED
   COMPLETED
   NO_SHOW
@@ -18,6 +19,8 @@ enum AppointmentStatus {
 enum NotificationType {
   CONFIRMATION
   REMINDER
+  REMINDER_24H
+  REMINDER_2H
   CANCELLATION
   FOLLOW_UP
 }
@@ -30,6 +33,11 @@ enum DiscountType {
 enum Role {
   ADMIN
   STAFF
+}
+
+enum BookingMode {
+  MANUAL
+  AUTO_INTELLIGENT
 }
 
 model StaffMember {
@@ -156,9 +164,18 @@ model Appointment {
   startsAt         DateTime
   endsAt           DateTime
   status           AppointmentStatus @default(PENDING)
+  clientPhone              String?
+  smsConsent               Boolean           @default(false)
   notes            String?
+  rejectedReason           String?
+  confirmedAt              DateTime?
+  rejectedAt               DateTime?
   confirmationEmailSentAt DateTime?
+  rejectedEmailSentAt     DateTime?
   reminder24hEmailSentAt  DateTime?
+  confirmationSmsSentAt   DateTime?
+  reminder24hSmsSentAt    DateTime?
+  reminder2hSmsSentAt     DateTime?
   canceledAt              DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -169,6 +186,14 @@ model Appointment {
 
   @@index([staffMemberId, startsAt])
   @@index([clientId, startsAt])
+}
+
+model InstituteSettings {
+  id          String     @id @default(cuid())
+  instituteId String?    @unique
+  bookingMode BookingMode @default(MANUAL)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model AppointmentItem {

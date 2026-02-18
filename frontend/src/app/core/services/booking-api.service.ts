@@ -56,6 +56,7 @@ export type CreateAppointmentPayload = {
   serviceId: string;
   staffId?: string;
   startAt: string;
+  smsConsent?: boolean;
   client: {
     firstName: string;
     lastName: string;
@@ -69,6 +70,8 @@ export type CreateAppointmentResponse = {
   appointmentId: string;
   startAt: string;
   endAt: string;
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
+  message: string;
   staffName: string;
   serviceName: string;
 };

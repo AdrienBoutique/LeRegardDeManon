@@ -1,0 +1,62 @@
+<section class="admin-requests stack">
+  <header class="card panel heading">
+    <h1>Demandes de RDV</h1>
+    <p>Liste des rendez-vous en attente de validation.</p>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card panel error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (successMessage()) {
+    <article class="card panel success-box">{{ successMessage() }}</article>
+  }
+
+  <section class="card panel">
+    @if (loading()) {
+      <p>Chargement...</p>
+    } @else if (pendingItems().length === 0) {
+      <p class="muted">Aucune demande en attente.</p>
+    } @else {
+      <div class="requests-grid">
+        @for (item of pendingItems(); track item.id) {
+          <article class="request-item card">
+            <h2>{{ item.clientName }}</h2>
+            <p><strong>Date:</strong> {{ formatDateTime(item.startAt) }}</p>
+            <p><strong>Duree:</strong> {{ item.durationMin }} min</p>
+            <p><strong>Praticienne:</strong> {{ item.practitionerName }}</p>
+            <p><strong>Email:</strong> {{ item.clientEmail || '-' }}</p>
+            <p><strong>Telephone:</strong> {{ item.clientPhone || '-' }}</p>
+            <p><strong>Soins:</strong> {{ serviceNames(item) }}</p>
+            @if (item.notes) {
+              <p><strong>Notes:</strong> {{ item.notes }}</p>
+            }
+
+            <div class="actions">
+              <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="accept(item)">Accepter</button>
+              <button type="button" class="btn btn-ghost" [disabled]="saving()" (click)="openReject(item)">Refuser</button>
+            </div>
+
+            @if (rejectOpenId() === item.id) {
+              <div class="reject-box">
+                <label>
+                  Motif (optionnel)
+                  <textarea
+                    rows="3"
+                    [ngModel]="rejectReason()"
+                    (ngModelChange)="rejectReason.set($event)"
+                    placeholder="Ex: creneau indisponible, merci de proposer une autre date."
+                  ></textarea>
+                </label>
+                <div class="actions">
+                  <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="reject(item)">Confirmer le refus</button>
+                  <button type="button" class="btn btn-ghost" [disabled]="saving()" (click)="closeReject()">Annuler</button>
+                </div>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</section>

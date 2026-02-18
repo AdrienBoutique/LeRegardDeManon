@@ -42,7 +42,7 @@ function instituteFooter(institute: InstituteEmailInfo): { html: string; text: s
   };
 }
 
-export function buildConfirmationEmail(
+export function buildConfirmedEmail(
   appointment: AppointmentEmailInfo,
   institute: InstituteEmailInfo
 ): { subject: string; html: string; text: string } {
@@ -77,6 +77,43 @@ export function buildConfirmationEmail(
       (institute.manageUrl
         ? `Annulation ou modification: ${institute.manageUrl}\n`
         : "Pour annuler ou reprogrammer, repondez a cet email.\n") +
+      footer.text,
+  };
+}
+
+export function buildConfirmationEmail(
+  appointment: AppointmentEmailInfo,
+  institute: InstituteEmailInfo
+): { subject: string; html: string; text: string } {
+  return buildConfirmedEmail(appointment, institute);
+}
+
+export function buildRejectedEmail(
+  appointment: AppointmentEmailInfo,
+  institute: InstituteEmailInfo,
+  reason?: string | null
+): { subject: string; html: string; text: string } {
+  const when = formatDateTimeBrussels(appointment.startsAt);
+  const safeName = escapeHtml(appointment.clientName);
+  const footer = instituteFooter(institute);
+  const safeReason = reason ? escapeHtml(reason) : "";
+  const reasonHtml = reason ? `<p><strong>Motif:</strong> ${safeReason}</p>` : "";
+  const reasonText = reason ? `Motif: ${reason}\n` : "";
+
+  return {
+    subject: `Demande de rendez-vous non retenue - ${institute.name}`,
+    html: `<div style="font-family:Arial,sans-serif;color:#2f241c;line-height:1.5;">
+      <p>Bonjour ${safeName},</p>
+      <p>Votre demande de rendez-vous du <strong>${escapeHtml(when)}</strong> n'a pas pu etre validee.</p>
+      ${reasonHtml}
+      <p>Vous pouvez nous recontacter pour trouver un autre creneau.</p>
+      ${footer.html}
+    </div>`,
+    text:
+      `Bonjour ${appointment.clientName},\n\n` +
+      `Votre demande de rendez-vous du ${when} n'a pas pu etre validee.\n` +
+      reasonText +
+      `Vous pouvez nous recontacter pour trouver un autre creneau.\n` +
       footer.text,
   };
 }

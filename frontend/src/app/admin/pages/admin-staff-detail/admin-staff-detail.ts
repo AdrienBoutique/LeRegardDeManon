@@ -107,6 +107,10 @@ export class AdminStaffDetail {
         };
       });
   });
+  protected readonly allServicesSelected = computed(() => {
+    const rows = this.serviceRows();
+    return rows.length > 0 && rows.every((row) => row.enabled);
+  });
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -196,6 +200,33 @@ export class AdminStaffDetail {
           }
         });
     }
+  }
+
+  protected selectAllServices(): void {
+    const member = this.staff();
+    if (!member || this.saving()) {
+      return;
+    }
+
+    const missing = this.serviceRows()
+      .filter((row) => !row.enabled)
+      .map((row) => row.service.id);
+
+    if (missing.length === 0) {
+      return;
+    }
+
+    this.saving.set(true);
+    Promise.all(missing.map((serviceId) => firstValueFrom(this.api.assignService(member.id, { serviceId }))))
+      .then(() => {
+        this.refreshAssignments(member.id);
+        this.errorMessage.set('');
+        this.setSuccess('Tous les soins ont ete selectionnes.');
+      })
+      .catch((error: { error?: { error?: string } }) => {
+        this.errorMessage.set(error?.error?.error ?? 'Selection globale impossible.');
+      })
+      .finally(() => this.saving.set(false));
   }
 
   protected saveServicePricing(serviceId: string, fixedPrice: string, useTraineeDiscount: boolean): void {

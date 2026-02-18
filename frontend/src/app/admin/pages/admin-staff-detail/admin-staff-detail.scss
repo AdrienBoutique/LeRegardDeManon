@@ -116,6 +116,15 @@ textarea {
   gap: 0.7rem;
 }
 
+.services-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+
 .service-item {
   padding: 0.9rem;
   display: grid;
