@@ -39,6 +39,8 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  width: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -49,6 +51,13 @@ body {
     radial-gradient(circle at 100% 0%, rgba(247, 233, 219, 0.55), transparent 33%),
     var(--color-bg);
   line-height: 1.55;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 a {

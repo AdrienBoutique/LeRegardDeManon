@@ -85,8 +85,18 @@ adminServicesRouter.post("/categories", async (req, res) => {
 
 adminServicesRouter.delete("/categories/:id", async (req, res) => {
   try {
-    await prisma.serviceCategory.delete({
-      where: { id: req.params.id },
+    const categoryId = req.params.id;
+
+    await prisma.$transaction(async (tx) => {
+      // Defensive update for existing databases where FK behavior may differ.
+      await tx.service.updateMany({
+        where: { categoryId },
+        data: { categoryId: null },
+      });
+
+      await tx.serviceCategory.delete({
+        where: { id: categoryId },
+      });
     });
 
     res.json({ ok: true });

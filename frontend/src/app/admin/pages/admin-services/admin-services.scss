@@ -1,5 +1,6 @@
-﻿.admin-services {
+.admin-services {
   gap: 1rem;
+  min-width: 0;
 }
 
 .heading,
@@ -7,6 +8,7 @@
 .service-item,
 .error-box {
   padding: 1rem;
+  min-width: 0;
 }
 
 .heading-top {
@@ -38,6 +40,7 @@ label {
   gap: 0.3rem;
   color: #5f4f42;
   font-weight: 600;
+  min-width: 0;
 }
 
 input,
@@ -149,12 +152,15 @@ select {
   justify-content: space-between;
   align-items: center;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .service-item h3 {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .meta {
@@ -172,6 +178,10 @@ select {
   display: flex;
   gap: 0.55rem;
   flex-wrap: wrap;
+}
+
+.actions .btn {
+  min-width: 0;
 }
 
 .chip.inactive {
@@ -228,6 +238,16 @@ select {
   justify-content: space-between;
   gap: 0.7rem;
   margin-bottom: 0.45rem;
+}
+
+@media (max-width: 640px) {
+  .category-create-inline {
+    grid-template-columns: 1fr;
+  }
+
+  .actions .btn {
+    flex: 1 1 100%;
+  }
 }
 
 @media (min-width: 860px) {

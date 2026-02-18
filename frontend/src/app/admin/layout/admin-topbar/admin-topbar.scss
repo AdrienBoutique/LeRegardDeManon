@@ -82,6 +82,25 @@
 @media (min-width: 900px) {
   .topbar-main {
     padding-inline: 2.5rem;
+    flex-wrap: wrap;
+    row-gap: 0.55rem;
+    align-items: flex-start;
+  }
+
+  .brand {
+    order: 1;
+  }
+
+  .topbar-actions {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .top-nav {
+    order: 2;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 }
 
@@ -133,10 +152,23 @@
     gap: 0.4rem;
   }
 
-  .topbar-actions .btn,
-  .topbar-actions .back-site-btn {
+.topbar-actions .btn,
+.topbar-actions .back-site-btn {
     flex: 1 1 0;
     text-align: center;
     justify-content: center;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .top-nav a {
+    padding: 0.45rem 0.62rem;
+    font-size: 0.82rem;
+  }
+
+  .topbar-actions .btn {
+    padding-inline: 0.55rem;
+    font-size: 0.8rem;
   }
 }
