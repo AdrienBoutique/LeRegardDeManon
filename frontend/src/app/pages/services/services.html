@@ -28,51 +28,71 @@
   </label>
 </section>
 
-<section class="categories-stack">
-  @for (group of groupedCategories(); track group.id) {
-    <section class="category-block">
-      <button
-        type="button"
-        class="cat-header"
-        (click)="toggleCategory(group.id)"
-        [attr.aria-expanded]="isOpen(group.id)"
-      >
-        <div class="left">
-          <h3>{{ group.name }}</h3>
-          <span class="meta">{{ group.name }} · {{ group.items.length }}</span>
-        </div>
-        <span class="chev" [class.open]="isOpen(group.id)">⌄</span>
-      </button>
-
-      @if (isOpen(group.id)) {
-        <div class="cat-body">
-          <div class="grid soins-grid">
-            @for (service of group.items; track service.id) {
-              <article class="card service-card">
-                <div class="stack">
-                  <p class="chip">{{ service.category }}</p>
-                  <h2>{{ service.name }}</h2>
-                  <p class="summary">{{ service.description }}</p>
-                </div>
-
-                <div class="bottom">
-                  <p class="meta">{{ service.durationMin }} min</p>
-                  <p class="price">{{ formatPrice(service.priceCents) }}</p>
-                </div>
-
-                <a [routerLink]="['/soins', service.id]" class="btn btn-ghost">Voir le detail</a>
-              </article>
+@if (groupedCategories().length === 0) {
+  <article class="card empty-state">
+    <h3>Aucun soin trouve</h3>
+    <p>Essayez un autre mot-cle.</p>
+  </article>
+} @else {
+  <section class="services-layout">
+    <aside class="card categories-panel">
+      <p class="panel-title">Categories</p>
+      @if (isMobile()) {
+        <label class="mobile-category-select" for="mobile-category-select">
+          Choisir une categorie
+          <select
+            id="mobile-category-select"
+            [value]="selectedCategory()?.id ?? ''"
+            (change)="selectCategory($any($event.target).value)"
+          >
+            @for (group of groupedCategories(); track group.id) {
+              <option [value]="group.id">{{ group.name }} ({{ group.items.length }})</option>
             }
-          </div>
+          </select>
+        </label>
+      } @else {
+        <div class="category-list" role="listbox" aria-label="Categories de soins">
+          @for (group of groupedCategories(); track group.id) {
+            <button
+              type="button"
+              class="category-item"
+              [class.active]="isCategorySelected(group.id)"
+              (click)="selectCategory(group.id)"
+              [attr.aria-selected]="isCategorySelected(group.id)"
+            >
+              <span class="name">{{ group.name }}</span>
+              <span class="count">{{ group.items.length }}</span>
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <section class="card services-panel">
+      @if (selectedCategory(); as group) {
+        <header class="services-panel-head">
+          <h2>{{ group.name }}</h2>
+        </header>
+
+        <div class="grid soins-grid">
+          @for (service of group.items; track service.id) {
+            <article class="card service-card">
+              <div class="stack">
+                <p class="chip">{{ service.category }}</p>
+                <h3>{{ service.name }}</h3>
+                <p class="summary">{{ service.description }}</p>
+              </div>
+
+              <div class="bottom">
+                <p class="meta">{{ service.durationMin }} min</p>
+                <p class="price">{{ formatPrice(service.priceCents) }}</p>
+              </div>
+
+              <a [routerLink]="['/soins', service.id]" class="btn btn-ghost">Voir le detail</a>
+            </article>
+          }
         </div>
       }
     </section>
-  }
-
-  @if (groupedCategories().length === 0) {
-    <article class="card empty-state">
-      <h3>Aucun soin trouve</h3>
-      <p>Essayez un autre mot-cle.</p>
-    </article>
-  }
-</section>
+  </section>
+}

@@ -2,11 +2,33 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .admin-content {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 1rem;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.admin-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-content .grid,
+.admin-content .stack,
+.admin-content .card,
+.admin-content .panel,
+.admin-content .heading {
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (min-width: 900px) {

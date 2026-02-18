@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   AdminServiceCategoryItem,
@@ -22,11 +22,24 @@ export class AdminServices {
   protected readonly errorMessage = signal('');
   protected readonly services = signal<AdminServiceItem[]>([]);
   protected readonly categories = signal<AdminServiceCategoryItem[]>([]);
+  protected readonly selectedCategoryFilter = signal<string>('all');
   protected readonly editingId = signal<string | null>(null);
   protected readonly createModalOpen = signal(false);
   protected readonly categoryCreateTarget = signal<'create' | 'edit' | null>(null);
   protected readonly categoryDraft = signal('');
+  protected readonly pendingCategoryDeleteId = signal<string | null>(null);
+  protected readonly categoriesListExpanded = signal(true);
   protected readonly colorOptions = PASTEL_COLOR_OPTIONS;
+  protected readonly filteredServices = computed(() => {
+    const filter = this.selectedCategoryFilter();
+    const services = this.services();
+
+    if (filter === 'all') {
+      return services;
+    }
+
+    return services.filter((service) => service.categoryId === filter);
+  });
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required]],
@@ -183,12 +196,15 @@ export class AdminServices {
   protected openCreateModal(): void {
     this.createModalOpen.set(true);
     this.errorMessage.set('');
+    this.categoriesListExpanded.set(true);
   }
 
   protected closeCreateModal(): void {
     this.createModalOpen.set(false);
     this.categoryCreateTarget.set(null);
     this.categoryDraft.set('');
+    this.pendingCategoryDeleteId.set(null);
+    this.categoriesListExpanded.set(true);
   }
 
   protected addCategoryForEdit(): void {
@@ -203,6 +219,18 @@ export class AdminServices {
   protected cancelCategoryCreate(): void {
     this.categoryCreateTarget.set(null);
     this.categoryDraft.set('');
+  }
+
+  protected requestCategoryDelete(categoryId: string): void {
+    this.pendingCategoryDeleteId.set(categoryId);
+  }
+
+  protected cancelCategoryDelete(): void {
+    this.pendingCategoryDeleteId.set(null);
+  }
+
+  protected toggleCategoriesList(): void {
+    this.categoriesListExpanded.update((value) => !value);
   }
 
   protected confirmCategoryCreate(): void {
@@ -222,6 +250,7 @@ export class AdminServices {
     this.api.deleteCategory(category.id).subscribe({
       next: () => {
         this.saving.set(false);
+        this.pendingCategoryDeleteId.set(null);
         this.categories.update((items) => items.filter((item) => item.id !== category.id));
 
         if (this.createForm.controls.categoryId.value === category.id) {
@@ -313,5 +342,9 @@ export class AdminServices {
     }
 
     return this.colorOptions.some((option) => option.hex.toUpperCase() === hex.toUpperCase());
+  }
+
+  protected setCategoryFilter(value: string): void {
+    this.selectedCategoryFilter.set(value);
   }
 }

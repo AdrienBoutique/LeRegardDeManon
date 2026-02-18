@@ -10,6 +10,7 @@ import {
 } from "../lib/time";
 import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
+import { getInstituteSettings } from "../services/settings/instituteSettings";
 
 const STEP_MIN = 15;
 const STEP_MS = STEP_MIN * 60_000;
@@ -304,6 +305,7 @@ publicFreeStartsRouter.get("/public/availability/month", async (req, res) => {
 
     const monthEnd = monthStart.endOf("month");
     const dayMeta: Record<string, { level: "none" | "low" | "mid" | "high" }> = {};
+    const settings = await getInstituteSettings();
 
     for (let cursor = monthStart; cursor <= monthEnd; cursor = cursor.plus({ days: 1 })) {
       const date = cursor.toFormat("yyyy-MM-dd");
@@ -345,6 +347,7 @@ publicFreeStartsRouter.get("/public/availability/month", async (req, res) => {
       month: query.month,
       staffId: query.staffId ?? null,
       dayMeta,
+      showAvailabilityDots: settings.showAvailabilityDots,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

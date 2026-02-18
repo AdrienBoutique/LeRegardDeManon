@@ -76,7 +76,7 @@ export class ServicesDataService {
         description: service.description,
         durationMin: service.durationMin,
         priceCents: service.priceCents,
-        category: service.categoryName ?? service.category ?? 'Sans categorie'
+        category: service.categoryName ?? service.category ?? 'Aucune'
       }))
     ),
     catchError(() => of(FALLBACK_SERVICES)),

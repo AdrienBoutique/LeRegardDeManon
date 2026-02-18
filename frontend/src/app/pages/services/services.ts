@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ServicesDataService, ServiceItem } from '../../core/services/services-data.service';
@@ -24,11 +24,13 @@ type SearchSuggestion = {
 })
 export class Services {
   private readonly servicesData = inject(ServicesDataService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly services = toSignal(this.servicesData.list(), { initialValue: [] as ServiceItem[] });
 
   protected readonly searchTerm = signal('');
-  protected readonly openCategoryId = signal<string | null>(null);
+  protected readonly selectedCategoryId = signal<string | null>(null);
   protected readonly searchFocused = signal(false);
+  protected readonly isMobile = signal(false);
 
   protected readonly groupedCategories = computed<CategoryGroup[]>(() => {
     const services = this.services();
@@ -36,7 +38,7 @@ export class Services {
     const grouped = new Map<string, CategoryGroup>();
 
     for (const service of services) {
-      const categoryName = service.category?.trim() || 'Sans categorie';
+      const categoryName = service.category?.trim() || 'Autres';
       const serviceSearch = `${service.name} ${service.description}`.toLowerCase();
       const inSearch = term.length === 0 || serviceSearch.includes(term);
       if (!inSearch) {
@@ -60,10 +62,10 @@ export class Services {
         items: [...group.items].sort((a, b) => a.name.localeCompare(b.name))
       }))
       .sort((a, b) => {
-        if (a.name === 'Sans categorie') {
+        if (a.name === 'Autres') {
           return 1;
         }
-        if (b.name === 'Sans categorie') {
+        if (b.name === 'Autres') {
           return -1;
         }
         return a.name.localeCompare(b.name);
@@ -81,7 +83,7 @@ export class Services {
     const includes: SearchSuggestion[] = [];
 
     for (const service of services) {
-      const category = service.category?.trim() || 'Sans categorie';
+      const category = service.category?.trim() || 'Autres';
       const nameNorm = this.normalize(service.name);
       const descNorm = this.normalize(service.description);
       const catNorm = this.normalize(category);
@@ -105,30 +107,49 @@ export class Services {
     return this.searchFocused() && this.searchTerm().trim().length > 0 && this.searchSuggestions().length > 0;
   });
 
+  protected readonly selectedCategory = computed<CategoryGroup | null>(() => {
+    const groups = this.groupedCategories();
+    const selectedId = this.selectedCategoryId();
+    if (groups.length === 0 || !selectedId) {
+      return null;
+    }
+
+    return groups.find((group) => group.id === selectedId) ?? null;
+  });
+
   constructor() {
+    if (typeof window !== 'undefined') {
+      const media = window.matchMedia('(max-width: 899px)');
+      this.isMobile.set(media.matches);
+
+      const onChange = (event: MediaQueryListEvent) => this.isMobile.set(event.matches);
+      media.addEventListener('change', onChange);
+      this.destroyRef.onDestroy(() => media.removeEventListener('change', onChange));
+    }
+
     effect(() => {
       const groups = this.groupedCategories();
-      const current = this.openCategoryId();
+      const current = this.selectedCategoryId();
 
       if (groups.length === 0) {
         if (current !== null) {
-          this.openCategoryId.set(null);
+          this.selectedCategoryId.set(null);
         }
         return;
       }
 
-      if (current && !groups.some((group) => group.id === current)) {
-        this.openCategoryId.set(null);
+      if (!current || !groups.some((group) => group.id === current)) {
+        this.selectedCategoryId.set(groups[0].id);
       }
     });
   }
 
-  protected toggleCategory(categoryId: string): void {
-    this.openCategoryId.update((current) => (current === categoryId ? null : categoryId));
+  protected selectCategory(categoryId: string): void {
+    this.selectedCategoryId.set(categoryId);
   }
 
-  protected isOpen(categoryId: string): boolean {
-    return this.openCategoryId() === categoryId;
+  protected isCategorySelected(categoryId: string): boolean {
+    return this.selectedCategoryId() === categoryId;
   }
 
   protected setSearch(value: string): void {
@@ -147,7 +168,7 @@ export class Services {
 
   protected applySuggestion(suggestion: SearchSuggestion): void {
     this.searchTerm.set(suggestion.name);
-    this.openCategoryId.set(this.toCategoryId(suggestion.category));
+    this.selectedCategoryId.set(this.toCategoryId(suggestion.category));
     this.searchFocused.set(false);
   }
 
@@ -166,7 +187,7 @@ export class Services {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '') || 'sans-categorie'
+        .replace(/(^-|-$)/g, '') || 'autres'
     );
   }
 

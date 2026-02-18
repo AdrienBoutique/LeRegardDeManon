@@ -56,6 +56,23 @@ type PromoBookingContext = {
   minDurationMin: number;
 };
 
+type BookingDraft = {
+  staffId: string;
+  date: string;
+  startAt: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  smsConsent: boolean;
+  notes: string;
+  month: string;
+  selectedCategoryId: string;
+  searchTerm: string;
+  currentStep: number;
+  selectedServices: BookingSelectedService[];
+};
+
 function contactValidator(control: AbstractControl): ValidationErrors | null {
   const email = (control.get('email')?.value as string | null)?.trim();
   const phone = (control.get('phone')?.value as string | null)?.trim();
@@ -70,11 +87,14 @@ function contactValidator(control: AbstractControl): ValidationErrors | null {
   styleUrl: './booking.scss'
 })
 export class Booking {
+  private static readonly DRAFT_STORAGE_KEY = 'booking_rdv_draft_v1';
   private readonly bookingApi = inject(BookingApiService);
   private readonly publicPromotionsApi = inject(PublicPromotionsApi);
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private hasInitializedDateStaff = false;
+  private hasInitializedStartAt = false;
 
   protected readonly currentStep = signal<Step>(1);
   protected readonly maxStep = 4;
@@ -98,6 +118,7 @@ export class Booking {
   protected readonly slotStepMin = signal(15);
   protected readonly eligibleServices = signal<EligibleServiceItem[]>([]);
   protected readonly dayMeta = signal<MonthDayMeta>({});
+  protected readonly showAvailabilityDots = signal(true);
   protected readonly searchTerm = signal('');
   protected readonly selectedCategoryId = signal<string>('all');
   protected readonly confirmation = signal<CreateAppointmentResponse | null>(null);
@@ -198,9 +219,22 @@ export class Booking {
 
   protected readonly categoryChoices = computed<CategoryChoice[]>(() => {
     const map = new Map<string, string>();
+    const categoryByServiceId = new Map(
+      this.catalogServices()
+        .filter((service) => Boolean(service.categoryId))
+        .map((service) => [service.id, { id: service.categoryId as string, name: service.categoryName ?? '' }])
+    );
+
     for (const service of this.eligibleServices()) {
-      if (service.categoryId && service.categoryName) {
-        map.set(service.categoryId, service.categoryName);
+      const fromEligible =
+        service.categoryId && service.categoryName
+          ? { id: service.categoryId, name: service.categoryName }
+          : null;
+      const fromCatalog = categoryByServiceId.get(service.id) ?? null;
+      const linked = fromEligible ?? fromCatalog;
+
+      if (linked && linked.name.trim().length > 0) {
+        map.set(linked.id, linked.name);
       }
     }
 
@@ -292,6 +326,7 @@ export class Booking {
   });
 
   constructor() {
+    this.restoreDraft();
     this.bindPromoContextFromQuery();
     this.loadStaff();
     this.loadCatalog();
@@ -302,13 +337,18 @@ export class Booking {
     ])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([staffId, date]) => {
-        this.resetAfterDateOrStaffChange();
+        if (this.hasInitializedDateStaff) {
+          this.resetAfterDateOrStaffChange();
+        }
+        this.hasInitializedDateStaff = true;
 
         if (date && this.isDateAllowedByPromo(date)) {
           this.loadFreeStarts(date, staffId || undefined);
         } else if (date) {
           this.startsError.set('Cette date est hors periode de promotion.');
         }
+
+        this.saveDraft();
       });
 
     this.form.controls.staffId.valueChanges
@@ -322,11 +362,16 @@ export class Booking {
     this.form.controls.startAt.valueChanges
       .pipe(startWith(this.form.controls.startAt.value), takeUntilDestroyed(this.destroyRef))
       .subscribe((startAt) => {
-        this.resetAfterStartChange();
+        if (this.hasInitializedStartAt) {
+          this.resetAfterStartChange();
+        }
+        this.hasInitializedStartAt = true;
 
         if (startAt) {
           this.loadEligibleServices(startAt, this.form.controls.staffId.value || undefined);
         }
+
+        this.saveDraft();
       });
 
     this.ensureInitialDateSelected();
@@ -334,6 +379,7 @@ export class Booking {
 
   protected selectStaff(staffId: string): void {
     this.form.controls.staffId.setValue(staffId);
+    this.saveDraft();
   }
 
   protected onMonthChange(direction: 'prev' | 'next'): void {
@@ -346,6 +392,7 @@ export class Booking {
 
     this.monthDate.set(this.startOfMonth(next));
     this.loadMonthMeta(this.monthDate(), this.form.controls.staffId.value || undefined);
+    this.saveDraft();
   }
 
   protected onDaySelect(dayYmd: string): void {
@@ -362,6 +409,7 @@ export class Booking {
       this.monthDate.set(this.startOfMonth(selectedDate));
       this.loadMonthMeta(this.monthDate(), this.form.controls.staffId.value || undefined);
     }
+    this.saveDraft();
   }
 
   protected selectStart(startAt: string): void {
@@ -371,6 +419,7 @@ export class Booking {
     }
 
     this.form.controls.startAt.setValue(startAt);
+    this.saveDraft();
   }
 
   protected addService(service: EligibleServiceItem): void {
@@ -413,6 +462,7 @@ export class Booking {
         staffPricingVariant: this.isDiscountedService(service) ? 'trainee' : 'standard'
       }
     ]);
+    this.saveDraft();
 
   }
 
@@ -426,6 +476,7 @@ export class Booking {
     if (this.selectedServices().length === 0 && this.currentStep() > 2) {
       this.goToStep(2);
     }
+    this.saveDraft();
   }
 
   protected goToStep(step: number): void {
@@ -435,6 +486,7 @@ export class Booking {
     }
     this.currentStep.set(normalized);
     this.scrollToTop();
+    this.saveDraft();
   }
 
   protected nextStep(): void {
@@ -446,6 +498,7 @@ export class Booking {
     }
     this.currentStep.set((this.currentStep() + 1) as Step);
     this.scrollToTop();
+    this.saveDraft();
   }
 
   protected prevStep(): void {
@@ -454,6 +507,7 @@ export class Booking {
     }
     this.currentStep.set((this.currentStep() - 1) as Step);
     this.scrollToTop();
+    this.saveDraft();
   }
 
   protected canGoNext(): boolean {
@@ -489,10 +543,12 @@ export class Booking {
 
   protected setSearch(value: string): void {
     this.searchTerm.set(value);
+    this.saveDraft();
   }
 
   protected selectCategory(categoryId: string): void {
     this.selectedCategoryId.set(categoryId);
+    this.saveDraft();
   }
 
   protected submit(): void {
@@ -555,6 +611,7 @@ export class Booking {
         next: (result) => {
           this.confirmation.set(result);
           this.currentStep.set(4);
+          this.clearDraft();
           this.scrollToTop();
         },
         error: (error: { error?: { error?: string } }) => {
@@ -719,7 +776,7 @@ export class Booking {
 
     return (
       this.catalogServices().find((item) => item.id === service.id)?.categoryName ??
-      'Sans categorie'
+      'Aucune'
     );
   }
 
@@ -743,6 +800,7 @@ export class Booking {
     this.submitError.set('');
     this.selectedServices.set([]);
     this.currentStep.set(1);
+    this.clearDraft();
   }
 
   private loadStaff(): void {
@@ -856,16 +914,23 @@ export class Booking {
     this.bookingApi
       .getMonthlyAvailability(month, staffId)
       .pipe(
-        catchError(() => of(this.buildMockMonthMeta(monthDate))),
+        catchError(() =>
+          of({
+            dayMeta: this.buildMockMonthMeta(monthDate),
+            showAvailabilityDots: true
+          })
+        ),
         finalize(() => {
           this.loadingMonthMeta.set(false);
         }),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((meta) => {
-        const constrainedMeta = this.applyPromoWindowToMeta(meta);
+        const constrainedMeta = this.applyPromoWindowToMeta(meta.dayMeta);
+        this.showAvailabilityDots.set(meta.showAvailabilityDots !== false);
         this.dayMeta.set(constrainedMeta);
         this.ensureDateSelectionFromMeta(constrainedMeta, monthDate);
+        this.saveDraft();
       });
   }
 
@@ -1145,6 +1210,7 @@ export class Booking {
         staffPricingVariant: this.isDiscountedService(chosen) ? 'trainee' : 'standard'
       }
     ]);
+    this.saveDraft();
   }
 
   private applyPromoWindowToMeta(meta: MonthDayMeta): MonthDayMeta {
@@ -1237,5 +1303,103 @@ export class Booking {
   private parseYmdToLocalDate(ymd: string): Date {
     const [year, month, day] = ymd.split('-').map(Number);
     return new Date(year, month - 1, day);
+  }
+
+  private saveDraft(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const raw = this.form.getRawValue();
+    const draft: BookingDraft = {
+      staffId: raw.staffId ?? '',
+      date: raw.date ?? '',
+      startAt: raw.startAt ?? '',
+      firstName: raw.firstName ?? '',
+      lastName: raw.lastName ?? '',
+      email: raw.email ?? '',
+      phone: raw.phone ?? '',
+      smsConsent: raw.smsConsent === true,
+      notes: raw.notes ?? '',
+      month: `${this.monthDate().getFullYear()}-${String(this.monthDate().getMonth() + 1).padStart(2, '0')}`,
+      selectedCategoryId: this.selectedCategoryId(),
+      searchTerm: this.searchTerm(),
+      currentStep: this.currentStep(),
+      selectedServices: this.selectedServices()
+    };
+
+    window.sessionStorage.setItem(Booking.DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  }
+
+  private restoreDraft(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const raw = window.sessionStorage.getItem(Booking.DRAFT_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(raw) as Partial<BookingDraft>;
+      const month = typeof draft.month === 'string' && /^\d{4}-\d{2}$/.test(draft.month) ? draft.month : null;
+
+      if (month) {
+        const [year, mon] = month.split('-').map(Number);
+        this.monthDate.set(new Date(year, mon - 1, 1));
+      }
+
+      this.form.patchValue(
+        {
+          staffId: typeof draft.staffId === 'string' ? draft.staffId : '',
+          date: typeof draft.date === 'string' ? draft.date : '',
+          startAt: typeof draft.startAt === 'string' ? draft.startAt : '',
+          firstName: typeof draft.firstName === 'string' ? draft.firstName : '',
+          lastName: typeof draft.lastName === 'string' ? draft.lastName : '',
+          email: typeof draft.email === 'string' ? draft.email : '',
+          phone: typeof draft.phone === 'string' ? draft.phone : '',
+          smsConsent: draft.smsConsent === true,
+          notes: typeof draft.notes === 'string' ? draft.notes : ''
+        },
+        { emitEvent: false }
+      );
+
+      if (Array.isArray(draft.selectedServices)) {
+        this.selectedServices.set(
+          draft.selectedServices
+            .filter((item): item is BookingSelectedService => Boolean(item?.id && item?.name))
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              durationMin: Number(item.durationMin || 0),
+              priceCents: Number(item.priceCents || 0),
+              staffPricingVariant: item.staffPricingVariant
+            }))
+        );
+      }
+
+      this.selectedCategoryId.set(
+        typeof draft.selectedCategoryId === 'string' && draft.selectedCategoryId.length > 0
+          ? draft.selectedCategoryId
+          : 'all'
+      );
+      this.searchTerm.set(typeof draft.searchTerm === 'string' ? draft.searchTerm : '');
+
+      const step = Number(draft.currentStep || 1);
+      if (step >= 1 && step <= this.maxStep) {
+        this.currentStep.set(step as Step);
+      }
+    } catch {
+      this.clearDraft();
+    }
+  }
+
+  private clearDraft(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.sessionStorage.removeItem(Booking.DRAFT_STORAGE_KEY);
   }
 }

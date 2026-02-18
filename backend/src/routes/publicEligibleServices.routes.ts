@@ -299,6 +299,8 @@ publicEligibleServicesRouter.get("/eligible-services", async (req, res) => {
         return {
           id: service.id,
           name: service.name,
+          categoryId: service.categoryId,
+          categoryName: service.category?.name ?? null,
           durationMin: service.durationMin,
           basePriceCents: service.priceCents,
           effectivePriceCents: cheapest.effectivePriceCents,

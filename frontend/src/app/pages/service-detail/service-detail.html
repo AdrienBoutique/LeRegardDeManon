@@ -15,8 +15,13 @@
       <aside class="card booking-card">
         <h2>Reservation</h2>
         <p>Choisissez un creneau qui vous convient et recevez une confirmation rapide.</p>
-        <a routerLink="/rdv" class="btn btn-primary">Reserver ce soin</a>
-        <a routerLink="/soins" class="btn btn-ghost">Retour aux soins</a>
+        @if (fromBooking()) {
+          <a routerLink="/rdv" class="btn btn-primary">Retour au RDV</a>
+          <a routerLink="/soins" class="btn btn-ghost">Retour aux soins</a>
+        } @else {
+          <a routerLink="/rdv" class="btn btn-primary">Reserver ce soin</a>
+          <a routerLink="/soins" class="btn btn-ghost">Retour aux soins</a>
+        }
       </aside>
     </div>
   } @else {

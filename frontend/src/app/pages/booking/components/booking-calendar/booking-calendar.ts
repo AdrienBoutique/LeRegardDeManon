@@ -20,6 +20,7 @@ export class BookingCalendar {
   @Input({ required: true }) monthDate!: Date;
   @Input({ required: true }) dayMeta: MonthDayMeta = {};
   @Input() selectedDay: string | null = null;
+  @Input() showAvailabilityDots = true;
 
   @Output() monthChange = new EventEmitter<'prev' | 'next'>();
   @Output() daySelect = new EventEmitter<string>();

@@ -25,6 +25,10 @@ export class ServiceDetail {
       return id ? services.find((service) => service.id === id) : undefined;
     })
   );
+  protected readonly fromBooking = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('fromBooking') === '1')),
+    { initialValue: false }
+  );
 
   protected formatPrice(priceCents: number): string {
     return new Intl.NumberFormat('fr-FR', {

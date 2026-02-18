@@ -24,11 +24,13 @@
         (click)="selectDay(cell)"
       >
         <span class="day-number">{{ cell.dayNumber }}</span>
-        <span class="dots">
-          @for (_ of dotIndexes(cell.level); track $index) {
-            <span class="dot"></span>
-          }
-        </span>
+        @if (showAvailabilityDots) {
+          <span class="dots">
+            @for (_ of dotIndexes(cell.level); track $index) {
+              <span class="dot"></span>
+            }
+          </span>
+        }
       </button>
     }
   </div>

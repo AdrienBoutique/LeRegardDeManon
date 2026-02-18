@@ -65,6 +65,7 @@
               <app-booking-calendar
                 [monthDate]="monthDate()"
                 [dayMeta]="dayMeta()"
+                [showAvailabilityDots]="showAvailabilityDots()"
                 [selectedDay]="form.controls.date.value || null"
                 (monthChange)="onMonthChange($event)"
                 (daySelect)="onDaySelect($event)"
@@ -169,18 +170,14 @@
                   <p class="hint">Les soins de l'offre sont ajoutes automatiquement selon le creneau choisi.</p>
                 }
               } @else {
-                <div class="category-filter" role="radiogroup" aria-label="Filtrer par categorie">
-                  @for (category of categoryChoices(); track category.id) {
-                    <button
-                      type="button"
-                      class="category-chip"
-                      [class.active]="selectedCategoryId() === category.id"
-                      (click)="selectCategory(category.id)"
-                    >
-                      {{ category.label }}
-                    </button>
-                  }
-                </div>
+                <label class="category-select">
+                  Categorie
+                  <select [value]="selectedCategoryId()" (change)="selectCategory($any($event.target).value)">
+                    @for (category of categoryChoices(); track category.id) {
+                      <option [value]="category.id">{{ category.label }}</option>
+                    }
+                  </select>
+                </label>
 
                 <label>
                   Rechercher un soin
@@ -204,42 +201,47 @@
                   @if (selectionError()) {
                     <p class="error">{{ selectionError() }}</p>
                   }
+                  <div class="service-grid-head" aria-hidden="true">
+                    <span class="col-service">Soin</span>
+                    <span class="col-duration">Duree</span>
+                    <span class="col-price">Prix</span>
+                    <span class="col-action">Action</span>
+                    <span class="col-detail">Detail</span>
+                  </div>
                   <div class="service-grid">
                     @for (service of filteredEligibleServices(); track service.id) {
                       <article class="service-card" [class.disabled]="!service.eligible" [class.selected]="isSelectedService(service.id)">
-                        <div class="service-top">
-                          <h3>{{ service.name }}</h3>
-                          <p class="duration">{{ service.durationMin }} min</p>
-                        </div>
-                        <p class="chip">{{ getServiceCategoryLabel(service) }}</p>
-
-                        <p class="description">{{ getServiceDescription(service.id) }}</p>
-                        <div class="price-row">
-                          <p class="price">{{ formatPrice(service.effectivePriceCents) }}</p>
-                          @if (isDiscountedService(service)) {
-                            <span class="discount-badge">Tarif stagiaire -{{ discountPercent(service) }}%</span>
+                        <div class="service-main">
+                          <div class="service-line">
+                            <h3>{{ service.name }}</h3>
+                            <p class="chip">{{ getServiceCategoryLabel(service) }}</p>
+                            @if (isDiscountedService(service)) {
+                              <span class="discount-badge">-{{ discountPercent(service) }}%</span>
+                            }
+                          </div>
+                          @if (!service.eligible) {
+                            <p class="reason">{{ service.reason ?? 'Non disponible' }}</p>
                           }
                         </div>
-                        @if (isDiscountedService(service)) {
-                          <p class="price-base">Prix standard: {{ formatPrice(service.basePriceCents) }}</p>
-                        }
-
-                        @if (!service.eligible) {
-                          <p class="reason">{{ service.reason ?? 'Non disponible' }}</p>
-                        }
-
-                        <div class="service-actions">
-                          <button type="button" class="btn btn-primary" [disabled]="!canAddService(service)" (click)="addService(service)">
-                            @if (isSelectedService(service.id)) {
-                              Ajoute
-                            } @else if (!service.eligible) {
-                              Indisponible
-                            } @else {
-                              Ajouter
-                            }
-                          </button>
-                          <a class="btn btn-ghost" [routerLink]="['/soins', service.id]">Voir detail</a>
-                        </div>
+                        <p class="duration">{{ service.durationMin }} min</p>
+                        <p class="price">{{ formatPrice(service.effectivePriceCents) }}</p>
+                        <button
+                          type="button"
+                          class="btn service-btn"
+                          [class.btn-ghost]="isSelectedService(service.id)"
+                          [class.btn-primary]="!isSelectedService(service.id)"
+                          [disabled]="!isSelectedService(service.id) && !canAddService(service)"
+                          (click)="isSelectedService(service.id) ? removeService(service.id) : addService(service)"
+                        >
+                          @if (isSelectedService(service.id)) {
+                            Retirer
+                          } @else if (!service.eligible) {
+                            Indisponible
+                          } @else {
+                            Ajouter
+                          }
+                        </button>
+                        <a class="btn btn-ghost service-btn" [routerLink]="['/soins', service.id]" [queryParams]="{ fromBooking: 1 }">Voir detail</a>
                       </article>
                     }
                   </div>

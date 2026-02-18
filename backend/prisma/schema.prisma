@@ -193,6 +193,7 @@ model InstituteSettings {
   id          String     @id @default(cuid())
   instituteId String?    @unique
   bookingMode BookingMode @default(MANUAL)
+  showAvailabilityDots Boolean @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }

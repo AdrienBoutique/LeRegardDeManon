@@ -38,6 +38,19 @@
           <p>Confirmation automatique si creneau disponible, sinon la demande passe en attente.</p>
         </button>
       </div>
+
+      <div class="toggle-row">
+        <label class="check-row">
+          <input
+            type="checkbox"
+            [checked]="showAvailabilityDots()"
+            [disabled]="saving()"
+            (change)="saveShowAvailabilityDots($any($event.target).checked)"
+          />
+          Afficher les points de disponibilite sur le calendrier de reservation
+        </label>
+        <p class="hint">Decoche pour masquer les boules de disponibilite cote cliente.</p>
+      </div>
     }
   </article>
 </section>

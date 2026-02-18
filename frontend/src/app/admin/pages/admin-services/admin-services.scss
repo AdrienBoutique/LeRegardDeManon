@@ -6,7 +6,8 @@
 .heading,
 .form-card,
 .service-item,
-.error-box {
+.error-box,
+.filter-card {
   padding: 1rem;
   min-width: 0;
 }
@@ -21,6 +22,10 @@
 
 .btn-add {
   white-space: nowrap;
+}
+
+.filter-label {
+  max-width: 360px;
 }
 
 h1,
@@ -120,9 +125,46 @@ select {
 }
 
 .category-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.45rem;
+}
+
+.category-management {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.category-management-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.category-management-title {
+  margin: 0;
+  font-weight: 700;
+  color: #5f4f42;
+}
+
+.category-item {
+  border: 1px solid #e2d2c4;
+  border-radius: 12px;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.category-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .category-create-inline {
@@ -130,21 +172,6 @@ select {
   grid-template-columns: 1fr auto auto;
   gap: 0.45rem;
   align-items: center;
-}
-
-.category-tag {
-  border: 1px solid #dbc7b7;
-  background: #fff;
-  color: #5f4f42;
-  border-radius: var(--radius-pill);
-  padding: 0.3rem 0.56rem;
-  font: inherit;
-  font-size: 0.86rem;
-  cursor: pointer;
-}
-
-.category-tag:hover {
-  border-color: #bf9f89;
 }
 
 .service-item .top {
@@ -226,10 +253,6 @@ select {
 
 .modal-card .category-list {
   gap: 0.35rem;
-}
-
-.modal-card .category-tag {
-  padding: 0.24rem 0.5rem;
 }
 
 .modal-top {

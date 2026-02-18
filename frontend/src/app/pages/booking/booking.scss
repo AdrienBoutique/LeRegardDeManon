@@ -129,7 +129,8 @@ label {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -146,6 +147,10 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.category-select {
+  max-width: 360px;
 }
 
 .category-filter {
@@ -312,16 +317,22 @@ textarea {
 .service-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.65rem;
+  gap: 0.55rem;
+}
+
+.service-grid-head {
+  display: none;
 }
 
 .service-card {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   background: #fff;
-  padding: 0.9rem;
+  padding: 0.65rem 0.75rem;
   display: grid;
-  gap: 0.6rem;
+  grid-template-columns: minmax(0, 1fr) 96px 104px 126px 126px;
+  align-items: center;
+  gap: 0.7rem;
 }
 
 .service-card.disabled {
@@ -331,43 +342,49 @@ textarea {
 
 .service-card.selected {
   border-color: var(--color-primary);
-  box-shadow: 0 11px 24px rgba(44, 32, 23, 0.12);
+  box-shadow: 0 6px 14px rgba(44, 32, 23, 0.1);
 }
 
-.service-top {
+.service-main {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.service-line {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
-.service-top h3 {
+.service-line h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
+  line-height: 1.2;
 }
 
 .duration,
-.description,
 .price,
 .reason {
   margin: 0;
 }
 
 .duration {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: var(--color-text-soft);
+  margin-right: 0.2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .price {
   font-weight: 700;
-  color: #5b4434;
-}
-
-.price-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  color: #4f392b;
+  font-size: 0.95rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  min-width: 4.6ch;
 }
 
 .discount-badge {
@@ -375,34 +392,32 @@ textarea {
   align-items: center;
   border: 1px solid #d3b89f;
   border-radius: var(--radius-pill);
-  padding: 0.16rem 0.52rem;
-  font-size: 0.75rem;
+  padding: 0.12rem 0.48rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #6a4b37;
   background: #f8eee5;
 }
 
-.price-base {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #8a7666;
-  text-decoration: line-through;
-}
-
-.description {
-  color: var(--color-text-soft);
-  font-size: 0.9rem;
-}
-
 .reason {
   color: #8b2d2d;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
-.service-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.service-btn {
+  justify-self: center;
+  width: 100%;
+  max-width: 126px;
+  min-height: 34px;
+  padding: 0.38rem 0.62rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.duration,
+.price {
+  justify-self: center;
+  white-space: nowrap;
 }
 
 .btn-sm {
@@ -529,18 +544,53 @@ textarea {
   }
 
   .steps {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .time-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .service-grid {
+  .two-cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .two-cols {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .service-grid-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px 104px 126px 126px;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0 0.8rem;
+    color: #7a685b;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .service-grid-head span:not(.col-service) {
+    text-align: center;
+  }
+
+  .service-card {
+    min-height: 74px;
+  }
+}
+
+@media (max-width: 860px) {
+  .service-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .service-btn {
+    justify-self: start;
+    width: auto;
+  }
+
+  .duration,
+  .price {
+    justify-self: start;
+    text-align: left;
   }
 }

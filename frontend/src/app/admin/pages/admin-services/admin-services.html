@@ -13,6 +13,18 @@
     <article class="card error-box">{{ errorMessage() }}</article>
   }
 
+  <article class="card filter-card">
+    <label class="filter-label">
+      Trier par categorie
+      <select [value]="selectedCategoryFilter()" (change)="setCategoryFilter($any($event.target).value)">
+        <option value="all">Toutes les categories</option>
+        @for (category of categories(); track category.id) {
+          <option [value]="category.id">{{ category.name }}</option>
+        }
+      </select>
+    </label>
+  </article>
+
   @if (editingId()) {
     <article class="card form-card edit-card">
       <h2>Modifier le service</h2>
@@ -39,7 +51,7 @@
           <label>
             Categorie
             <select formControlName="categoryId">
-              <option value="">Sans categorie</option>
+              <option value="">Aucune</option>
               @for (category of categories(); track category.id) {
                 <option [value]="category.id">{{ category.name }}</option>
               }
@@ -103,7 +115,7 @@
       <article class="card">Chargement...</article>
     }
 
-    @for (service of services(); track service.id) {
+    @for (service of filteredServices(); track service.id) {
       <article class="card service-item">
         <div class="top">
           <h3>
@@ -114,7 +126,7 @@
         </div>
         <p>{{ service.description }}</p>
         <p class="meta">{{ service.durationMin }} min - {{ formatPrice(service.priceCents) }}</p>
-        <p class="muted">Categorie: {{ service.categoryName || 'Sans categorie' }}</p>
+        <p class="muted">Categorie: {{ service.categoryName || 'Aucune' }}</p>
         <p class="muted color-line">
           Couleur:
           @if (service.colorHex) {
@@ -128,6 +140,10 @@
           <button type="button" class="btn btn-ghost" (click)="deleteService(service)">Supprimer</button>
         </div>
       </article>
+    }
+
+    @if (!loading() && filteredServices().length === 0) {
+      <article class="card">Aucun service pour cette categorie.</article>
     }
   </section>
 
@@ -161,7 +177,7 @@
             <label>
               Categorie
               <select formControlName="categoryId">
-                <option value="">Sans categorie</option>
+                <option value="">Aucune</option>
                 @for (category of categories(); track category.id) {
                   <option [value]="category.id">{{ category.name }}</option>
                 }
@@ -187,13 +203,41 @@
               </button>
             </div>
           }
-          <div class="category-list">
-            @for (category of categories(); track category.id) {
-              <button type="button" class="category-tag" [disabled]="saving()" (click)="deleteCategory(category)">
-                {{ category.name }} <span aria-hidden="true">×</span>
+          <section class="category-management">
+            <div class="category-management-head">
+              <p class="category-management-title">Categories existantes</p>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="toggleCategoriesList()">
+                {{ categoriesListExpanded() ? 'Masquer' : 'Afficher' }}
               </button>
+            </div>
+            @if (categoriesListExpanded()) {
+              @if (categories().length === 0) {
+                <p class="muted">Aucune categorie creee.</p>
+              } @else {
+                <ul class="category-list">
+                  @for (category of categories(); track category.id) {
+                    <li class="category-item">
+                      <span>{{ category.name }}</span>
+                      @if (pendingCategoryDeleteId() === category.id) {
+                        <div class="category-delete-confirm">
+                          <button type="button" class="btn btn-ghost btn-sm" [disabled]="saving()" (click)="cancelCategoryDelete()">
+                            Annuler
+                          </button>
+                          <button type="button" class="btn btn-primary btn-sm" [disabled]="saving()" (click)="deleteCategory(category)">
+                            Confirmer
+                          </button>
+                        </div>
+                      } @else {
+                        <button type="button" class="btn btn-ghost btn-sm" [disabled]="saving()" (click)="requestCategoryDelete(category.id)">
+                          Supprimer
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
             }
-          </div>
+          </section>
           <div class="color-row">
             <label class="color-label">
               Couleur (optionnel)
