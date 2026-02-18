@@ -34,7 +34,7 @@
       <li><a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a></li>
       <li><a routerLink="/rdv" class="cta" (click)="closeMenu()">Prendre RDV</a></li>
       <li *ngIf="isAdmin">
-        <button class="admin-btn" (click)="editHomepage(); closeMenu()" title="Modifier la page">
+        <button class="admin-btn" (click)="editHomepage(); closeMenu()" title="Ouvrir le dashboard">
           ⚙
         </button>
       </li>

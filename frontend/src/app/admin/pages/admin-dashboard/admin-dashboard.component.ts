@@ -16,13 +16,14 @@ export class AdminDashboardComponent {
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly dashboard = signal<AdminDashboardData | null>(null);
+  protected readonly weeklyAppointmentsTarget = 20;
 
   protected readonly weekProgressPercent = computed(() => {
     const data = this.dashboard();
-    if (!data || data.stats.weekAppointments <= 0) {
+    if (!data || this.weeklyAppointmentsTarget <= 0) {
       return 0;
     }
-    return Math.max(0, Math.min(100, Math.round((data.todayCount / data.stats.weekAppointments) * 100)));
+    return Math.max(0, Math.min(100, Math.round((data.stats.weekAppointments / this.weeklyAppointmentsTarget) * 100)));
   });
 
   constructor() {
@@ -51,6 +52,15 @@ export class AdminDashboardComponent {
 
   protected formatTime(value: string): string {
     return new Intl.DateTimeFormat('fr-BE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(value));
+  }
+
+  protected formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat('fr-BE', {
+      day: '2-digit',
+      month: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(value));

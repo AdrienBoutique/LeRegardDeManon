@@ -1,9 +1,12 @@
 .admin-dashboard {
   gap: 1rem;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .panel {
   padding: 1rem;
+  min-width: 0;
 }
 
 h1,
@@ -15,6 +18,7 @@ h2 {
 .cards-grid {
   display: grid;
   gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
 }
 
 .stats-card {
@@ -24,7 +28,7 @@ h2 {
 
 .stat-row {
   display: grid;
-  grid-template-columns: 1.3rem minmax(0, 1fr) auto;
+  grid-template-columns: 1.3rem minmax(0, 1fr);
   align-items: center;
   gap: 0.45rem;
   border: 1px solid var(--color-border-soft);
@@ -35,6 +39,20 @@ h2 {
 
 .icon {
   text-align: center;
+}
+
+.stat-row strong {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stat-row--split span {
+  white-space: nowrap;
+}
+
+.stat-row--split strong {
+  justify-self: end;
 }
 
 .badge {
@@ -84,7 +102,19 @@ h2 {
 }
 
 @media (min-width: 980px) {
-  .cards-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .stat-row strong {
+    grid-column: 3;
+  }
+
+  .stat-row {
+    grid-template-columns: 1.3rem minmax(0, 1fr) auto;
+  }
+
+  .stat-row--split {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .stat-row--split strong {
+    grid-column: auto;
   }
 }

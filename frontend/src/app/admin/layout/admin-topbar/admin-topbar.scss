@@ -4,6 +4,7 @@
   z-index: 30;
   background: #fbf6f1;
   border-bottom: 1px solid #e8ddd3;
+  overflow-x: clip;
 }
 
 .topbar-main {
@@ -12,6 +13,7 @@
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  min-width: 0;
 }
 
 .brand {
@@ -29,6 +31,7 @@
   scrollbar-width: thin;
   padding-bottom: 0.1rem;
   flex: 1;
+  min-width: 0;
 }
 
 .top-nav a {
@@ -68,6 +71,7 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  flex: 0 0 auto;
 }
 
 .back-site-btn {

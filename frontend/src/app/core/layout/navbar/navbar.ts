@@ -67,16 +67,16 @@ export class Navbar {
 
   protected openAdminLogin(): void {
     this.closeProAccess();
-    this.router.navigateByUrl('/admin');
+    this.router.navigateByUrl('/admin/login');
   }
 
   protected editHomepage(): void {
-    this.router.navigateByUrl('/admin/accueil');
+    this.router.navigateByUrl('/admin/dashboard');
   }
 
   private openProAccess(): void {
     if (this.authService.isLoggedIn()) {
-      this.router.navigateByUrl('/admin');
+      this.router.navigateByUrl('/admin/dashboard');
       return;
     }
 

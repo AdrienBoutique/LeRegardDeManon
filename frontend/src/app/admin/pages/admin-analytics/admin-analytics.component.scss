@@ -1,9 +1,12 @@
 .admin-analytics {
   gap: 1rem;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .panel {
   padding: 1rem;
+  min-width: 0;
 }
 
 h1,
@@ -15,6 +18,7 @@ h2 {
 .kpi-grid {
   display: grid;
   gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
 }
 
 .kpi p {
@@ -38,6 +42,14 @@ h2 {
   position: relative;
   width: 100%;
   min-height: 240px;
+  overflow: hidden;
+}
+
+.chart-wrap canvas {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
 
 .heatmap-card {
@@ -47,7 +59,7 @@ h2 {
 
 .heatmap-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 0.45rem;
 }
 
