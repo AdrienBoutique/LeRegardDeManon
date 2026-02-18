@@ -4,6 +4,8 @@
     <p>Liste des rendez-vous en attente de validation.</p>
   </header>
 
+  <app-notifications-card></app-notifications-card>
+
   @if (errorMessage()) {
     <article class="card panel error-box">{{ errorMessage() }}</article>
   }

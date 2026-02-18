@@ -5,10 +5,11 @@ import {
   AdminAppointmentRequestsApiService,
   PendingAppointmentItem
 } from '../../../core/services/admin-appointment-requests-api.service';
+import { NotificationsCardComponent } from '../../components/notifications-card/notifications-card.component';
 
 @Component({
   selector: 'app-admin-appointment-requests',
-  imports: [FormsModule],
+  imports: [FormsModule, NotificationsCardComponent],
   templateUrl: './admin-appointment-requests.html',
   styleUrl: './admin-appointment-requests.scss'
 })

@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { PushService } from '../../../core/services/push.service';
 
 @Component({
   selector: 'app-admin-login',
@@ -12,6 +13,7 @@ import { AuthService } from '../../../core/services/auth.service';
 export class AdminLogin {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly pushService = inject(PushService);
   private readonly router = inject(Router);
 
   protected readonly loading = signal(false);
@@ -49,6 +51,9 @@ export class AdminLogin {
     this.authService.login(email, password).subscribe({
       next: (user) => {
         this.loading.set(false);
+        if (user.role === 'ADMIN') {
+          void this.pushService.initPush();
+        }
         if (user.mustChangePassword) {
           this.router.navigateByUrl('/change-password');
         } else if (user.role === 'ADMIN') {

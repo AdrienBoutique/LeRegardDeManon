@@ -96,7 +96,7 @@
               <p class="error">{{ startsError() }}</p>
             } @else {
               <div class="time-grid">
-                @for (start of freeStarts(); track start.startAt) {
+                @for (start of displayStarts(); track start.startAt) {
                   <button
                     type="button"
                     class="time-pill"
@@ -106,6 +106,9 @@
                     (click)="selectStart(start.startAt)"
                   >
                     <strong>{{ formatHour(start.startAt) }}</strong>
+                    @if (!isStartSelectable(start)) {
+                      <span>Indisponible</span>
+                    }
                   </button>
                 }
               </div>

@@ -24,6 +24,7 @@ import { AdminLayout } from './admin/layout/admin-layout';
 import { AdminClients } from './admin/pages/admin-clients/admin-clients';
 import { AdminAppointmentRequests } from './admin/pages/admin-appointment-requests/admin-appointment-requests';
 import { AdminSettings } from './admin/pages/admin-settings/admin-settings';
+import { AdminDashboardComponent } from './admin/pages/admin-dashboard/admin-dashboard.component';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { ChangePassword } from './pages/change-password/change-password';
@@ -43,6 +44,7 @@ const adminChildren: Routes = [
   { path: 'horaires', component: AdminHours, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'conges', component: AdminTimeOff, canActivate: [roleGuard], data: { roles: ['STAFF', 'ADMIN'] } },
   { path: 'planning', component: AdminPlanning, canActivate: [roleGuard], data: { roles: ['STAFF', 'ADMIN'] } },
+  { path: 'dashboard', component: AdminDashboardComponent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'demandes', component: AdminAppointmentRequests, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'reglages', component: AdminSettings, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: '', pathMatch: 'full', redirectTo: 'planning' }

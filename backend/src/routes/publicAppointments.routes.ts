@@ -12,6 +12,7 @@ import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availab
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 import { sendConfirmationEmailIfNeeded } from "../services/email/appointmentEmails";
 import { sendConfirmationSmsIfNeeded } from "../services/sms/appointmentSms";
+import { sendPendingAppointmentPush } from "../services/push/appointmentPush";
 
 class HttpError extends Error {
   constructor(
@@ -497,6 +498,13 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
     if (created.appointment.status === AppointmentStatus.CONFIRMED) {
       void sendConfirmationEmailIfNeeded(created.appointment.id);
       void sendConfirmationSmsIfNeeded(created.appointment.id);
+    } else if (created.appointment.status === AppointmentStatus.PENDING) {
+      void sendPendingAppointmentPush(created.appointment.id).catch((error) => {
+        console.warn(
+          `[publicAppointments.create] pending push failed appointmentId=${created.appointment.id}`,
+          error
+        );
+      });
     }
   } catch (error) {
     if (error instanceof z.ZodError) {

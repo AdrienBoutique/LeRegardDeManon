@@ -42,6 +42,10 @@ type BookingState = {
   totalPriceCents: number;
 };
 
+type StartOption = FreeStartItem & {
+  unavailable?: boolean;
+};
+
 type PromoBookingContext = {
   promoId: string;
   title: string;
@@ -91,6 +95,7 @@ export class Booking {
   protected readonly staffMembers = signal<BookingStaffItem[]>([]);
   protected readonly catalogServices = signal<BookingServiceItem[]>([]);
   protected readonly freeStarts = signal<FreeStartItem[]>([]);
+  protected readonly slotStepMin = signal(15);
   protected readonly eligibleServices = signal<EligibleServiceItem[]>([]);
   protected readonly dayMeta = signal<MonthDayMeta>({});
   protected readonly searchTerm = signal('');
@@ -221,6 +226,45 @@ export class Booking {
 
     return map;
   });
+
+  protected readonly displayStarts = computed<StartOption[]>(() => {
+    const starts = this.freeStarts();
+    if (starts.length <= 1) {
+      return starts;
+    }
+
+    const sorted = [...starts].sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+    const firstMs = Date.parse(sorted[0].startAt);
+    const lastMs = Date.parse(sorted[sorted.length - 1].startAt);
+    const stepMs = Math.max(5, this.slotStepMin()) * 60_000;
+
+    if (Number.isNaN(firstMs) || Number.isNaN(lastMs) || stepMs <= 0) {
+      return sorted;
+    }
+
+    const byStartMs = new Map<number, StartOption>();
+    for (const start of sorted) {
+      byStartMs.set(Date.parse(start.startAt), start);
+    }
+
+    const options: StartOption[] = [];
+    for (let cursorMs = firstMs; cursorMs <= lastMs; cursorMs += stepMs) {
+      const existing = byStartMs.get(cursorMs);
+      if (existing) {
+        options.push(existing);
+        continue;
+      }
+
+      options.push({
+        startAt: new Date(cursorMs).toISOString(),
+        maxFreeMin: 0,
+        staffIds: [],
+        unavailable: true
+      });
+    }
+
+    return options;
+  });
   protected readonly requiredDurationMinForSlots = computed(() => {
     const selectedDuration = this.totalDurationMin();
     if (selectedDuration > 0) {
@@ -322,7 +366,7 @@ export class Booking {
 
   protected selectStart(startAt: string): void {
     const start = this.freeStarts().find((item) => item.startAt === startAt);
-    if (start && !this.isStartSelectable(start)) {
+    if (!start || !this.isStartSelectable(start)) {
       return;
     }
 
@@ -581,7 +625,11 @@ export class Booking {
     return startMs <= Date.now();
   }
 
-  protected isStartSelectable(start: FreeStartItem): boolean {
+  protected isStartSelectable(start: StartOption): boolean {
+    if (start.unavailable) {
+      return false;
+    }
+
     return this.isStartCompatible(start) && !this.isStartInPast(start);
   }
 
@@ -760,6 +808,7 @@ export class Booking {
       .subscribe({
         next: (response) => {
           this.freeStarts.set(response.starts);
+          this.slotStepMin.set(response.stepMin || 15);
 
           if (response.starts.length === 0) {
             this.startsError.set('Aucun horaire disponible pour cette date.');

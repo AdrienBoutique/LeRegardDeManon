@@ -1,6 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { DashboardStateService } from '../../../core/services/dashboard-state.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-admin-topbar',
@@ -11,6 +13,20 @@ import { AuthService } from '../../../core/services/auth.service';
 export class AdminTopbar {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly dashboardState = inject(DashboardStateService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly pendingCount = signal(0);
+
+  constructor() {
+    if (this.isAdminUser()) {
+      this.dashboardState.startAutoRefresh(30_000);
+      this.dashboardState.data$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((data) => {
+          this.pendingCount.set(data?.pendingCount ?? 0);
+        });
+    }
+  }
 
   protected isAdminUser(): boolean {
     return this.authService.getCurrentUser()?.role === 'ADMIN';
@@ -32,6 +48,10 @@ export class AdminTopbar {
       url.startsWith('/admin/contact') ||
       url.startsWith('/espace-pro/contact')
     );
+  }
+
+  protected hasPendingBadge(): boolean {
+    return this.pendingCount() > 0;
   }
 
   protected logout(): void {

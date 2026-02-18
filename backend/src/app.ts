@@ -15,6 +15,8 @@ import { adminPractitionersRouter } from "./routes/adminPractitioners.routes";
 import { adminEmailRouter } from "./routes/adminEmail.routes";
 import { adminSettingsRouter } from "./routes/adminSettings.routes";
 import { adminAppointmentsRouter } from "./routes/adminAppointments.routes";
+import { adminPushRouter } from "./routes/adminPush.routes";
+import { adminDashboardRouter } from "./routes/adminDashboard.routes";
 import { publicAppointmentsRouter } from "./routes/publicAppointments.routes";
 import { publicEligibleServicesRouter } from "./routes/publicEligibleServices.routes";
 import { publicFreeStartsRouter } from "./routes/publicFreeStarts.routes";
@@ -31,6 +33,9 @@ export const app = express();
 
 const allowedOrigins = [
   "http://localhost:4200",
+  "http://localhost",
+  "capacitor://localhost",
+  "ionic://localhost",
   "https://leregarddemanon.com",
   "https://www.leregarddemanon.com",
   "https://le-regard-de-manon.vercel.app",
@@ -79,6 +84,8 @@ app.use("/api/admin/staff", adminStaffRouter);
 app.use("/api/admin", adminEmailRouter);
 app.use("/api/admin", adminSettingsRouter);
 app.use("/api/admin", adminAppointmentsRouter);
+app.use("/api/admin", adminPushRouter);
+app.use("/api/admin", adminDashboardRouter);
 app.use("/api/public/promotions", publicPromotionsRouter);
 app.use("/api", publicHomeContentRouter);
 app.use("/api", publicPageContentRouter);

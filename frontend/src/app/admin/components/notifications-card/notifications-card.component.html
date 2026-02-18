@@ -1,0 +1,37 @@
+<section class="card panel notifications-card">
+  <header>
+    <h2>Notifications</h2>
+    <p class="status">{{ statusLabel() }}</p>
+  </header>
+
+  <div class="actions">
+    <button
+      type="button"
+      class="btn btn-primary"
+      [disabled]="isUnsupported() || enabling()"
+      (click)="activateNotifications()"
+    >
+      {{ enabling() ? 'Activation...' : mainButtonLabel() }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-ghost"
+      [disabled]="!isGranted() || testing()"
+      (click)="testPush()"
+    >
+      {{ testing() ? 'Test...' : 'Tester' }}
+    </button>
+  </div>
+
+  @if (testResult(); as result) {
+    <p class="hint">Dernier test: sent={{ result.sentCount }} / failed={{ result.failedCount }}</p>
+  }
+
+  @if (infoMessage()) {
+    <p class="success">{{ infoMessage() }}</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+</section>

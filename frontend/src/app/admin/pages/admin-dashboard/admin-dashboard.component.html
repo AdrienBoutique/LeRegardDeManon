@@ -1,0 +1,74 @@
+<section class="admin-dashboard stack">
+  <header class="card panel heading">
+    <h1>Dashboard admin</h1>
+    <p>Vue rapide des demandes et de l'activite.</p>
+  </header>
+
+  @if (loading() && !dashboard()) {
+    <article class="card panel">Chargement...</article>
+  } @else if (errorMessage() && !dashboard()) {
+    <article class="card panel error-box">{{ errorMessage() }}</article>
+  } @else if (dashboard(); as data) {
+    <div class="cards-grid">
+      <article class="card panel stats-card">
+        <h2>Vue rapide</h2>
+
+        <div class="stat-row">
+          <span class="icon" aria-hidden="true">⚠</span>
+          <span>RDV en attente</span>
+          <strong class="badge" [class.badge-alert]="data.pendingCount > 0">{{ data.pendingCount }}</strong>
+        </div>
+
+        <div class="stat-row">
+          <span class="icon" aria-hidden="true">📅</span>
+          <span>RDV aujourd'hui</span>
+          <strong>{{ data.todayCount }}</strong>
+        </div>
+
+        <div class="stat-row">
+          <span class="icon" aria-hidden="true">🕒</span>
+          <span>Prochain RDV</span>
+          @if (data.nextAppointment) {
+            <strong>{{ formatTime(data.nextAppointment.startAt) }} - {{ data.nextAppointment.clientName }} - {{ data.nextAppointment.serviceName }}</strong>
+          } @else {
+            <strong>Aucun</strong>
+          }
+        </div>
+
+        <div class="stat-row">
+          <span class="icon" aria-hidden="true">€</span>
+          <span>CA du jour</span>
+          <strong>{{ formatEuro(data.revenue.today) }}</strong>
+        </div>
+      </article>
+
+      <article class="card panel stats-card">
+        <h2>Statistiques</h2>
+
+        <div class="stat-row">
+          <span>CA semaine</span>
+          <strong>{{ formatEuro(data.revenue.week) }}</strong>
+        </div>
+
+        <div class="stat-row">
+          <span>RDV semaine</span>
+          <strong>{{ data.stats.weekAppointments }}</strong>
+        </div>
+
+        <div class="progress-wrap">
+          <p>Progression du jour dans la semaine</p>
+          <div class="progress-track" role="progressbar" [attr.aria-valuenow]="weekProgressPercent()" aria-valuemin="0" aria-valuemax="100">
+            <span class="progress-bar" [style.width.%]="weekProgressPercent()"></span>
+          </div>
+          <small>{{ weekProgressPercent() }}%</small>
+        </div>
+      </article>
+    </div>
+
+    <footer class="actions">
+      <button type="button" class="btn btn-primary" (click)="goToRequests()">Voir demandes</button>
+    </footer>
+  } @else {
+    <article class="card panel">Aucune donnee.</article>
+  }
+</section>

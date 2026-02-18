@@ -40,6 +40,20 @@
   border: 1px solid transparent;
 }
 
+.demandes-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pending-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #d23838;
+  box-shadow: 0 0 0 2px #fff;
+}
+
 .top-nav a.active {
   background: #f2e4d7;
   color: var(--color-primary-strong);

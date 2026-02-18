@@ -274,6 +274,16 @@ model NotificationLog {
   @@index([staffMemberId])
 }
 
+model PushDevice {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  platform   String
+  deviceName String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  disabledAt DateTime?
+}
+
 model AdminUser {
   id           String   @id @default(cuid())
   email        String   @unique

@@ -1,0 +1,47 @@
+<section class="card dashboard-widget">
+  <header>
+    <h2>Dashboard</h2>
+  </header>
+
+  @if (loading()) {
+    <p class="muted">Chargement...</p>
+  } @else if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  } @else if (!hasData()) {
+    <p class="muted">Aucune donnee pour le moment.</p>
+  } @else if (data(); as stats) {
+    <div class="stats">
+      <div class="stat-row">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M12 2l10 18H2L12 2zm0 5.5a1 1 0 00-1 1V13a1 1 0 102 0V8.5a1 1 0 00-1-1zm0 9.5a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5z"/></svg>
+        </span>
+        <span>RDV en attente</span>
+        <strong class="badge" [class.badge-alert]="stats.pendingCount > 0">{{ stats.pendingCount }}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M7 2a1 1 0 011 1v1h8V3a1 1 0 112 0v1h1a3 3 0 013 3v2H2V7a3 3 0 013-3h1V3a1 1 0 011-1zm15 9v8a3 3 0 01-3 3H5a3 3 0 01-3-3v-8h20z"/></svg>
+        </span>
+        <span>RDV aujourd&apos;hui</span>
+        <strong>{{ stats.todayCount }}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 10.59l3.3 3.3a1 1 0 01-1.42 1.42l-3.59-3.6A1 1 0 0111 13V7a1 1 0 012 0z"/></svg>
+        </span>
+        <span>Prochain RDV</span>
+        @if (stats.nextAppointment) {
+          <strong>{{ formatTime(stats.nextAppointment.startAt) }} - {{ stats.nextAppointment.clientName }} - {{ stats.nextAppointment.serviceName }}</strong>
+        } @else {
+          <strong>Aucun</strong>
+        }
+      </div>
+    </div>
+  }
+
+  <footer>
+    <button type="button" class="btn btn-primary" (click)="openRequests()">Voir demandes</button>
+  </footer>
+</section>
