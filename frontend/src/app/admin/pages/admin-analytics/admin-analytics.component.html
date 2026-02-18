@@ -1,0 +1,66 @@
+<section class="admin-analytics stack">
+  <header class="card panel heading">
+    <h1>Analytics</h1>
+    <p>Pilotage de l'activite institut.</p>
+  </header>
+
+  @if (loading() && !data()) {
+    <article class="card panel">Chargement...</article>
+  } @else if (errorMessage() && !data()) {
+    <article class="card panel error-box">{{ errorMessage() }}</article>
+  } @else if (data(); as stats) {
+    <div class="kpi-grid">
+      <article class="card panel kpi">
+        <p>CA jour</p>
+        <strong>{{ formatEuro(stats.revenue.today) }}</strong>
+      </article>
+      <article class="card panel kpi">
+        <p>CA semaine</p>
+        <strong>{{ formatEuro(stats.revenue.week) }}</strong>
+      </article>
+      <article class="card panel kpi">
+        <p>Taux annulation</p>
+        <strong>{{ formatPercent(stats.appointments.cancellationRate) }}</strong>
+      </article>
+      <article class="card panel kpi">
+        <p>Panier moyen</p>
+        <strong>{{ formatEuro(stats.basket.averageBasket) }}</strong>
+      </article>
+      <article class="card panel kpi">
+        <p>Nouvelles clientes</p>
+        <strong>{{ stats.clients.newClientsThisWeek }}</strong>
+      </article>
+      <article class="card panel kpi">
+        <p>Clientes habituées</p>
+        <strong>{{ stats.clients.returningClientsThisWeek }}</strong>
+      </article>
+    </div>
+
+    <article class="card panel chart-card">
+      <header>
+        <h2>CA 7 derniers jours</h2>
+      </header>
+      <div class="chart-wrap">
+        <canvas baseChart [type]="'line'" [data]="revenueChartData()" [options]="revenueChartOptions"></canvas>
+      </div>
+    </article>
+
+    <article class="card panel heatmap-card">
+      <header>
+        <h2>Planning hebdo visuel</h2>
+      </header>
+      <div class="heatmap-grid">
+        @for (day of heatmap(); track day.key) {
+          <article class="day-cell" [style.background]="heatmapBackground(day)">
+            <span>{{ day.label }}</span>
+            <strong>{{ day.count }}</strong>
+          </article>
+        }
+      </div>
+    </article>
+
+    <footer class="actions">
+      <button type="button" class="btn btn-primary" (click)="goToRequests()">Voir demandes</button>
+    </footer>
+  }
+</section>

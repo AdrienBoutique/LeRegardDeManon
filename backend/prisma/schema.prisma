@@ -164,6 +164,7 @@ model Appointment {
   startsAt         DateTime
   endsAt           DateTime
   status           AppointmentStatus @default(PENDING)
+  totalPrice       Float             @default(0)
   clientPhone              String?
   smsConsent               Boolean           @default(false)
   notes            String?

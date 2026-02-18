@@ -45,6 +45,13 @@ const adminChildren: Routes = [
   { path: 'conges', component: AdminTimeOff, canActivate: [roleGuard], data: { roles: ['STAFF', 'ADMIN'] } },
   { path: 'planning', component: AdminPlanning, canActivate: [roleGuard], data: { roles: ['STAFF', 'ADMIN'] } },
   { path: 'dashboard', component: AdminDashboardComponent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  {
+    path: 'analytics',
+    loadComponent: () =>
+      import('./admin/pages/admin-analytics/admin-analytics.component').then((m) => m.AdminAnalyticsComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
   { path: 'demandes', component: AdminAppointmentRequests, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'reglages', component: AdminSettings, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: '', pathMatch: 'full', redirectTo: 'planning' }

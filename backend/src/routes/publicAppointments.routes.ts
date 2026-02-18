@@ -449,6 +449,7 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
             startsAt: startAt,
             endsAt: endAt,
             status: nextStatus,
+            totalPrice: selectedStaff.totalPriceCents / 100,
             clientPhone: phone ?? client.phone ?? null,
             smsConsent: payload.smsConsent === true,
             confirmedAt: nextStatus === AppointmentStatus.CONFIRMED ? new Date() : null,

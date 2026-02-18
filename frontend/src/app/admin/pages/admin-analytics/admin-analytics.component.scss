@@ -1,0 +1,91 @@
+.admin-analytics {
+  gap: 1rem;
+}
+
+.panel {
+  padding: 1rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.kpi p {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.kpi strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.25rem;
+  color: #4f3a2c;
+}
+
+.chart-card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 240px;
+}
+
+.heatmap-card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.day-cell {
+  border: 1px solid #dbc7b7;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.45rem;
+  display: grid;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.day-cell span {
+  font-size: 0.82rem;
+  color: #5d4b3d;
+}
+
+.day-cell strong {
+  font-size: 1.05rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.error-box {
+  color: #9f1f1f;
+}
+
+@media (min-width: 840px) {
+  .kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .heatmap-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

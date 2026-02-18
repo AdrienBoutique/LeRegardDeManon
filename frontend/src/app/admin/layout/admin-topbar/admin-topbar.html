@@ -5,6 +5,7 @@
     <nav class="top-nav" aria-label="Navigation admin">
       @if (isAdminUser()) {
         <a routerLink="/admin/dashboard" routerLinkActive="active">Dashboard</a>
+        <a routerLink="/admin/analytics" routerLinkActive="active">Analytics</a>
         <a routerLink="/admin/edition" [class.active]="isEditionSection()">Edition</a>
         <a routerLink="/admin/services" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Services</a>
         <a routerLink="/admin/clients" routerLinkActive="active">Clients</a>
