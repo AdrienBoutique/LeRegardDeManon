@@ -157,6 +157,9 @@ model Appointment {
   endsAt           DateTime
   status           AppointmentStatus @default(PENDING)
   notes            String?
+  confirmationEmailSentAt DateTime?
+  reminder24hEmailSentAt  DateTime?
+  canceledAt              DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   client           Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)

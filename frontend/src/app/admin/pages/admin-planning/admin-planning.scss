@@ -258,8 +258,8 @@ p {
   border-radius: 12px;
   background: #fff;
   overflow: hidden;
-  max-height: 48vh;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 .mobile-slot-row {

@@ -10,6 +10,7 @@ import {
 } from "../lib/time";
 import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
+import { sendConfirmationEmailIfNeeded } from "../services/email/appointmentEmails";
 
 class HttpError extends Error {
   constructor(
@@ -474,6 +475,8 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
       staffName: created.staffName,
       serviceName: created.serviceName,
     });
+
+    void sendConfirmationEmailIfNeeded(created.appointment.id);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: zodErrorToMessage(error) });
