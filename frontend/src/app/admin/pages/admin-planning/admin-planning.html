@@ -208,6 +208,7 @@
                   [class.is-booked]="appointment.status === 'BOOKED'"
                   [class.is-done]="appointment.status === 'DONE'"
                   [class.is-no-show]="appointment.status === 'NO_SHOW'"
+                  [class.is-cancelled]="appointment.status === 'CANCELLED'"
                   [ngStyle]="getAppointmentStyle(appointment)"
                   (click)="openAppointmentEditor(appointment)"
                   [attr.aria-label]="

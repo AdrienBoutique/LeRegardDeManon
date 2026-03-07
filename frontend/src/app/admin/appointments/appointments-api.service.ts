@@ -111,14 +111,14 @@ export class AppointmentsApiService {
     return this.http.patch<Appointment>(`${this.adminBaseUrl}/${id}`, payload);
   }
 
+  cancelAppointment(id: string): Observable<void> {
+    return this.http.post<void>(`${this.adminBaseUrl}/${id}/cancel`, {});
+  }
+
   deleteAppointment(id: string): Observable<void> {
     return this.http.delete<void>(`${this.adminBaseUrl}/${id}`).pipe(
       map(() => {
         this.fallbackAppointments = this.fallbackAppointments.filter((item) => item.id !== id);
-      }),
-      catchError(() => {
-        this.fallbackAppointments = this.fallbackAppointments.filter((item) => item.id !== id);
-        return of(void 0);
       })
     );
   }
@@ -132,6 +132,9 @@ export class AppointmentsApiService {
     const endAtIso = addMinutes(startAtIso, durationMin);
     const conflictWith = this.fallbackAppointments.find((item) => {
       if (item.practitionerId !== practitionerId) {
+        return false;
+      }
+      if (item.status === 'cancelled') {
         return false;
       }
       if (excludeAppointmentId && item.id === excludeAppointmentId) {

@@ -13,7 +13,7 @@ export type PlanningAppointmentItem = {
   id: string;
   startAt: string;
   endAt: string;
-  status: 'BOOKED' | 'DONE' | 'NO_SHOW';
+  status: 'BOOKED' | 'DONE' | 'NO_SHOW' | 'CANCELLED';
   serviceId: string;
   serviceName: string;
   serviceColorHex: string | null;

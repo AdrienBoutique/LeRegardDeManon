@@ -1,4 +1,4 @@
-export type AppointmentStatus = 'confirmed' | 'pending' | 'blocked';
+export type AppointmentStatus = 'confirmed' | 'pending' | 'blocked' | 'cancelled';
 
 export interface AppointmentServiceItem {
   serviceId: string;

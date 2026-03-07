@@ -39,13 +39,17 @@ const planningQuerySchema = z
     }
   });
 
-function mapStatus(status: AppointmentStatus): "BOOKED" | "DONE" | "NO_SHOW" {
+function mapStatus(status: AppointmentStatus): "BOOKED" | "DONE" | "NO_SHOW" | "CANCELLED" {
   if (status === AppointmentStatus.COMPLETED) {
     return "DONE";
   }
 
   if (status === AppointmentStatus.NO_SHOW) {
     return "NO_SHOW";
+  }
+
+  if (status === AppointmentStatus.CANCELLED) {
+    return "CANCELLED";
   }
 
   return "BOOKED";
@@ -100,7 +104,12 @@ adminPlanningRouter.get("/planning", async (req, res) => {
             lt: endLocal.toUTC().toJSDate(),
           },
           status: {
-            in: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW],
+            in: [
+              AppointmentStatus.CONFIRMED,
+              AppointmentStatus.COMPLETED,
+              AppointmentStatus.NO_SHOW,
+              AppointmentStatus.CANCELLED,
+            ],
           },
         },
         orderBy: { startsAt: "asc" },

@@ -430,6 +430,10 @@ export class AdminPlanning {
       return 'Absence';
     }
 
+    if (status === 'CANCELLED') {
+      return 'Annule';
+    }
+
     return 'Reserve';
   }
 
@@ -439,6 +443,9 @@ export class AdminPlanning {
     }
     if (status === 'NO_SHOW') {
       return 'is-no-show';
+    }
+    if (status === 'CANCELLED') {
+      return 'is-cancelled';
     }
     return 'is-booked';
   }
@@ -625,7 +632,12 @@ export class AdminPlanning {
       clientPhone: item.clientPhone ?? undefined,
       clientEmail: item.clientEmail ?? undefined,
       notes: undefined,
-      status: item.status === 'NO_SHOW' ? 'blocked' : 'confirmed'
+      status:
+        item.status === 'NO_SHOW'
+          ? 'blocked'
+          : item.status === 'CANCELLED'
+            ? 'cancelled'
+            : 'confirmed'
     };
   }
 

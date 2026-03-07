@@ -259,6 +259,17 @@ textarea:focus {
   background: #feecec;
 }
 
+.btn-cancel-appointment {
+  border-color: #dfc8b2;
+  color: #72533d;
+  background: #fff9f3;
+}
+
+.btn-cancel-appointment:hover {
+  border-color: #cfb091;
+  background: #f9eee1;
+}
+
 @media (max-width: 640px) {
   .wizard-shell {
     height: calc(100vh - 64px);

@@ -40,7 +40,7 @@ const upsertSchema = z.object({
     })
     .optional(),
   notes: z.string().optional(),
-  status: z.enum(["confirmed", "pending", "blocked"]),
+  status: z.enum(["confirmed", "pending", "blocked", "cancelled"]),
 });
 
 const conflictQuerySchema = z.object({
@@ -50,22 +50,28 @@ const conflictQuerySchema = z.object({
   excludeAppointmentId: z.string().min(1).optional(),
 });
 
-function toDraftStatus(status: AppointmentStatus): "confirmed" | "pending" | "blocked" {
+function toDraftStatus(status: AppointmentStatus): "confirmed" | "pending" | "blocked" | "cancelled" {
   if (status === AppointmentStatus.PENDING) {
     return "pending";
   }
   if (status === AppointmentStatus.NO_SHOW) {
     return "blocked";
   }
+  if (status === AppointmentStatus.CANCELLED) {
+    return "cancelled";
+  }
   return "confirmed";
 }
 
-function fromDraftStatus(status: "confirmed" | "pending" | "blocked"): AppointmentStatus {
+function fromDraftStatus(status: "confirmed" | "pending" | "blocked" | "cancelled"): AppointmentStatus {
   if (status === "pending") {
     return AppointmentStatus.PENDING;
   }
   if (status === "blocked") {
     return AppointmentStatus.NO_SHOW;
+  }
+  if (status === "cancelled") {
+    return AppointmentStatus.CANCELLED;
   }
   return AppointmentStatus.CONFIRMED;
 }
@@ -444,6 +450,38 @@ adminAppointmentsRouter.delete("/appointments/:id", async (req, res) => {
       return;
     }
 
+    await prisma.appointment.delete({
+      where: { id: appointment.id },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("[adminAppointments.delete]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAppointmentsRouter.post("/appointments/:id/cancel", async (req, res) => {
+  try {
+    const id = String(req.params.id || "");
+    if (!id) {
+      res.status(400).json({ error: "Missing appointment id" });
+      return;
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!appointment) {
+      res.status(404).json({ error: "Appointment not found" });
+      return;
+    }
+
     if (appointment.status === AppointmentStatus.CANCELLED) {
       res.json({ ok: true, status: AppointmentStatus.CANCELLED });
       return;
@@ -460,7 +498,7 @@ adminAppointmentsRouter.delete("/appointments/:id", async (req, res) => {
     res.json({ ok: true, status: AppointmentStatus.CANCELLED });
     void sendAppointmentCancellationSms(appointment.id);
   } catch (error) {
-    console.error("[adminAppointments.delete]", error);
+    console.error("[adminAppointments.cancel]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -489,6 +527,7 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
           id: true,
           clientId: true,
           status: true,
+          canceledAt: true,
           staffMemberId: true,
           startsAt: true,
           endsAt: true,
@@ -573,6 +612,12 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
       });
 
       const nextStatus = fromDraftStatus(payload.status);
+      const nextCanceledAt =
+        nextStatus === AppointmentStatus.CANCELLED
+          ? existing.status === AppointmentStatus.CANCELLED
+            ? existing.canceledAt ?? new Date()
+            : new Date()
+          : null;
       const appointment = await tx.appointment.update({
         where: { id },
         data: {
@@ -583,7 +628,7 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
           totalPrice: totalPriceCents / 100,
           notes: payload.notes ?? null,
           status: nextStatus,
-          canceledAt: null,
+          canceledAt: nextCanceledAt,
           confirmedAt:
             nextStatus === AppointmentStatus.CONFIRMED
               ? existing.status === AppointmentStatus.CONFIRMED

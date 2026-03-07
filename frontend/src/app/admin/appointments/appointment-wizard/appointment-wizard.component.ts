@@ -52,6 +52,7 @@ export class AppointmentWizardComponent {
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
   protected readonly deleteConfirmOpen = signal(false);
+  protected readonly confirmAction = signal<'cancel' | 'delete'>('cancel');
   protected readonly errorMessage = signal('');
 
   protected readonly filteredClients = computed(() => {
@@ -378,6 +379,9 @@ export class AppointmentWizardComponent {
     if (status === 'pending') {
       return 'En attente';
     }
+    if (status === 'cancelled') {
+      return 'Annule';
+    }
     return 'Absence';
   }
 
@@ -425,10 +429,19 @@ export class AppointmentWizardComponent {
     });
   }
 
+  protected requestCancelConfirmation(): void {
+    if (this.mode() !== 'edit' || this.deleting() || this.saving()) {
+      return;
+    }
+    this.confirmAction.set('cancel');
+    this.deleteConfirmOpen.set(true);
+  }
+
   protected requestDeleteConfirmation(): void {
     if (this.mode() !== 'edit' || this.deleting() || this.saving()) {
       return;
     }
+    this.confirmAction.set('delete');
     this.deleteConfirmOpen.set(true);
   }
 
@@ -451,8 +464,12 @@ export class AppointmentWizardComponent {
     this.deleteConfirmOpen.set(false);
     this.errorMessage.set('');
 
-    this.appointmentsApi
-      .deleteAppointment(id)
+    const request$ =
+      this.confirmAction() === 'cancel'
+        ? this.appointmentsApi.cancelAppointment(id)
+        : this.appointmentsApi.deleteAppointment(id);
+
+    request$
       .pipe(finalize(() => this.deleting.set(false)))
       .subscribe({
         next: () => {
@@ -463,6 +480,24 @@ export class AppointmentWizardComponent {
           this.errorMessage.set(this.extractSaveErrorMessage(error));
         }
       });
+  }
+
+  protected confirmTitle(): string {
+    return this.confirmAction() === 'cancel' ? 'Annuler ce rendez-vous ?' : 'Supprimer ce rendez-vous ?';
+  }
+
+  protected confirmMessage(): string {
+    return this.confirmAction() === 'cancel'
+      ? 'Le rendez-vous restera visible dans le planning et comptera comme annule dans les statistiques.'
+      : 'Le rendez-vous sera supprime definitivement du planning et ne comptera plus dans les statistiques.';
+  }
+
+  protected confirmButtonLabel(): string {
+    if (this.deleting()) {
+      return this.confirmAction() === 'cancel' ? 'Annulation...' : 'Suppression...';
+    }
+
+    return this.confirmAction() === 'cancel' ? "Confirmer l'annulation" : 'Confirmer la suppression';
   }
 
   private triggerConflictCheck(): void {
@@ -602,6 +637,9 @@ export class AppointmentWizardComponent {
     if (normalized.includes('conflict')) {
       return 'Conflit detecte: ce creneau est deja pris.';
     }
+    if (normalized.includes('not found')) {
+      return 'Rendez-vous introuvable.';
+    }
     return message;
   }
 
@@ -702,6 +740,9 @@ export class AppointmentWizardComponent {
 
     for (const item of this.appointments()) {
       if (item.practitionerId !== practitionerId) {
+        continue;
+      }
+      if (item.status === 'cancelled') {
         continue;
       }
       if (excludeId && item.id === excludeId) {
