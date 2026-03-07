@@ -125,6 +125,7 @@ publicSlotsRouter.get("/slots", async (req, res) => {
       prisma.appointment.findMany({
         where: {
           staffMemberId: { in: staffIds },
+          deletedAt: null,
           startsAt: { lt: dayEndUtc },
           endsAt: { gt: dayStartUtc },
           status: { not: AppointmentStatus.CANCELLED },

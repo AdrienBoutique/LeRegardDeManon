@@ -178,6 +178,7 @@ model Appointment {
   reminder24hSmsSentAt    DateTime?
   reminder2hSmsSentAt     DateTime?
   canceledAt              DateTime?
+  deletedAt               DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   client           Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)

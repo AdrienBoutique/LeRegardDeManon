@@ -197,6 +197,12 @@
         <p><strong>Statut:</strong> {{ statusLabel(draft().status) }}</p>
       </div>
 
+      @if (isCancelledAppointment()) {
+        <p class="hint warning-hint">
+          Ce rendez-vous est annule. Son creneau peut deja avoir ete repris par un autre rendez-vous.
+        </p>
+      }
+
       <label>
         Statut
         <select [ngModel]="draft().status" (ngModelChange)="updateStatus($event)">
@@ -235,9 +241,15 @@
     <div class="wizard-actions-left">
       <button type="button" class="btn btn-ghost" [disabled]="step() === 1 || deleting()" (click)="previousStep()">Retour</button>
       @if (mode() === 'edit') {
-        <button type="button" class="btn btn-ghost btn-cancel-appointment" [disabled]="saving() || deleting()" (click)="requestCancelConfirmation()">
-          Annuler le rendez-vous
-        </button>
+        @if (isCancelledAppointment()) {
+          <button type="button" class="btn btn-ghost btn-restore-appointment" [disabled]="saving() || deleting()" (click)="requestRestoreConfirmation()">
+            Desannuler le rendez-vous
+          </button>
+        } @else {
+          <button type="button" class="btn btn-ghost btn-cancel-appointment" [disabled]="saving() || deleting()" (click)="requestCancelConfirmation()">
+            Annuler le rendez-vous
+          </button>
+        }
         <button type="button" class="btn btn-ghost btn-delete" [disabled]="saving() || deleting()" (click)="requestDeleteConfirmation()">
           Supprimer definitivement
         </button>

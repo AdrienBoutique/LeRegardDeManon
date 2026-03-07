@@ -22,6 +22,7 @@ const smsSelect = {
   startsAt: true,
   status: true,
   canceledAt: true,
+  deletedAt: true,
   clientId: true,
   clientPhone: true,
   smsConsent: true,
@@ -45,11 +46,11 @@ type SmsKind = "confirmation" | "reminder24h" | "reminder2h" | "cancellation" | 
 type TrackedSmsKind = "confirmation" | "reminder24h" | "reminder2h";
 
 function isConfirmedAndActive(appointment: SmsAppointmentRecord): boolean {
-  return appointment.status === AppointmentStatus.CONFIRMED && appointment.canceledAt === null;
+  return appointment.deletedAt === null && appointment.status === AppointmentStatus.CONFIRMED && appointment.canceledAt === null;
 }
 
 function isCancelledAppointment(appointment: SmsAppointmentRecord): boolean {
-  return appointment.status === AppointmentStatus.CANCELLED || appointment.canceledAt !== null;
+  return appointment.deletedAt === null && (appointment.status === AppointmentStatus.CANCELLED || appointment.canceledAt !== null);
 }
 
 function clientName(appointment: SmsAppointmentRecord): string {
@@ -257,6 +258,7 @@ async function sendTrackedSmsByKind(appointmentId: string, kind: TrackedSmsKind)
 
   const reserveWhere: Prisma.AppointmentWhereInput = {
     id: appointment.id,
+    deletedAt: null,
     [field]: null,
   };
   const reserveData: Prisma.AppointmentUpdateManyMutationInput = {
@@ -294,6 +296,7 @@ async function sendTrackedSmsByKind(appointmentId: string, kind: TrackedSmsKind)
     const messageText = error instanceof Error ? error.message : "SMS_SEND_FAILED";
     const rollbackWhere: Prisma.AppointmentWhereInput = {
       id: appointment.id,
+      deletedAt: null,
       [field]: reservedAt,
     };
     const rollbackData: Prisma.AppointmentUpdateManyMutationInput = {
@@ -346,7 +349,7 @@ async function sendEventSmsByKind(appointmentId: string, kind: "cancellation" | 
     select: smsSelect,
   });
 
-  if (!appointment || appointment.smsConsent !== true) {
+  if (!appointment || appointment.deletedAt !== null || appointment.smsConsent !== true) {
     return "skipped";
   }
 
@@ -434,6 +437,7 @@ export async function findReminder24hSmsCandidates(windowStartUtc: Date, windowE
         lte: windowEndUtc,
       },
       status: AppointmentStatus.CONFIRMED,
+      deletedAt: null,
       canceledAt: null,
       smsConsent: true,
       reminder24hSmsSentAt: null,
@@ -453,6 +457,7 @@ export async function findReminder2hSmsCandidates(windowStartUtc: Date, windowEn
         lte: windowEndUtc,
       },
       status: AppointmentStatus.CONFIRMED,
+      deletedAt: null,
       canceledAt: null,
       smsConsent: true,
       reminder2hSmsSentAt: null,

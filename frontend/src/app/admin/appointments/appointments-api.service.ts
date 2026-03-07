@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { inject, Injectable } from '@angular/core';
 import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Appointment, AppointmentUpsertPayload } from './appointment.models';
+import { Appointment, AppointmentHistoryResponse, AppointmentUpsertPayload } from './appointment.models';
 
 export function hasOverlap(
   aStartIso: string,
@@ -113,6 +113,32 @@ export class AppointmentsApiService {
 
   cancelAppointment(id: string): Observable<void> {
     return this.http.post<void>(`${this.adminBaseUrl}/${id}/cancel`, {});
+  }
+
+  restoreAppointment(id: string): Observable<void> {
+    return this.http.post<void>(`${this.adminBaseUrl}/${id}/restore`, {});
+  }
+
+  undeleteAppointment(id: string): Observable<void> {
+    return this.http.post<void>(`${this.adminBaseUrl}/${id}/undelete`, {});
+  }
+
+  listAppointmentHistory(params: {
+    page?: number;
+    pageSize?: number;
+    status?: 'all' | 'confirmed' | 'pending' | 'cancelled' | 'noShow' | 'completed' | 'deleted';
+    q?: string;
+  }): Observable<AppointmentHistoryResponse> {
+    const httpParams = new HttpParams({
+      fromObject: {
+        page: String(params.page ?? 1),
+        pageSize: String(params.pageSize ?? 20),
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.q?.trim() ? { q: params.q.trim() } : {})
+      }
+    });
+
+    return this.http.get<AppointmentHistoryResponse>(`${this.adminBaseUrl}/history`, { params: httpParams });
   }
 
   deleteAppointment(id: string): Observable<void> {

@@ -53,6 +53,7 @@ staffPlanningRouter.get("/staff/me/planning", authRequired, requireRole(Role.STA
     const appointments = await prisma.appointment.findMany({
       where: {
         staffMemberId: practitionerId,
+        deletedAt: null,
         startsAt: {
           gte: dayStart.toUTC().toJSDate(),
           lt: dayEnd.toUTC().toJSDate(),

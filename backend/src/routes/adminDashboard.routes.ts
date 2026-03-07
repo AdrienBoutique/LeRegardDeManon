@@ -16,6 +16,7 @@ const advancedQuerySchema = z.object({
 async function sumRevenueForRange(startUtc: Date, endUtc: Date, nowUtc: Date): Promise<number> {
   const revenueAgg = await prisma.appointment.aggregate({
     where: {
+      deletedAt: null,
       status: AppointmentStatus.CONFIRMED,
       startsAt: {
         gte: startUtc,
@@ -51,11 +52,13 @@ adminDashboardRouter.get("/dashboard", async (_req, res) => {
     ] = await Promise.all([
       prisma.appointment.count({
         where: {
+          deletedAt: null,
           status: AppointmentStatus.PENDING,
         },
       }),
       prisma.appointment.count({
         where: {
+          deletedAt: null,
           status: AppointmentStatus.CONFIRMED,
           startsAt: {
             gte: dayStartUtc,
@@ -65,6 +68,7 @@ adminDashboardRouter.get("/dashboard", async (_req, res) => {
       }),
       prisma.appointment.findFirst({
         where: {
+          deletedAt: null,
           status: AppointmentStatus.CONFIRMED,
           startsAt: {
             gt: nowUtc,
@@ -98,6 +102,7 @@ adminDashboardRouter.get("/dashboard", async (_req, res) => {
       }),
       prisma.appointment.count({
         where: {
+          deletedAt: null,
           status: AppointmentStatus.CONFIRMED,
           startsAt: {
             gte: weekStartUtc,
@@ -171,6 +176,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
       sumRevenueForRange(periodStartUtc, periodEndUtc, nowUtc),
       prisma.appointment.aggregate({
         where: {
+          deletedAt: null,
           status: AppointmentStatus.CONFIRMED,
           startsAt: { lt: nowUtc },
         },
@@ -183,6 +189,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
     const periodStatusCounts = await prisma.appointment.groupBy({
       by: ["status"],
       where: {
+        deletedAt: null,
         startsAt: {
           gte: periodStartUtc,
           lte: periodEndUtc,
@@ -203,6 +210,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
     const periodClients = await prisma.appointment.groupBy({
       by: ["clientId"],
       where: {
+        deletedAt: null,
         status: AppointmentStatus.CONFIRMED,
         startsAt: {
           gte: periodStartUtc,
@@ -220,6 +228,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
       const firstAppointments = await prisma.appointment.groupBy({
         by: ["clientId"],
         where: {
+          deletedAt: null,
           clientId: { in: clientIds },
           status: AppointmentStatus.CONFIRMED,
           startsAt: { lt: nowUtc },
@@ -242,6 +251,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
 
     const appointmentsForIntervals = await prisma.appointment.findMany({
       where: {
+        deletedAt: null,
         status: AppointmentStatus.CONFIRMED,
         startsAt: { lt: nowUtc },
       },
@@ -273,6 +283,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
 
     const confirmedLast7 = await prisma.appointment.findMany({
       where: {
+        deletedAt: null,
         status: AppointmentStatus.CONFIRMED,
         startsAt: {
           gte: last7StartUtc,
@@ -337,6 +348,7 @@ adminDashboardRouter.get("/dashboard/advanced", async (req, res) => {
 
     const periodRows = await prisma.appointment.findMany({
       where: {
+        deletedAt: null,
         startsAt: {
           gte: periodStartUtc,
           lte: periodEndUtc,

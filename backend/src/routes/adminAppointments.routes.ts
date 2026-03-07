@@ -50,6 +50,13 @@ const conflictQuerySchema = z.object({
   excludeAppointmentId: z.string().min(1).optional(),
 });
 
+const historyQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.enum(["all", "confirmed", "pending", "cancelled", "noShow", "completed", "deleted"]).optional(),
+  q: z.string().trim().optional(),
+});
+
 function toDraftStatus(status: AppointmentStatus): "confirmed" | "pending" | "blocked" | "cancelled" {
   if (status === AppointmentStatus.PENDING) {
     return "pending";
@@ -78,6 +85,126 @@ function fromDraftStatus(status: "confirmed" | "pending" | "blocked" | "cancelle
 
 export const adminAppointmentsRouter = Router();
 adminAppointmentsRouter.use(authAdmin);
+
+adminAppointmentsRouter.get("/appointments/history", async (req, res) => {
+  try {
+    const query = historyQuerySchema.parse(req.query ?? {});
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const search = query.q?.trim();
+    const status = query.status ?? "all";
+
+    const where = {
+      ...(search
+        ? {
+            OR: [
+              { client: { firstName: { contains: search, mode: "insensitive" as const } } },
+              { client: { lastName: { contains: search, mode: "insensitive" as const } } },
+              { staffMember: { firstName: { contains: search, mode: "insensitive" as const } } },
+              { staffMember: { lastName: { contains: search, mode: "insensitive" as const } } },
+              { notes: { contains: search, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+      ...(status === "deleted"
+        ? { deletedAt: { not: null } }
+        : status === "confirmed"
+          ? { status: AppointmentStatus.CONFIRMED, deletedAt: null }
+          : status === "pending"
+            ? { status: AppointmentStatus.PENDING, deletedAt: null }
+            : status === "cancelled"
+              ? { status: AppointmentStatus.CANCELLED, deletedAt: null }
+              : status === "noShow"
+                ? { status: AppointmentStatus.NO_SHOW, deletedAt: null }
+                : status === "completed"
+                  ? { status: AppointmentStatus.COMPLETED, deletedAt: null }
+                  : {}),
+    };
+
+    const [total, items] = await Promise.all([
+      prisma.appointment.count({ where }),
+      prisma.appointment.findMany({
+        where,
+        orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          deletedAt: true,
+          canceledAt: true,
+          totalPrice: true,
+          notes: true,
+          createdAt: true,
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          },
+          staffMember: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          items: {
+            orderBy: { order: "asc" },
+            select: {
+              service: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    res.json({
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      items: items.map((item) => ({
+        id: item.id,
+        startsAt: item.startsAt,
+        endsAt: item.endsAt,
+        status: item.status,
+        deletedAt: item.deletedAt,
+        canceledAt: item.canceledAt,
+        totalPrice: item.totalPrice,
+        notes: item.notes,
+        createdAt: item.createdAt,
+        client: {
+          id: item.client.id,
+          name: `${item.client.firstName} ${item.client.lastName}`.trim(),
+          phone: item.client.phone,
+          email: item.client.email,
+        },
+        staff: {
+          id: item.staffMember.id,
+          name: `${item.staffMember.firstName} ${item.staffMember.lastName}`.trim(),
+        },
+        services: item.items.map((serviceItem) => serviceItem.service.name),
+      })),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid history query" });
+      return;
+    }
+    console.error("[adminAppointments.history]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 adminAppointmentsRouter.post("/appointments", async (req, res) => {
   try {
@@ -346,6 +473,7 @@ adminAppointmentsRouter.get("/appointments/conflicts", async (req, res) => {
       where: {
         staffMemberId: query.practitionerId,
         id: query.excludeAppointmentId ? { not: query.excludeAppointmentId } : undefined,
+        deletedAt: null,
         status: { not: AppointmentStatus.CANCELLED },
         startsAt: { lt: endAtUtc },
         endsAt: { gt: startAtUtc },
@@ -442,6 +570,7 @@ adminAppointmentsRouter.delete("/appointments/:id", async (req, res) => {
       select: {
         id: true,
         status: true,
+        deletedAt: true,
       },
     });
 
@@ -450,8 +579,16 @@ adminAppointmentsRouter.delete("/appointments/:id", async (req, res) => {
       return;
     }
 
-    await prisma.appointment.delete({
+    if (appointment.deletedAt) {
+      res.json({ ok: true });
+      return;
+    }
+
+    await prisma.appointment.update({
       where: { id: appointment.id },
+      data: {
+        deletedAt: new Date(),
+      },
     });
 
     res.json({ ok: true });
@@ -474,11 +611,17 @@ adminAppointmentsRouter.post("/appointments/:id/cancel", async (req, res) => {
       select: {
         id: true,
         status: true,
+        deletedAt: true,
       },
     });
 
     if (!appointment) {
       res.status(404).json({ error: "Appointment not found" });
+      return;
+    }
+
+    if (appointment.deletedAt) {
+      res.status(409).json({ error: "Impossible d'annuler un rendez-vous supprime." });
       return;
     }
 
@@ -492,6 +635,7 @@ adminAppointmentsRouter.post("/appointments/:id/cancel", async (req, res) => {
       data: {
         status: AppointmentStatus.CANCELLED,
         canceledAt: new Date(),
+        deletedAt: null,
       },
     });
 
@@ -499,6 +643,145 @@ adminAppointmentsRouter.post("/appointments/:id/cancel", async (req, res) => {
     void sendAppointmentCancellationSms(appointment.id);
   } catch (error) {
     console.error("[adminAppointments.cancel]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAppointmentsRouter.post("/appointments/:id/restore", async (req, res) => {
+  try {
+    const id = String(req.params.id || "");
+    if (!id) {
+      res.status(400).json({ error: "Missing appointment id" });
+      return;
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        deletedAt: true,
+        startsAt: true,
+        endsAt: true,
+        staffMemberId: true,
+        confirmedAt: true,
+      },
+    });
+
+    if (!appointment) {
+      res.status(404).json({ error: "Appointment not found" });
+      return;
+    }
+
+    if (appointment.deletedAt) {
+      res.status(409).json({ error: "Impossible de desannuler un rendez-vous supprime." });
+      return;
+    }
+
+    if (appointment.status !== AppointmentStatus.CANCELLED) {
+      res.json({ ok: true, status: appointment.status });
+      return;
+    }
+
+    const durationMin = Math.max(
+      1,
+      Math.round(DateTime.fromJSDate(appointment.endsAt).diff(DateTime.fromJSDate(appointment.startsAt), "minutes").minutes)
+    );
+
+    const available = await isSlotAvailable({
+      practitionerId: appointment.staffMemberId,
+      startAtUtc: appointment.startsAt,
+      durationMin,
+      excludeAppointmentId: appointment.id,
+    });
+
+    if (!available) {
+      res.status(409).json({
+        error: "Impossible de desannuler: le creneau est deja repris par un autre rendez-vous.",
+      });
+      return;
+    }
+
+    await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        status: AppointmentStatus.CONFIRMED,
+        canceledAt: null,
+        deletedAt: null,
+        confirmedAt: appointment.confirmedAt ?? new Date(),
+      },
+    });
+
+    res.json({ ok: true, status: AppointmentStatus.CONFIRMED });
+  } catch (error) {
+    console.error("[adminAppointments.restore]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAppointmentsRouter.post("/appointments/:id/undelete", async (req, res) => {
+  try {
+    const id = String(req.params.id || "");
+    if (!id) {
+      res.status(400).json({ error: "Missing appointment id" });
+      return;
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        deletedAt: true,
+        startsAt: true,
+        endsAt: true,
+        staffMemberId: true,
+      },
+    });
+
+    if (!appointment) {
+      res.status(404).json({ error: "Appointment not found" });
+      return;
+    }
+
+    if (!appointment.deletedAt) {
+      res.json({ ok: true, status: appointment.status });
+      return;
+    }
+
+    const needsAvailabilityCheck =
+      appointment.status === AppointmentStatus.CONFIRMED || appointment.status === AppointmentStatus.PENDING;
+
+    if (needsAvailabilityCheck) {
+      const durationMin = Math.max(
+        1,
+        Math.round(DateTime.fromJSDate(appointment.endsAt).diff(DateTime.fromJSDate(appointment.startsAt), "minutes").minutes)
+      );
+      const available = await isSlotAvailable({
+        practitionerId: appointment.staffMemberId,
+        startAtUtc: appointment.startsAt,
+        durationMin,
+        excludeAppointmentId: appointment.id,
+      });
+
+      if (!available) {
+        res.status(409).json({
+          error: "Impossible de restaurer: le creneau est deja repris par un autre rendez-vous.",
+        });
+        return;
+      }
+    }
+
+    await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        deletedAt: null,
+      },
+    });
+
+    res.json({ ok: true, status: appointment.status });
+  } catch (error) {
+    console.error("[adminAppointments.undelete]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -528,6 +811,7 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
           clientId: true,
           status: true,
           canceledAt: true,
+          deletedAt: true,
           staffMemberId: true,
           startsAt: true,
           endsAt: true,
@@ -536,6 +820,10 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
 
       if (!existing) {
         return null;
+      }
+
+      if (existing.deletedAt) {
+        throw new Error("Appointment deleted");
       }
 
       const activeServices = await tx.service.findMany({
@@ -738,6 +1026,7 @@ adminAppointmentsRouter.get("/appointments/pending", async (_req, res) => {
       where: {
         status: AppointmentStatus.PENDING,
         canceledAt: null,
+        deletedAt: null,
       },
       orderBy: {
         startsAt: "asc",
@@ -820,6 +1109,7 @@ adminAppointmentsRouter.post("/appointments/:id/accept", async (req, res) => {
       select: {
         id: true,
         status: true,
+        deletedAt: true,
         startsAt: true,
         endsAt: true,
         staffMemberId: true,
@@ -828,6 +1118,11 @@ adminAppointmentsRouter.post("/appointments/:id/accept", async (req, res) => {
 
     if (!appointment) {
       res.status(404).json({ error: "Appointment not found" });
+      return;
+    }
+
+    if (appointment.deletedAt) {
+      res.status(409).json({ error: "Appointment was deleted" });
       return;
     }
 
@@ -891,11 +1186,17 @@ adminAppointmentsRouter.post("/appointments/:id/reject", async (req, res) => {
       select: {
         id: true,
         status: true,
+        deletedAt: true,
       },
     });
 
     if (!appointment) {
       res.status(404).json({ error: "Appointment not found" });
+      return;
+    }
+
+    if (appointment.deletedAt) {
+      res.status(409).json({ error: "Appointment was deleted" });
       return;
     }
 

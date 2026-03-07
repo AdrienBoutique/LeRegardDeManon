@@ -163,6 +163,10 @@ export class AdminAnalyticsComponent {
     void this.router.navigateByUrl('/admin/demandes');
   }
 
+  protected goToAppointmentHistory(): void {
+    void this.router.navigateByUrl('/admin/analytics/rendez-vous');
+  }
+
   protected setPeriod(value: string): void {
     const normalized: 'week' | 'month' = value === 'month' ? 'month' : 'week';
     this.period.set(normalized);

@@ -14,6 +14,7 @@ const appointmentEmailSelect = {
   startsAt: true,
   status: true,
   canceledAt: true,
+  deletedAt: true,
   rejectedReason: true,
   confirmationEmailSentAt: true,
   rejectedEmailSentAt: true,
@@ -133,7 +134,7 @@ export async function sendConfirmationEmailIfNeeded(appointmentId: string): Prom
     select: appointmentEmailSelect,
   });
 
-  if (!appointment || isCancelled(appointment) || appointment.status !== AppointmentStatus.CONFIRMED) {
+  if (!appointment || appointment.deletedAt !== null || isCancelled(appointment) || appointment.status !== AppointmentStatus.CONFIRMED) {
     return "skipped";
   }
 
@@ -150,6 +151,7 @@ export async function sendConfirmationEmailIfNeeded(appointmentId: string): Prom
   const reservation = await prisma.appointment.updateMany({
     where: {
       id: appointment.id,
+      deletedAt: null,
       confirmationEmailSentAt: null,
     },
     data: {
@@ -187,6 +189,7 @@ export async function sendConfirmationEmailIfNeeded(appointmentId: string): Prom
     await prisma.appointment.updateMany({
       where: {
         id: appointment.id,
+        deletedAt: null,
         confirmationEmailSentAt: reservationTime,
       },
       data: {
@@ -222,7 +225,7 @@ export async function sendRejectedIfNeeded(appointmentId: string): Promise<"sent
     select: appointmentEmailSelect,
   });
 
-  if (!appointment || appointment.status !== AppointmentStatus.REJECTED) {
+  if (!appointment || appointment.deletedAt !== null || appointment.status !== AppointmentStatus.REJECTED) {
     return "skipped";
   }
 
@@ -239,6 +242,7 @@ export async function sendRejectedIfNeeded(appointmentId: string): Promise<"sent
   const reservation = await prisma.appointment.updateMany({
     where: {
       id: appointment.id,
+      deletedAt: null,
       rejectedEmailSentAt: null,
     },
     data: {
@@ -276,6 +280,7 @@ export async function sendRejectedIfNeeded(appointmentId: string): Promise<"sent
     await prisma.appointment.updateMany({
       where: {
         id: appointment.id,
+        deletedAt: null,
         rejectedEmailSentAt: reservationTime,
       },
       data: {
@@ -307,7 +312,7 @@ export async function sendReminder24hEmailIfNeeded(appointmentId: string): Promi
     select: appointmentEmailSelect,
   });
 
-  if (!appointment || isCancelled(appointment) || appointment.status !== AppointmentStatus.CONFIRMED) {
+  if (!appointment || appointment.deletedAt !== null || isCancelled(appointment) || appointment.status !== AppointmentStatus.CONFIRMED) {
     return "skipped";
   }
 
@@ -324,6 +329,7 @@ export async function sendReminder24hEmailIfNeeded(appointmentId: string): Promi
   const reservation = await prisma.appointment.updateMany({
     where: {
       id: appointment.id,
+      deletedAt: null,
       reminder24hEmailSentAt: null,
     },
     data: {
@@ -361,6 +367,7 @@ export async function sendReminder24hEmailIfNeeded(appointmentId: string): Promi
     await prisma.appointment.updateMany({
       where: {
         id: appointment.id,
+        deletedAt: null,
         reminder24hEmailSentAt: reservationTime,
       },
       data: {
@@ -392,6 +399,7 @@ export async function findReminder24hCandidates(windowStartUtc: Date, windowEndU
       status: {
         equals: AppointmentStatus.CONFIRMED,
       },
+      deletedAt: null,
       canceledAt: null,
       reminder24hEmailSentAt: null,
       client: {

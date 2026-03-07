@@ -112,6 +112,14 @@ textarea:focus {
   font-size: 0.88rem;
 }
 
+.warning-hint {
+  color: #7a5b44;
+  background: #fff6eb;
+  border: 1px solid #ecd4bc;
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+}
+
 .delete-confirm {
   border: 1px solid #e4c7c7;
   border-radius: 12px;
@@ -268,6 +276,17 @@ textarea:focus {
 .btn-cancel-appointment:hover {
   border-color: #cfb091;
   background: #f9eee1;
+}
+
+.btn-restore-appointment {
+  border-color: #b7d2bf;
+  color: #2d6240;
+  background: #f4fbf6;
+}
+
+.btn-restore-appointment:hover {
+  border-color: #97be9f;
+  background: #eaf7ee;
 }
 
 @media (max-width: 640px) {

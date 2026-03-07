@@ -52,6 +52,15 @@ const adminChildren: Routes = [
     canActivate: [roleGuard],
     data: { roles: ['ADMIN'] }
   },
+  {
+    path: 'analytics/rendez-vous',
+    loadComponent: () =>
+      import('./admin/pages/admin-appointments-history/admin-appointments-history.component').then(
+        (m) => m.AdminAppointmentsHistoryComponent
+      ),
+    canActivate: [roleGuard],
+    data: { roles: ['ADMIN'] }
+  },
   { path: 'demandes', component: AdminAppointmentRequests, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'reglages', component: AdminSettings, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: '', pathMatch: 'full', redirectTo: 'planning' }

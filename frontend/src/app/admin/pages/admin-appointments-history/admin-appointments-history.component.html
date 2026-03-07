@@ -1,0 +1,153 @@
+<section class="admin-appointments-history stack">
+  <header class="card panel heading">
+    <div>
+      <h1>Tous les rendez-vous</h1>
+      <p>Historique complet de l'institut, y compris les rendez-vous supprimes.</p>
+    </div>
+    <a routerLink="/admin/analytics" class="btn btn-ghost">Retour analytics</a>
+  </header>
+
+  <article class="card panel filters-bar">
+    <label>
+      Rechercher
+      <input
+        [ngModel]="searchInput()"
+        (ngModelChange)="searchInput.set($event)"
+        (keyup.enter)="submitSearch()"
+        placeholder="Cliente, praticienne, note"
+      />
+    </label>
+
+    <label>
+      Statut
+      <select [ngModel]="statusFilter()" (ngModelChange)="setStatusFilter($event)">
+        <option value="all">Tous</option>
+        <option value="confirmed">Confirmes</option>
+        <option value="pending">En attente</option>
+        <option value="cancelled">Annules</option>
+        <option value="noShow">Absences</option>
+        <option value="completed">Termines</option>
+        <option value="deleted">Supprimes</option>
+      </select>
+    </label>
+
+    <div class="filter-actions">
+      <button type="button" class="btn btn-primary" (click)="submitSearch()">Rechercher</button>
+      <button type="button" class="btn btn-ghost" (click)="clearSearch()">Effacer</button>
+    </div>
+  </article>
+
+  @if (successMessage()) {
+    <article class="card panel success-box">{{ successMessage() }}</article>
+  }
+
+  @if (errorMessage()) {
+    <article class="card panel error-box">{{ errorMessage() }}</article>
+  }
+
+  <article class="card panel list-shell">
+    <div class="list-topbar">
+      <strong>{{ pageLabel() }}</strong>
+      <span>20 rendez-vous par page</span>
+    </div>
+
+    @if (loading()) {
+      <p class="hint">Chargement...</p>
+    } @else if (items().length === 0) {
+      <p class="hint">Aucun rendez-vous trouve.</p>
+    } @else {
+      <div class="history-list">
+        @for (item of items(); track item.id) {
+          <article class="history-item">
+            <div class="history-main">
+              <div class="history-head">
+                <div>
+                  <h2>{{ item.client.name }}</h2>
+                  <p>{{ formatDateTime(item.startsAt) }} - {{ item.staff.name }}</p>
+                </div>
+                <span class="status-pill" [class]="statusClass(item)">{{ statusLabel(item) }}</span>
+              </div>
+
+              <p><strong>Services :</strong> {{ item.services.join(', ') || 'Aucun service' }}</p>
+              <p><strong>Montant :</strong> {{ formatMoney(item.totalPrice) }}</p>
+              @if (item.client.phone || item.client.email) {
+                <p>
+                  <strong>Contact :</strong>
+                  {{ item.client.phone || '-' }}
+                  @if (item.client.phone && item.client.email) {
+                    <span> - </span>
+                  }
+                  {{ item.client.email || '' }}
+                </p>
+              }
+              @if (item.notes) {
+                <p><strong>Notes :</strong> {{ item.notes }}</p>
+              }
+              @if (item.deletedAt) {
+                <p class="meta-line"><strong>Supprime le :</strong> {{ formatDateTime(item.deletedAt) }}</p>
+              }
+            </div>
+
+            <div class="history-actions">
+              @if (canCancel(item)) {
+                <button
+                  type="button"
+                  class="btn btn-ghost"
+                  [disabled]="actionLoadingId() === item.id"
+                  (click)="cancel(item)"
+                >
+                  Annuler
+                </button>
+              }
+              @if (canRestoreCancel(item)) {
+                <button
+                  type="button"
+                  class="btn btn-ghost"
+                  [disabled]="actionLoadingId() === item.id"
+                  (click)="restoreCancellation(item)"
+                >
+                  Desannuler
+                </button>
+              }
+              @if (canDelete(item)) {
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-danger"
+                  [disabled]="actionLoadingId() === item.id"
+                  (click)="delete(item)"
+                >
+                  Supprimer
+                </button>
+              }
+              @if (canUndelete(item)) {
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-restore"
+                  [disabled]="actionLoadingId() === item.id"
+                  (click)="undelete(item)"
+                >
+                  Restaurer
+                </button>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+
+    <footer class="pagination-bar">
+      <button type="button" class="btn btn-ghost" [disabled]="loading() || page() <= 1" (click)="previousPage()">
+        Precedent
+      </button>
+      <span>Page {{ page() }} / {{ totalPages() }}</span>
+      <button
+        type="button"
+        class="btn btn-ghost"
+        [disabled]="loading() || page() >= totalPages()"
+        (click)="nextPage()"
+      >
+        Suivant
+      </button>
+    </footer>
+  </article>
+</section>

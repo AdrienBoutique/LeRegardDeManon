@@ -99,6 +99,7 @@ adminPlanningRouter.get("/planning", async (req, res) => {
       prisma.appointment.findMany({
         where: {
           ...(query.staffId ? { staffMemberId: query.staffId } : {}),
+          deletedAt: null,
           startsAt: {
             gte: startLocal.toUTC().toJSDate(),
             lt: endLocal.toUTC().toJSDate(),

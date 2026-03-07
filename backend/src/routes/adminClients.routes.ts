@@ -177,26 +177,28 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       history,
     ] = await Promise.all([
       prisma.appointment.count({
-        where: { clientId: id },
+        where: { clientId: id, deletedAt: null },
       }),
       prisma.appointment.count({
-        where: { clientId: id, status: AppointmentStatus.PENDING },
+        where: { clientId: id, status: AppointmentStatus.PENDING, deletedAt: null },
       }),
       prisma.appointment.count({
-        where: { clientId: id, status: AppointmentStatus.CANCELLED },
+        where: { clientId: id, status: AppointmentStatus.CANCELLED, deletedAt: null },
       }),
       prisma.appointment.count({
-        where: { clientId: id, status: AppointmentStatus.NO_SHOW },
+        where: { clientId: id, status: AppointmentStatus.NO_SHOW, deletedAt: null },
       }),
       prisma.appointment.count({
         where: {
           clientId: id,
+          deletedAt: null,
           status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED] },
         },
       }),
       prisma.appointment.aggregate({
         where: {
           clientId: id,
+          deletedAt: null,
           status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED] },
           startsAt: { lt: now },
         },
@@ -205,6 +207,7 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       prisma.appointment.count({
         where: {
           clientId: id,
+          deletedAt: null,
           status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED] },
           startsAt: { lt: now },
         },
@@ -212,6 +215,7 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       prisma.appointment.findFirst({
         where: {
           clientId: id,
+          deletedAt: null,
           startsAt: { lt: now },
         },
         orderBy: { startsAt: "desc" },
@@ -242,6 +246,7 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       prisma.appointment.findFirst({
         where: {
           clientId: id,
+          deletedAt: null,
           startsAt: { gte: now },
           status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
         },
@@ -271,7 +276,7 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
         },
       }),
       prisma.appointment.findMany({
-        where: { clientId: id },
+        where: { clientId: id, deletedAt: null },
         orderBy: { startsAt: "desc" },
         take: 50,
         select: {
@@ -400,6 +405,7 @@ adminClientsRouter.delete("/:id/appointments/:appointmentId", async (req, res) =
       where: {
         id: appointmentId,
         clientId: id,
+        deletedAt: null,
       },
       select: { id: true },
     });
@@ -409,8 +415,9 @@ adminClientsRouter.delete("/:id/appointments/:appointmentId", async (req, res) =
       return;
     }
 
-    await prisma.appointment.delete({
+    await prisma.appointment.update({
       where: { id: appointment.id },
+      data: { deletedAt: new Date() },
     });
 
     res.json({ ok: true });
@@ -500,7 +507,7 @@ adminClientsRouter.delete("/:id", async (req, res) => {
     }
 
     const appointmentsCount = await prisma.appointment.count({
-      where: { clientId: req.params.id },
+      where: { clientId: req.params.id, deletedAt: null },
     });
 
     if (appointmentsCount > 0) {

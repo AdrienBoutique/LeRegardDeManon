@@ -66,6 +66,7 @@ export async function isSlotAvailable(input: SlotAvailabilityInput): Promise<boo
     prisma.appointment.findMany({
       where: {
         staffMemberId: input.practitionerId,
+        deletedAt: null,
         status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
         startsAt: { lt: dayEndUtc },
         endsAt: { gt: dayStartUtc },

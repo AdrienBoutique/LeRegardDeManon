@@ -388,6 +388,9 @@ export class AdminPlanning {
 
     const top = ((fromMin - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT;
     const height = Math.max(30, ((toMin - fromMin) / SLOT_MIN) * SLOT_HEIGHT);
+    const isCancelled = item.status === 'CANCELLED';
+    const visualTop = isCancelled ? top + 4 : top + 1;
+    const visualHeight = isCancelled ? Math.min(28, Math.max(18, height - 8)) : height - 2;
 
     const border = this.sanitizeHex(item.staffColorHex, this.fallbackStaffColor);
     const bg = this.hexToRgba(border, 0.45);
@@ -395,8 +398,10 @@ export class AdminPlanning {
     const serviceColor = this.sanitizeHex(item.serviceColorHex ?? border, this.fallbackServiceColor);
 
     return {
-      top: `${top + 1}px`,
-      height: `${height - 2}px`,
+      top: `${visualTop}px`,
+      height: `${visualHeight}px`,
+      left: isCancelled ? '0.9rem' : '0.35rem',
+      right: isCancelled ? '0.9rem' : '0.35rem',
       '--apptBg': bg,
       '--apptBorder': border,
       '--apptText': text,

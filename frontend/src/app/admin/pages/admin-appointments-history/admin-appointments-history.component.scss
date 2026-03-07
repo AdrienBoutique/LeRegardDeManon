@@ -1,0 +1,199 @@
+.admin-appointments-history {
+  gap: 1rem;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.heading h1 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.heading p {
+  margin: 0.35rem 0 0;
+  color: #6c5b4e;
+}
+
+.filters-bar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 220px auto;
+  gap: 0.8rem;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 0.28rem;
+  color: #5d4a3c;
+  font-weight: 600;
+}
+
+input,
+select {
+  width: 100%;
+  border: 1px solid #d9c7b8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.62rem 0.72rem;
+  font: inherit;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.success-box {
+  color: #2d6240;
+  border: 1px solid #cce3d1;
+  background: #f3faf4;
+}
+
+.error-box {
+  color: #9f1f1f;
+  border: 1px solid #edc8c8;
+  background: #fff7f7;
+}
+
+.list-shell {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.list-topbar,
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #6b5a4d;
+}
+
+.history-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.history-item {
+  border: 1px solid #e5d4c6;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffdfb, #faf3ed);
+  padding: 0.9rem 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+}
+
+.history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.history-head h2 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.history-head p,
+.history-main p {
+  margin: 0.25rem 0 0;
+  color: #5f4e42;
+}
+
+.history-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: stretch;
+  min-width: 148px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #d8c5b5;
+  background: #fff8f2;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-pill.is-confirmed {
+  color: #365b2f;
+  border-color: #b8d2ae;
+  background: #f5fbf1;
+}
+
+.status-pill.is-pending {
+  color: #7c5c1d;
+  border-color: #e4d2a4;
+  background: #fff9eb;
+}
+
+.status-pill.is-cancelled,
+.status-pill.is-deleted {
+  color: #8e3d3d;
+  border-color: #e2bcbc;
+  background: #fff5f5;
+}
+
+.status-pill.is-no-show {
+  color: #6a4d1f;
+  border-color: #dcc39c;
+  background: #fbf4e6;
+}
+
+.status-pill.is-completed {
+  color: #4e4a45;
+  border-color: #d7d1ca;
+  background: #f6f4f2;
+}
+
+.btn-danger {
+  border-color: #e2b8b8;
+  color: #8a1f1f;
+  background: #fff5f5;
+}
+
+.btn-restore {
+  border-color: #b7d2bf;
+  color: #2d6240;
+  background: #f4fbf6;
+}
+
+.meta-line {
+  font-size: 0.88rem;
+}
+
+.hint {
+  color: #6c5b4e;
+}
+
+@media (max-width: 900px) {
+  .heading,
+  .filters-bar,
+  .history-item,
+  .pagination-bar,
+  .list-topbar {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-actions {
+    min-width: 0;
+  }
+}

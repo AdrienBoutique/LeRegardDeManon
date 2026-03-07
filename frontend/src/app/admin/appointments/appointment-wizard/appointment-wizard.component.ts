@@ -52,7 +52,7 @@ export class AppointmentWizardComponent {
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
   protected readonly deleteConfirmOpen = signal(false);
-  protected readonly confirmAction = signal<'cancel' | 'delete'>('cancel');
+  protected readonly confirmAction = signal<'cancel' | 'delete' | 'restore'>('cancel');
   protected readonly errorMessage = signal('');
 
   protected readonly filteredClients = computed(() => {
@@ -319,6 +319,10 @@ export class AppointmentWizardComponent {
     this.ui.setPartial({ notes: value });
   }
 
+  protected isCancelledAppointment(): boolean {
+    return this.mode() === 'edit' && this.draft().status === 'cancelled';
+  }
+
   protected startAtInputValue(): string {
     const raw = this.draft().startAt;
     if (!raw) {
@@ -445,6 +449,14 @@ export class AppointmentWizardComponent {
     this.deleteConfirmOpen.set(true);
   }
 
+  protected requestRestoreConfirmation(): void {
+    if (!this.isCancelledAppointment() || this.deleting() || this.saving()) {
+      return;
+    }
+    this.confirmAction.set('restore');
+    this.deleteConfirmOpen.set(true);
+  }
+
   protected cancelDeleteConfirmation(): void {
     this.deleteConfirmOpen.set(false);
   }
@@ -467,7 +479,9 @@ export class AppointmentWizardComponent {
     const request$ =
       this.confirmAction() === 'cancel'
         ? this.appointmentsApi.cancelAppointment(id)
-        : this.appointmentsApi.deleteAppointment(id);
+        : this.confirmAction() === 'restore'
+          ? this.appointmentsApi.restoreAppointment(id)
+          : this.appointmentsApi.deleteAppointment(id);
 
     request$
       .pipe(finalize(() => this.deleting.set(false)))
@@ -483,21 +497,43 @@ export class AppointmentWizardComponent {
   }
 
   protected confirmTitle(): string {
-    return this.confirmAction() === 'cancel' ? 'Annuler ce rendez-vous ?' : 'Supprimer ce rendez-vous ?';
+    if (this.confirmAction() === 'cancel') {
+      return 'Annuler ce rendez-vous ?';
+    }
+    if (this.confirmAction() === 'restore') {
+      return 'Desannuler ce rendez-vous ?';
+    }
+    return 'Supprimer ce rendez-vous ?';
   }
 
   protected confirmMessage(): string {
-    return this.confirmAction() === 'cancel'
-      ? 'Le rendez-vous restera visible dans le planning et comptera comme annule dans les statistiques.'
-      : 'Le rendez-vous sera supprime definitivement du planning et ne comptera plus dans les statistiques.';
+    if (this.confirmAction() === 'cancel') {
+      return 'Le rendez-vous restera visible dans le planning et comptera comme annule dans les statistiques.';
+    }
+    if (this.confirmAction() === 'restore') {
+      return 'Le rendez-vous redeviendra actif uniquement si le creneau est toujours libre.';
+    }
+    return 'Le rendez-vous sera supprime definitivement du planning et ne comptera plus dans les statistiques.';
   }
 
   protected confirmButtonLabel(): string {
     if (this.deleting()) {
-      return this.confirmAction() === 'cancel' ? 'Annulation...' : 'Suppression...';
+      if (this.confirmAction() === 'cancel') {
+        return 'Annulation...';
+      }
+      if (this.confirmAction() === 'restore') {
+        return 'Desannulation...';
+      }
+      return 'Suppression...';
     }
 
-    return this.confirmAction() === 'cancel' ? "Confirmer l'annulation" : 'Confirmer la suppression';
+    if (this.confirmAction() === 'cancel') {
+      return "Confirmer l'annulation";
+    }
+    if (this.confirmAction() === 'restore') {
+      return 'Confirmer la desannulation';
+    }
+    return 'Confirmer la suppression';
   }
 
   private triggerConflictCheck(): void {
@@ -636,6 +672,9 @@ export class AppointmentWizardComponent {
     }
     if (normalized.includes('conflict')) {
       return 'Conflit detecte: ce creneau est deja pris.';
+    }
+    if (normalized.includes('impossible de desannuler')) {
+      return 'Impossible de desannuler: le creneau est deja repris par un autre rendez-vous.';
     }
     if (normalized.includes('not found')) {
       return 'Rendez-vous introuvable.';
