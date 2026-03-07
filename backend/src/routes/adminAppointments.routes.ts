@@ -6,7 +6,11 @@ import { prisma } from "../lib/prisma";
 import { authAdmin } from "../middlewares/authAdmin";
 import { isSlotAvailable } from "../services/appointments/availability";
 import { sendConfirmedIfNeeded, sendRejectedIfNeeded } from "../services/email/appointmentEmails";
-import { sendConfirmationSmsIfNeeded } from "../services/sms/appointmentSms";
+import {
+  sendAppointmentCancellationSms,
+  sendAppointmentConfirmationSms,
+  sendAppointmentRescheduleSms,
+} from "../jobs/appointmentSmsReminders.job";
 
 const rejectSchema = z.object({
   reason: z.string().trim().max(500).optional(),
@@ -213,6 +217,7 @@ adminAppointmentsRouter.delete("/appointments/:id", async (req, res) => {
     });
 
     res.json({ ok: true, status: AppointmentStatus.CANCELLED });
+    void sendAppointmentCancellationSms(appointment.id);
   } catch (error) {
     console.error("[adminAppointments.delete]", error);
     res.status(500).json({ error: "Internal server error" });
@@ -243,6 +248,9 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
           id: true,
           clientId: true,
           status: true,
+          staffMemberId: true,
+          startsAt: true,
+          endsAt: true,
         },
       });
 
@@ -397,6 +405,12 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
         clientName: `${appointment.client.firstName} ${appointment.client.lastName}`.trim(),
         notes: appointment.notes ?? undefined,
         status: toDraftStatus(appointment.status),
+        shouldSendRescheduleSms:
+          existing.status === AppointmentStatus.CONFIRMED &&
+          appointment.status === AppointmentStatus.CONFIRMED &&
+          (existing.staffMemberId !== payload.practitionerId ||
+            existing.startsAt.getTime() !== startAtUtc.getTime() ||
+            existing.endsAt.getTime() !== endAtUtc.getTime()),
       };
     });
 
@@ -406,6 +420,9 @@ adminAppointmentsRouter.patch("/appointments/:id", async (req, res) => {
     }
 
     res.json(updated);
+    if (updated.shouldSendRescheduleSms) {
+      void sendAppointmentRescheduleSms(updated.id);
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid appointment payload" });
@@ -560,7 +577,7 @@ adminAppointmentsRouter.post("/appointments/:id/accept", async (req, res) => {
 
     const [emailResult, smsResult] = await Promise.all([
       sendConfirmedIfNeeded(appointment.id),
-      sendConfirmationSmsIfNeeded(appointment.id),
+      sendAppointmentConfirmationSms(appointment.id),
     ]);
     res.json({
       ok: true,

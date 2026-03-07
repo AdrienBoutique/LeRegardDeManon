@@ -65,6 +65,115 @@
           </button>
         </div>
       </div>
+
+      <form class="sms-section" [formGroup]="smsForm" (ngSubmit)="saveSmsSettings()">
+        <div class="section-head">
+          <div>
+            <h2>Notifications SMS</h2>
+            <p class="hint">Activez les envois SMS et choisissez quels messages peuvent partir automatiquement.</p>
+          </div>
+          <label class="switch-card">
+            <span class="switch-copy">
+              <strong>Activer les SMS</strong>
+              <small>Coupe globalement tous les envois SMS automatiques.</small>
+            </span>
+            <input
+              type="checkbox"
+              formControlName="smsEnabled"
+              [disabled]="saving()"
+              (change)="setSmsEnabled($any($event.target).checked)"
+            />
+          </label>
+        </div>
+
+        <div class="sms-body" [class.disabled]="smsOptionsDisabled()">
+          <div class="toggles-grid">
+            <label class="switch-card">
+              <span class="switch-copy">
+                <strong>SMS de confirmation</strong>
+                <small>Envoye juste apres confirmation du rendez-vous.</small>
+              </span>
+              <input type="checkbox" formControlName="smsConfirmationEnabled" [disabled]="smsOptionsDisabled()" />
+            </label>
+
+            <label class="switch-card">
+              <span class="switch-copy">
+                <strong>SMS de rappel 24h avant</strong>
+                <small>Rappel automatique la veille du rendez-vous.</small>
+              </span>
+              <input type="checkbox" formControlName="smsReminder24hEnabled" [disabled]="smsOptionsDisabled()" />
+            </label>
+
+            <label class="switch-card">
+              <span class="switch-copy">
+                <strong>SMS de rappel 2h avant</strong>
+                <small>Rappel court peu avant le rendez-vous.</small>
+              </span>
+              <input type="checkbox" formControlName="smsReminder2hEnabled" [disabled]="smsOptionsDisabled()" />
+            </label>
+
+            <label class="switch-card">
+              <span class="switch-copy">
+                <strong>SMS d'annulation</strong>
+                <small>Previent la cliente si le rendez-vous est annule.</small>
+              </span>
+              <input type="checkbox" formControlName="smsCancellationEnabled" [disabled]="smsOptionsDisabled()" />
+            </label>
+
+            <label class="switch-card">
+              <span class="switch-copy">
+                <strong>SMS de modification</strong>
+                <small>Envoye les changements d'horaire ou de rendez-vous.</small>
+              </span>
+              <input type="checkbox" formControlName="smsRescheduleEnabled" [disabled]="smsOptionsDisabled()" />
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              Expediteur SMS
+              <input type="text" formControlName="smsSender" maxlength="30" [disabled]="smsOptionsDisabled()" placeholder="Manon" />
+            </label>
+          </div>
+
+          @if (smsForm.controls.smsSender.touched && smsForm.controls.smsSender.hasError('maxlength')) {
+            <p class="error-inline">L'expediteur ne peut pas depasser 30 caracteres.</p>
+          }
+
+          <div class="templates-grid">
+            <label>
+              Modele confirmation
+              <textarea rows="3" formControlName="smsTemplateConfirmation" [disabled]="smsOptionsDisabled()"></textarea>
+            </label>
+
+            <label>
+              Modele rappel 24h
+              <textarea rows="3" formControlName="smsTemplateReminder24h" [disabled]="smsOptionsDisabled()"></textarea>
+            </label>
+
+            <label>
+              Modele rappel 2h
+              <textarea rows="3" formControlName="smsTemplateReminder2h" [disabled]="smsOptionsDisabled()"></textarea>
+            </label>
+
+            <label>
+              Modele annulation
+              <textarea rows="3" formControlName="smsTemplateCancellation" [disabled]="smsOptionsDisabled()"></textarea>
+            </label>
+
+            <label>
+              Modele modification de rendez-vous
+              <textarea rows="3" formControlName="smsTemplateReschedule" [disabled]="smsOptionsDisabled()"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </form>
     }
   </article>
 </section>

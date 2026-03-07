@@ -190,13 +190,25 @@ model Appointment {
 }
 
 model InstituteSettings {
-  id          String     @id @default(cuid())
-  instituteId String?    @unique
-  bookingMode BookingMode @default(MANUAL)
-  showAvailabilityDots Boolean @default(true)
-  availabilityDisplayMode String @default("dots")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                      String      @id @default(cuid())
+  instituteId             String?     @unique
+  bookingMode             BookingMode @default(MANUAL)
+  showAvailabilityDots    Boolean     @default(true)
+  availabilityDisplayMode String      @default("dots")
+  smsEnabled              Boolean     @default(true)
+  smsConfirmationEnabled  Boolean     @default(true)
+  smsReminder24hEnabled   Boolean     @default(true)
+  smsReminder2hEnabled    Boolean     @default(false)
+  smsCancellationEnabled  Boolean     @default(true)
+  smsRescheduleEnabled    Boolean     @default(true)
+  smsSender               String?     @default("Manon")
+  smsTemplateConfirmation String?     @default("{establishmentName} : bonjour {clientName}, votre rendez-vous est confirme le {date} a {time}. A bientot.")
+  smsTemplateReminder24h  String?     @default("{establishmentName} : rappel de votre rendez-vous demain, le {date} a {time}. A bientot.")
+  smsTemplateReminder2h   String?     @default("{establishmentName} : rappel, votre rendez-vous est dans 2h a {time}. A tout a l'heure.")
+  smsTemplateCancellation String?     @default("{establishmentName} : votre rendez-vous du {date} a {time} a ete annule. Merci de nous contacter si besoin.")
+  smsTemplateReschedule   String?     @default("{establishmentName} : votre rendez-vous a ete modifie. Nouveau creneau : {date} a {time}.")
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
 }
 
 model AppointmentItem {

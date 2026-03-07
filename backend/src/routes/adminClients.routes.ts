@@ -48,6 +48,11 @@ const clientParamsSchema = z.object({
   id: z.string().trim().min(1),
 });
 
+const clientAppointmentParamsSchema = z.object({
+  id: z.string().trim().min(1),
+  appointmentId: z.string().trim().min(1),
+});
+
 function mapClient(client: {
   id: string;
   firstName: string;
@@ -369,6 +374,49 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       return;
     }
     console.error("[adminClients.stats]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminClientsRouter.delete("/:id/appointments/:appointmentId", async (req, res) => {
+  try {
+    const { id, appointmentId } = parseOrThrow(clientAppointmentParamsSchema, req.params);
+
+    const client = await prisma.client.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!client) {
+      res.status(404).json({ error: "Client introuvable." });
+      return;
+    }
+
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        id: appointmentId,
+        clientId: id,
+      },
+      select: { id: true },
+    });
+
+    if (!appointment) {
+      res.status(404).json({ error: "Rendez-vous introuvable." });
+      return;
+    }
+
+    await prisma.appointment.delete({
+      where: { id: appointment.id },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[adminClients.deleteAppointment]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -95,4 +95,8 @@ export class AdminClientsApiService {
   getStats(id: string): Observable<AdminClientStats> {
     return this.http.get<AdminClientStats>(`${this.baseUrl}/${id}/stats`);
   }
+
+  deleteAppointment(clientId: string, appointmentId: string): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(`${this.baseUrl}/${clientId}/appointments/${appointmentId}`);
+  }
 }

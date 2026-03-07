@@ -191,7 +191,17 @@
                   <article class="history-item">
                     <div class="history-top">
                       <strong>{{ formatDate(item.startsAt) }}</strong>
-                      <span class="chip">{{ mapStatusLabel(item.status) }}</span>
+                      <div class="history-top-actions">
+                        <span class="chip">{{ mapStatusLabel(item.status) }}</span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-compact"
+                          [disabled]="deletingHistoryAppointmentId() === item.id"
+                          (click)="deleteHistoryAppointment(item.id)"
+                        >
+                          {{ deletingHistoryAppointmentId() === item.id ? 'Suppression...' : 'Supprimer' }}
+                        </button>
+                      </div>
                     </div>
                     <p><strong>Praticienne:</strong> {{ item.staffName }}</p>
                     <p><strong>Services:</strong> {{ item.services.join(' + ') || '-' }}</p>

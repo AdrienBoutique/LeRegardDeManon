@@ -11,7 +11,7 @@ import {
 import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 import { sendConfirmationEmailIfNeeded } from "../services/email/appointmentEmails";
-import { sendConfirmationSmsIfNeeded } from "../services/sms/appointmentSms";
+import { sendAppointmentConfirmationSms } from "../jobs/appointmentSmsReminders.job";
 import { sendPendingAppointmentPush } from "../services/push/appointmentPush";
 
 class HttpError extends Error {
@@ -498,7 +498,7 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
 
     if (created.appointment.status === AppointmentStatus.CONFIRMED) {
       void sendConfirmationEmailIfNeeded(created.appointment.id);
-      void sendConfirmationSmsIfNeeded(created.appointment.id);
+      void sendAppointmentConfirmationSms(created.appointment.id);
     } else if (created.appointment.status === AppointmentStatus.PENDING) {
       void sendPendingAppointmentPush(created.appointment.id).catch((error) => {
         console.warn(

@@ -5,7 +5,22 @@ import { environment } from '../../../environments/environment';
 
 export type BookingMode = 'MANUAL' | 'AUTO_INTELLIGENT';
 export type AvailabilityDisplayMode = 'dots' | 'colors';
-export type AdminSettings = {
+export type AdminSmsSettings = {
+  smsEnabled: boolean;
+  smsConfirmationEnabled: boolean;
+  smsReminder24hEnabled: boolean;
+  smsReminder2hEnabled: boolean;
+  smsCancellationEnabled: boolean;
+  smsRescheduleEnabled: boolean;
+  smsSender: string | null;
+  smsTemplateConfirmation: string | null;
+  smsTemplateReminder24h: string | null;
+  smsTemplateReminder2h: string | null;
+  smsTemplateCancellation: string | null;
+  smsTemplateReschedule: string | null;
+};
+
+export type AdminSettings = AdminSmsSettings & {
   bookingMode: BookingMode;
   showAvailabilityDots: boolean;
   availabilityDisplayMode: AvailabilityDisplayMode;

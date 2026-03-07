@@ -30,6 +30,7 @@ export class AdminClients {
   protected readonly statsOpen = signal(false);
   protected readonly statsLoading = signal(false);
   protected readonly statsError = signal('');
+  protected readonly deletingHistoryAppointmentId = signal<string | null>(null);
   protected readonly activeStatsClient = signal<AdminClientItem | null>(null);
   protected readonly clientStats = signal<AdminClientStats | null>(null);
 
@@ -112,10 +113,14 @@ export class AdminClients {
     this.clientStats.set(null);
     this.statsError.set('');
     this.statsOpen.set(true);
+    this.loadStats(client.id);
+  }
+
+  private loadStats(clientId: string): void {
     this.statsLoading.set(true);
 
     this.api
-      .getStats(client.id)
+      .getStats(clientId)
       .pipe(finalize(() => this.statsLoading.set(false)))
       .subscribe({
         next: (stats) => this.clientStats.set(stats),
@@ -127,6 +132,35 @@ export class AdminClients {
     this.statsOpen.set(false);
     this.statsError.set('');
     this.clientStats.set(null);
+    this.deletingHistoryAppointmentId.set(null);
+  }
+
+  protected deleteHistoryAppointment(appointmentId: string): void {
+    const client = this.activeStatsClient();
+    if (!client || this.deletingHistoryAppointmentId()) {
+      return;
+    }
+
+    const confirmed = window.confirm('Supprimer ce rendez-vous de l historique ? Cette action est definitive.');
+    if (!confirmed) {
+      return;
+    }
+
+    this.deletingHistoryAppointmentId.set(appointmentId);
+    this.statsError.set('');
+
+    this.api
+      .deleteAppointment(client.id, appointmentId)
+      .pipe(finalize(() => this.deletingHistoryAppointmentId.set(null)))
+      .subscribe({
+        next: () => {
+          this.fetchClients();
+          this.loadStats(client.id);
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.statsError.set(error.error?.error ?? 'Suppression du rendez-vous impossible.');
+        }
+      });
   }
 
   protected requestDelete(clientId: string): void {
