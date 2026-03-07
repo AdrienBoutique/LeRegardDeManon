@@ -50,6 +50,8 @@ export class AppointmentWizardComponent {
   protected readonly loadingStaffServices = signal(false);
   protected readonly staffServiceIds = signal<Set<string> | null>(null);
   protected readonly saving = signal(false);
+  protected readonly deleting = signal(false);
+  protected readonly deleteConfirmOpen = signal(false);
   protected readonly errorMessage = signal('');
 
   protected readonly filteredClients = computed(() => {
@@ -191,6 +193,7 @@ export class AppointmentWizardComponent {
   }
 
   protected close(): void {
+    this.deleteConfirmOpen.set(false);
     this.ui.close();
   }
 
@@ -420,6 +423,46 @@ export class AppointmentWizardComponent {
         this.errorMessage.set(this.extractSaveErrorMessage(error));
       }
     });
+  }
+
+  protected requestDeleteConfirmation(): void {
+    if (this.mode() !== 'edit' || this.deleting() || this.saving()) {
+      return;
+    }
+    this.deleteConfirmOpen.set(true);
+  }
+
+  protected cancelDeleteConfirmation(): void {
+    this.deleteConfirmOpen.set(false);
+  }
+
+  protected confirmDeleteCurrentAppointment(): void {
+    if (this.mode() !== 'edit' || this.deleting() || this.saving()) {
+      return;
+    }
+
+    const id = this.editingId();
+    if (!id) {
+      this.errorMessage.set('Suppression impossible: rendez-vous introuvable.');
+      return;
+    }
+
+    this.deleting.set(true);
+    this.deleteConfirmOpen.set(false);
+    this.errorMessage.set('');
+
+    this.appointmentsApi
+      .deleteAppointment(id)
+      .pipe(finalize(() => this.deleting.set(false)))
+      .subscribe({
+        next: () => {
+          this.ui.notifySaved();
+          this.ui.close();
+        },
+        error: (error) => {
+          this.errorMessage.set(this.extractSaveErrorMessage(error));
+        }
+      });
   }
 
   private triggerConflictCheck(): void {

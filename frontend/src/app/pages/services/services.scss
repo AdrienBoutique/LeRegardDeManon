@@ -177,6 +177,7 @@
   padding: 0.9rem;
   display: grid;
   gap: 0.62rem;
+  grid-template-rows: 1fr auto auto;
 }
 
 .service-card h3 {
@@ -206,6 +207,11 @@
 
 .price {
   font-size: 1.02rem;
+}
+
+.details-btn {
+  width: 100%;
+  min-height: 44px;
 }
 
 .empty-state {

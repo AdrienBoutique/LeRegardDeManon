@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,15 +9,20 @@ import { environment } from '../../../../environments/environment';
 import 'chart.js/auto';
 
 type AdvancedDashboardResponse = {
+  period?: 'week' | 'month';
   revenue: {
     today: number;
     week: number;
     month: number;
+    period?: number;
     revenuePerDayLast7Days: Array<{ date: string; sum: number }>;
+    revenuePerPeriod?: Array<{ date: string; sum: number }>;
   };
   appointments: {
     totalWeekConfirmed: number;
     totalWeekCancelled: number;
+    totalPeriodConfirmed?: number;
+    totalPeriodCancelled?: number;
     cancellationRate: number;
   };
   clients: {
@@ -38,6 +43,12 @@ type AdvancedDashboardResponse = {
     fri: number;
     sat: number;
     sun: number;
+  };
+  trend?: {
+    labels: string[];
+    revenue: number[];
+    confirmed: number[];
+    cancelled: number[];
   };
 };
 
@@ -63,6 +74,7 @@ export class AdminAnalyticsComponent {
   protected readonly errorMessage = signal('');
   protected readonly data = signal<AdvancedDashboardResponse | null>(null);
   protected readonly heatmap = signal<HeatmapItem[]>([]);
+  protected readonly period = signal<'week' | 'month'>('week');
 
   protected readonly revenueChartData = signal<ChartConfiguration<'line'>['data']>({
     labels: [],
@@ -91,7 +103,49 @@ export class AdminAnalyticsComponent {
     scales: {
       y: {
         ticks: {
-          callback: (value) => `${value} €`
+          callback: (value) => `${value} EUR`
+        }
+      }
+    }
+  };
+
+  protected readonly appointmentRateChartData = signal<ChartConfiguration<'line'>['data']>({
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        label: 'Confirmes',
+        borderColor: '#6f8f5b',
+        backgroundColor: 'rgba(111, 143, 91, 0.16)',
+        fill: true,
+        tension: 0.25,
+        pointRadius: 3
+      },
+      {
+        data: [],
+        label: 'Annules',
+        borderColor: '#b05a5a',
+        backgroundColor: 'rgba(176, 90, 90, 0.12)',
+        fill: true,
+        tension: 0.25,
+        pointRadius: 3
+      }
+    ]
+  });
+
+  protected readonly appointmentRateChartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
         }
       }
     }
@@ -107,6 +161,16 @@ export class AdminAnalyticsComponent {
 
   protected goToRequests(): void {
     void this.router.navigateByUrl('/admin/demandes');
+  }
+
+  protected setPeriod(value: string): void {
+    const normalized: 'week' | 'month' = value === 'month' ? 'month' : 'week';
+    this.period.set(normalized);
+    this.fetch();
+  }
+
+  protected periodLabel(): string {
+    return this.period() === 'month' ? 'mois' : 'semaine';
   }
 
   protected formatEuro(value: number): string {
@@ -129,22 +193,31 @@ export class AdminAnalyticsComponent {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    this.http.get<AdvancedDashboardResponse>(`${environment.apiUrl}/api/admin/dashboard/advanced`).subscribe({
-      next: (response) => {
-        this.data.set(response);
-        this.updateChart(response);
-        this.updateHeatmap(response.weeklyPlanningHeatmap);
-        this.loading.set(false);
-      },
-      error: (error: { error?: { error?: string } }) => {
-        this.errorMessage.set(error.error?.error ?? 'Chargement analytics impossible.');
-        this.loading.set(false);
-      }
-    });
+    const period = this.period();
+    this.http
+      .get<AdvancedDashboardResponse>(`${environment.apiUrl}/api/admin/dashboard/advanced?period=${period}`)
+      .subscribe({
+        next: (response) => {
+          this.data.set(response);
+          this.updateRevenueChart(response);
+          this.updateAppointmentRateChart(response);
+          this.updateHeatmap(response.weeklyPlanningHeatmap);
+          this.loading.set(false);
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? 'Chargement analytics impossible.');
+          this.loading.set(false);
+        }
+      });
   }
 
-  private updateChart(response: AdvancedDashboardResponse): void {
-    const rows = response.revenue.revenuePerDayLast7Days ?? [];
+  private updateRevenueChart(response: AdvancedDashboardResponse): void {
+    const trend = response.trend;
+    const rows =
+      trend?.labels?.length
+        ? trend.labels.map((label, index) => ({ date: label, sum: trend.revenue[index] ?? 0 }))
+        : response.revenue.revenuePerPeriod ?? response.revenue.revenuePerDayLast7Days ?? [];
+
     this.revenueChartData.set({
       labels: rows.map((item) => item.date),
       datasets: [
@@ -157,6 +230,38 @@ export class AdminAnalyticsComponent {
           tension: 0.28,
           pointRadius: 3,
           pointHoverRadius: 4
+        }
+      ]
+    });
+  }
+
+  private updateAppointmentRateChart(response: AdvancedDashboardResponse): void {
+    const trend = response.trend;
+    if (!trend || trend.labels.length === 0) {
+      this.appointmentRateChartData.set({ labels: [], datasets: [] });
+      return;
+    }
+
+    this.appointmentRateChartData.set({
+      labels: trend.labels,
+      datasets: [
+        {
+          data: trend.confirmed,
+          label: 'Confirmes',
+          borderColor: '#6f8f5b',
+          backgroundColor: 'rgba(111, 143, 91, 0.16)',
+          fill: true,
+          tension: 0.25,
+          pointRadius: 3
+        },
+        {
+          data: trend.cancelled,
+          label: 'Annules',
+          borderColor: '#b05a5a',
+          backgroundColor: 'rgba(176, 90, 90, 0.12)',
+          fill: true,
+          tension: 0.25,
+          pointRadius: 3
         }
       ]
     });

@@ -80,7 +80,7 @@
               <div class="stack">
                 <p class="chip">{{ service.category }}</p>
                 <h3>{{ service.name }}</h3>
-                <p class="summary">{{ service.description }}</p>
+                <p class="summary">{{ previewDescription(service.description) }}</p>
               </div>
 
               <div class="bottom">
@@ -88,7 +88,7 @@
                 <p class="price">{{ formatPrice(service.priceCents) }}</p>
               </div>
 
-              <a [routerLink]="['/soins', service.id]" class="btn btn-ghost">Voir le detail</a>
+              <a [routerLink]="['/soins', service.id]" class="btn btn-ghost details-btn">Voir le detail</a>
             </article>
           }
         </div>

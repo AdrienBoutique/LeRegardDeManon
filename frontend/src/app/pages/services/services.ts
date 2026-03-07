@@ -23,6 +23,7 @@ type SearchSuggestion = {
   styleUrl: './services.scss'
 })
 export class Services {
+  private readonly previewWords = 20;
   private readonly servicesData = inject(ServicesDataService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly services = toSignal(this.servicesData.list(), { initialValue: [] as ServiceItem[] });
@@ -178,6 +179,15 @@ export class Services {
       currency: 'EUR',
       maximumFractionDigits: 0
     }).format(priceCents / 100);
+  }
+
+  protected previewDescription(description: string): string {
+    const words = description.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= this.previewWords) {
+      return description;
+    }
+
+    return `${words.slice(0, this.previewWords).join(' ')}...`;
   }
 
   private toCategoryId(category: string): string {

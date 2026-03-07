@@ -133,6 +133,10 @@ textarea {
   padding: 1rem;
 }
 
+.stats-modal {
+  width: min(980px, 100%);
+}
+
 .modal-top {
   display: flex;
   align-items: center;
@@ -141,12 +145,61 @@ textarea {
   margin-bottom: 0.75rem;
 }
 
+.stats-subtitle {
+  margin: 0 0 0.75rem;
+}
+
+.stats-grid {
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+
+.stats-card {
+  padding: 0.85rem;
+}
+
+.stats-card p {
+  margin: 0.35rem 0 0;
+}
+
+.history-block h3 {
+  margin-top: 0.2rem;
+}
+
+.history-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.history-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  background: #fffdf9;
+}
+
+.history-item p {
+  margin: 0.25rem 0 0;
+}
+
+.history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 @media (min-width: 860px) {
   .clients-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

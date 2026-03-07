@@ -53,7 +53,11 @@ export type EligibleServicesResponse = {
 };
 
 export type CreateAppointmentPayload = {
-  serviceId: string;
+  serviceId?: string;
+  services?: Array<{
+    serviceId: string;
+    priceCents?: number;
+  }>;
   staffId?: string;
   startAt: string;
   smsConsent?: boolean;
@@ -77,11 +81,13 @@ export type CreateAppointmentResponse = {
 };
 
 export type AvailabilityLevel = 'none' | 'low' | 'mid' | 'high';
+export type AvailabilityDisplayMode = 'dots' | 'colors';
 
 export type MonthDayMeta = Record<string, { level: AvailabilityLevel }>;
 export type MonthlyAvailabilityResponse = {
   dayMeta: MonthDayMeta;
   showAvailabilityDots: boolean;
+  availabilityDisplayMode: AvailabilityDisplayMode;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -121,15 +127,19 @@ export class BookingApiService {
         dayMeta?: MonthDayMeta;
         days?: Array<{ date: string; level: AvailabilityLevel }>;
         showAvailabilityDots?: boolean;
+        availabilityDisplayMode?: AvailabilityDisplayMode;
       }>(`${environment.apiUrl}/api/public/availability/month?month=${encodeURIComponent(month)}${staffParam}`)
       .pipe(
         map((response) => {
-          const showAvailabilityDots = response.showAvailabilityDots !== false;
+          const availabilityDisplayMode =
+            response.availabilityDisplayMode ?? (response.showAvailabilityDots === false ? 'colors' : 'dots');
+          const showAvailabilityDots = availabilityDisplayMode === 'dots';
 
           if (response.dayMeta && typeof response.dayMeta === 'object') {
             return {
               dayMeta: response.dayMeta,
-              showAvailabilityDots
+              showAvailabilityDots,
+              availabilityDisplayMode
             };
           }
 
@@ -140,13 +150,15 @@ export class BookingApiService {
             }
             return {
               dayMeta: mapped,
-              showAvailabilityDots
+              showAvailabilityDots,
+              availabilityDisplayMode
             };
           }
 
           return {
             dayMeta: {},
-            showAvailabilityDots
+            showAvailabilityDots,
+            availabilityDisplayMode
           };
         })
       );

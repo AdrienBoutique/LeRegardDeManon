@@ -20,11 +20,16 @@
         [class.today]="cell.isToday"
         [class.selected]="cell.isSelected"
         [class.disabled]="isDisabled(cell)"
+        [class.display-colors]="!isDotsMode()"
+        [class.level-none]="cell.level === 'none'"
+        [class.level-low]="cell.level === 'low'"
+        [class.level-mid]="cell.level === 'mid'"
+        [class.level-high]="cell.level === 'high'"
         [disabled]="isDisabled(cell)"
         (click)="selectDay(cell)"
       >
         <span class="day-number">{{ cell.dayNumber }}</span>
-        @if (showAvailabilityDots) {
+        @if (isDotsMode()) {
           <span class="dots">
             @for (_ of dotIndexes(cell.level); track $index) {
               <span class="dot"></span>

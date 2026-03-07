@@ -8,6 +8,7 @@ import {
   HomeReasonItem,
   HomeTestimonialItem
 } from '../../../core/api/home-content.api';
+import { CloudinaryService } from '../../../core/services/cloudinary.service';
 
 @Component({
   selector: 'app-admin-home-content',
@@ -17,10 +18,13 @@ import {
 })
 export class AdminHomeContent {
   private readonly api = inject(HomeContentApi);
+  private readonly cloudinary = inject(CloudinaryService);
 
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
+  protected readonly uploadingAboutImage = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly uploadErrorMessage = signal('');
   protected readonly toastMessage = signal('');
   protected readonly newAboutImageUrl = signal('');
   protected readonly content = signal<HomeContentPayload>(defaultHomeContent());
@@ -46,21 +50,7 @@ export class AdminHomeContent {
   }
 
   protected save(): void {
-    this.saving.set(true);
-    this.errorMessage.set('');
-
-    this.api.updateAdminContent(this.content()).subscribe({
-      next: (payload) => {
-        this.content.set(payload);
-        this.saving.set(false);
-        this.toastMessage.set('Accueil mis a jour.');
-        setTimeout(() => this.toastMessage.set(''), 2200);
-      },
-      error: (error: { error?: { error?: string } }) => {
-        this.saving.set(false);
-        this.errorMessage.set(error.error?.error ?? 'Sauvegarde impossible.');
-      }
-    });
+    this.persistHomeContent('Accueil mis a jour.');
   }
 
   protected updateHero(field: keyof HomeContentPayload['hero'], value: string | boolean): void {
@@ -192,6 +182,10 @@ export class AdminHomeContent {
       return;
     }
 
+    if (this.content().about.images.includes(raw)) {
+      return;
+    }
+
     this.content.update((current) => ({
       ...current,
       about: {
@@ -201,6 +195,54 @@ export class AdminHomeContent {
     }));
 
     this.newAboutImageUrl.set('');
+    this.persistHomeContent('Image ajoutee et accueil sauvegarde.');
+  }
+
+  protected uploadAboutImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    this.uploadingAboutImage.set(true);
+    this.uploadErrorMessage.set('');
+
+    this.cloudinary.uploadImage(file).subscribe({
+      next: (result) => {
+        const url = result.secure_url?.trim() ?? '';
+        if (!url) {
+          this.uploadingAboutImage.set(false);
+          this.uploadErrorMessage.set("Upload termine mais l'URL est vide.");
+          return;
+        }
+
+        this.newAboutImageUrl.set(url);
+        this.content.update((current) => ({
+          ...current,
+          about: {
+            ...current.about,
+            images: current.about.images.includes(url) ? current.about.images : [...current.about.images, url]
+          }
+        }));
+        this.uploadingAboutImage.set(false);
+        this.persistHomeContent('Image envoyee et accueil sauvegarde.');
+      },
+      error: (error: { status?: number; error?: { error?: { message?: string }; message?: string } }) => {
+        this.uploadingAboutImage.set(false);
+        const cloudinaryMessage =
+          error.error?.error?.message?.trim() ??
+          error.error?.message?.trim() ??
+          '';
+        this.uploadErrorMessage.set(
+          cloudinaryMessage
+            ? `Cloudinary (${error.status ?? 400}): ${cloudinaryMessage}`
+            : "Impossible d'envoyer l'image vers Cloudinary."
+        );
+      }
+    });
   }
 
   protected removeAboutImage(index: number): void {
@@ -211,9 +253,28 @@ export class AdminHomeContent {
         images: current.about.images.filter((_, idx) => idx !== index)
       }
     }));
+    this.persistHomeContent('Image supprimee et accueil sauvegarde.');
   }
 
   protected blockClass(visible: boolean): string {
     return visible ? 'block-editor' : 'block-editor block-hidden';
+  }
+
+  private persistHomeContent(successMessage: string): void {
+    this.saving.set(true);
+    this.errorMessage.set('');
+
+    this.api.updateAdminContent(this.content()).subscribe({
+      next: (payload) => {
+        this.content.set(payload);
+        this.saving.set(false);
+        this.toastMessage.set(successMessage);
+        setTimeout(() => this.toastMessage.set(''), 2200);
+      },
+      error: (error: { error?: { error?: string } }) => {
+        this.saving.set(false);
+        this.errorMessage.set(error.error?.error ?? 'Sauvegarde impossible.');
+      }
+    });
   }
 }

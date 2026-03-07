@@ -40,16 +40,30 @@
       </div>
 
       <div class="toggle-row">
-        <label class="check-row">
-          <input
-            type="checkbox"
-            [checked]="showAvailabilityDots()"
+        <p class="hint">Affichage de la disponibilite sur le calendrier de reservation.</p>
+        <div class="mode-grid">
+          <button
+            type="button"
+            class="mode-card"
+            [class.active]="availabilityDisplayMode() === 'dots'"
             [disabled]="saving()"
-            (change)="saveShowAvailabilityDots($any($event.target).checked)"
-          />
-          Afficher les points de disponibilite sur le calendrier de reservation
-        </label>
-        <p class="hint">Decoche pour masquer les boules de disponibilite cote cliente.</p>
+            (click)="saveAvailabilityDisplayMode('dots')"
+          >
+            <h2>Points de disponibilite</h2>
+            <p>Affiche 1 a 3 points sous le jour selon le niveau de disponibilite.</p>
+          </button>
+
+          <button
+            type="button"
+            class="mode-card"
+            [class.active]="availabilityDisplayMode() === 'colors'"
+            [disabled]="saving()"
+            (click)="saveAvailabilityDisplayMode('colors')"
+          >
+            <h2>Code couleur</h2>
+            <p>Gris = indisponible, rouge = faible, jaune = moyen, vert = eleve.</p>
+          </button>
+        </div>
       </div>
     }
   </article>

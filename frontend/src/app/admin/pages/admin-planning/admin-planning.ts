@@ -390,7 +390,7 @@ export class AdminPlanning {
     const height = Math.max(30, ((toMin - fromMin) / SLOT_MIN) * SLOT_HEIGHT);
 
     const border = this.sanitizeHex(item.staffColorHex, this.fallbackStaffColor);
-    const bg = this.hexToRgba(border, 0.22);
+    const bg = this.hexToRgba(border, 0.45);
     const text = this.pickTextColor(border);
     const serviceColor = this.sanitizeHex(item.serviceColorHex ?? border, this.fallbackServiceColor);
 
@@ -601,21 +601,30 @@ export class AdminPlanning {
   }
 
   private toAppointment(item: PlanningAppointmentItem): Appointment {
+    const fullServices =
+      item.services && item.services.length > 0
+        ? item.services
+        : [
+            {
+              serviceId: item.serviceId,
+              name: item.serviceName,
+              durationMin: this.diffMinutes(item.startAt, item.endAt),
+              price: 0
+            }
+          ];
+
     return {
       id: item.id,
       practitionerId: item.staffId,
       practitionerName: item.staffName,
       startAt: item.startAt,
       durationMin: this.diffMinutes(item.startAt, item.endAt),
-      services: [
-        {
-          serviceId: item.serviceId,
-          name: item.serviceName,
-          durationMin: this.diffMinutes(item.startAt, item.endAt),
-          price: 0
-        }
-      ],
+      services: fullServices,
+      clientId: item.clientId,
       clientName: item.clientName,
+      clientPhone: item.clientPhone ?? undefined,
+      clientEmail: item.clientEmail ?? undefined,
+      notes: undefined,
       status: item.status === 'NO_SHOW' ? 'blocked' : 'confirmed'
     };
   }

@@ -17,7 +17,16 @@ export type PlanningAppointmentItem = {
   serviceId: string;
   serviceName: string;
   serviceColorHex: string | null;
+  services?: Array<{
+    serviceId: string;
+    name: string;
+    durationMin: number;
+    price: number;
+  }>;
+  clientId?: string;
   clientName: string;
+  clientPhone?: string | null;
+  clientEmail?: string | null;
   staffId: string;
   staffName?: string;
   staffColorHex: string;

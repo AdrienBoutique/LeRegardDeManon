@@ -65,7 +65,7 @@
               <app-booking-calendar
                 [monthDate]="monthDate()"
                 [dayMeta]="dayMeta()"
-                [showAvailabilityDots]="showAvailabilityDots()"
+                [availabilityDisplayMode]="availabilityDisplayMode()"
                 [selectedDay]="form.controls.date.value || null"
                 (monthChange)="onMonthChange($event)"
                 (daySelect)="onDaySelect($event)"
@@ -209,7 +209,7 @@
                     <span class="col-detail">Detail</span>
                   </div>
                   <div class="service-grid">
-                    @for (service of filteredEligibleServices(); track service.id) {
+                    @for (service of visibleEligibleServices(); track service.id) {
                       <article class="service-card" [class.disabled]="!service.eligible" [class.selected]="isSelectedService(service.id)">
                         <div class="service-main">
                           <div class="service-line">
@@ -245,6 +245,22 @@
                       </article>
                     }
                   </div>
+
+                  @if (filteredEligibleServices().length > 0) {
+                    <div class="service-list-actions">
+                      <p class="hint">
+                        {{ visibleEligibleServices().length }} / {{ filteredEligibleServices().length }} soins affiches
+                      </p>
+                      <div class="actions">
+                        @if (hasMoreEligibleServices()) {
+                          <button type="button" class="btn btn-ghost" (click)="showMoreServices()">Voir plus</button>
+                        }
+                        @if (visibleEligibleServices().length > initialVisibleServices) {
+                          <button type="button" class="btn btn-ghost" (click)="showLessServices()">Voir moins</button>
+                        }
+                      </div>
+                    </div>
+                  }
 
                   @if (filteredEligibleServices().length === 0) {
                     <p class="hint">Aucun soin ne correspond a votre recherche.</p>

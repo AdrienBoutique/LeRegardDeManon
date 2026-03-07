@@ -1,5 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { AvailabilityLevel, MonthDayMeta } from '../../../../core/services/booking-api.service';
+import {
+  AvailabilityDisplayMode,
+  AvailabilityLevel,
+  MonthDayMeta
+} from '../../../../core/services/booking-api.service';
 
 type CalendarCell = {
   date: Date;
@@ -20,7 +24,7 @@ export class BookingCalendar {
   @Input({ required: true }) monthDate!: Date;
   @Input({ required: true }) dayMeta: MonthDayMeta = {};
   @Input() selectedDay: string | null = null;
-  @Input() showAvailabilityDots = true;
+  @Input() availabilityDisplayMode: AvailabilityDisplayMode = 'dots';
 
   @Output() monthChange = new EventEmitter<'prev' | 'next'>();
   @Output() daySelect = new EventEmitter<string>();
@@ -76,6 +80,10 @@ export class BookingCalendar {
 
   protected dotIndexes(level: AvailabilityLevel): number[] {
     return Array.from({ length: this.dotsFor(level) }, (_, index) => index);
+  }
+
+  protected isDotsMode(): boolean {
+    return this.availabilityDisplayMode === 'dots';
   }
 
   protected isDisabled(cell: CalendarCell): boolean {

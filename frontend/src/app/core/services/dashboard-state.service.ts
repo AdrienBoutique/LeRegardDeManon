@@ -15,6 +15,7 @@ export type AdminDashboardData = {
   revenue: {
     today: number;
     week: number;
+    month: number;
   };
   stats: {
     weekAppointments: number;
@@ -69,7 +70,8 @@ export class DashboardStateService {
           nextAppointment: data.nextAppointment ?? null,
           revenue: {
             today: Number(data.revenue?.today ?? 0),
-            week: Number(data.revenue?.week ?? 0)
+            week: Number(data.revenue?.week ?? 0),
+            month: Number(data.revenue?.month ?? 0)
           },
           stats: {
             weekAppointments: Number(data.stats?.weekAppointments ?? 0)

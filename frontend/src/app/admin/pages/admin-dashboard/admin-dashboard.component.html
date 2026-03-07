@@ -1,4 +1,4 @@
-<section class="admin-dashboard stack">
+﻿<section class="admin-dashboard stack">
   <header class="card panel heading">
     <h1>Dashboard admin</h1>
     <p>Vue rapide des demandes et de l'activite.</p>
@@ -14,20 +14,38 @@
         <h2>Vue rapide</h2>
 
         <div class="stat-row">
-          <span class="icon" aria-hidden="true">?</span>
-          <span>RDV en attente</span>
+          <span class="icon" aria-hidden="true">ATT</span>
+          <span class="label-with-tip">
+            RDV en attente
+            <span class="tip-wrap" tabindex="0" aria-label="Aide RDV en attente">
+              i
+              <span class="tip">Demandes non traitees, en attente de validation.</span>
+            </span>
+          </span>
           <strong class="badge" [class.badge-alert]="data.pendingCount > 0">{{ data.pendingCount }}</strong>
         </div>
 
         <div class="stat-row">
-          <span class="icon" aria-hidden="true">??</span>
-          <span>RDV aujourd'hui</span>
+          <span class="icon" aria-hidden="true">AUJ</span>
+          <span class="label-with-tip">
+            RDV aujourd'hui
+            <span class="tip-wrap" tabindex="0" aria-label="Aide RDV aujourd'hui">
+              i
+              <span class="tip">Nombre de rendez-vous confirmes prevus aujourd'hui (journée complete).</span>
+            </span>
+          </span>
           <strong>{{ data.todayCount }}</strong>
         </div>
 
         <div class="stat-row">
-          <span class="icon" aria-hidden="true">??</span>
-          <span>Prochain RDV</span>
+          <span class="icon" aria-hidden="true">PRO</span>
+          <span class="label-with-tip">
+            Prochain RDV
+            <span class="tip-wrap" tabindex="0" aria-label="Aide Prochain RDV">
+              i
+              <span class="tip">Prochain rendez-vous confirme a venir a partir de maintenant.</span>
+            </span>
+          </span>
           @if (data.nextAppointment) {
             <strong>{{ formatDateTime(data.nextAppointment.startAt) }} - {{ data.nextAppointment.clientName }} - {{ data.nextAppointment.serviceName }}</strong>
           } @else {
@@ -36,8 +54,14 @@
         </div>
 
         <div class="stat-row">
-          <span class="icon" aria-hidden="true">�</span>
-          <span>CA du jour</span>
+          <span class="icon" aria-hidden="true">EUR</span>
+          <span class="label-with-tip">
+            CA du jour
+            <span class="tip-wrap" tabindex="0" aria-label="Aide CA du jour">
+              i
+              <span class="tip">CA deja realise aujourd'hui (RDV confirmes deja passes), pas une prevision.</span>
+            </span>
+          </span>
           <strong>{{ formatEuro(data.revenue.today) }}</strong>
         </div>
       </article>
@@ -45,22 +69,80 @@
       <article class="card panel stats-card">
         <h2>Statistiques</h2>
 
+        <div class="goal-controls">
+          <label>
+            Objectif
+            <select [value]="goalType()" (change)="setGoalType($any($event.target).value)">
+              <option value="weeklyAppointments">RDV hebdomadaire</option>
+              <option value="monthlyRevenue">CA mensuel</option>
+            </select>
+          </label>
+          <label>
+            Valeur cible
+            <input
+              type="number"
+              min="1"
+              [value]="goalValue()"
+              (input)="setGoalValue($any($event.target).value)"
+              [attr.placeholder]="goalType() === 'monthlyRevenue' ? 'Ex: 6000' : 'Ex: 20'"
+            />
+          </label>
+        </div>
+
         <div class="stat-row stat-row--split">
-          <span>CA semaine</span>
+          <span class="label-with-tip">
+            CA semaine
+            <span class="tip-wrap" tabindex="0" aria-label="Aide CA semaine">
+              i
+              <span class="tip">CA deja realise cette semaine jusqu'a maintenant (pas le futur).</span>
+            </span>
+          </span>
           <strong>{{ formatEuro(data.revenue.week) }}</strong>
         </div>
 
         <div class="stat-row stat-row--split">
-          <span>RDV semaine</span>
+          <span class="label-with-tip">
+            RDV semaine
+            <span class="tip-wrap" tabindex="0" aria-label="Aide RDV semaine">
+              i
+              <span class="tip">Nombre de rendez-vous confirmes planifies sur la semaine courante.</span>
+            </span>
+          </span>
           <strong>{{ data.stats.weekAppointments }}</strong>
         </div>
 
+        <div class="stat-row stat-row--split">
+          <span class="label-with-tip">
+            Panier moyen semaine
+            <span class="tip-wrap" tabindex="0" aria-label="Aide Panier moyen semaine">
+              i
+              <span class="tip">CA semaine divise par le nombre de RDV semaine.</span>
+            </span>
+          </span>
+          <strong>{{ formatEuro(averageBasketWeek()) }}</strong>
+        </div>
+
+        <div class="stat-row stat-row--split">
+          <span class="label-with-tip">
+            RDV restants objectif
+            <span class="tip-wrap" tabindex="0" aria-label="Aide RDV restants objectif">
+              i
+              <span class="tip">Nombre de RDV a faire pour atteindre l'objectif hebdomadaire.</span>
+            </span>
+          </span>
+          @if (goalType() === 'monthlyRevenue') {
+            <strong>{{ formatEuro(remainingToGoal()) }}</strong>
+          } @else {
+            <strong>{{ remainingToGoal() }}</strong>
+          }
+        </div>
+
         <div class="progress-wrap">
-          <p>Progression vers l'objectif hebdomadaire ({{ weeklyAppointmentsTarget }} RDV)</p>
-          <div class="progress-track" role="progressbar" [attr.aria-valuenow]="weekProgressPercent()" aria-valuemin="0" aria-valuemax="100">
-            <span class="progress-bar" [style.width.%]="weekProgressPercent()"></span>
+          <p>Progression vers l'objectif {{ goalLabel() }} ({{ goalType() === 'monthlyRevenue' ? formatEuro(goalValue()) : goalValue() + ' RDV' }})</p>
+          <div class="progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0" aria-valuemax="100">
+            <span class="progress-bar" [style.width.%]="progressPercent()"></span>
           </div>
-          <small>{{ weekProgressPercent() }}%</small>
+          <small>{{ progressPercent() }}% - {{ progressText() }}</small>
         </div>
       </article>
     </div>
@@ -72,3 +154,5 @@
     <article class="card panel">Aucune donnee.</article>
   }
 </section>
+
+

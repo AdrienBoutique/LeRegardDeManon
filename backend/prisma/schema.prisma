@@ -194,6 +194,7 @@ model InstituteSettings {
   instituteId String?    @unique
   bookingMode BookingMode @default(MANUAL)
   showAvailabilityDots Boolean @default(true)
+  availabilityDisplayMode String @default("dots")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }

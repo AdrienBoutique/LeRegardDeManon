@@ -4,9 +4,11 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type BookingMode = 'MANUAL' | 'AUTO_INTELLIGENT';
+export type AvailabilityDisplayMode = 'dots' | 'colors';
 export type AdminSettings = {
   bookingMode: BookingMode;
   showAvailabilityDots: boolean;
+  availabilityDisplayMode: AvailabilityDisplayMode;
 };
 
 export type UpdateAdminSettingsPayload = Partial<AdminSettings>;

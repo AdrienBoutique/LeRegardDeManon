@@ -112,6 +112,8 @@ adminPlanningRouter.get("/planning", async (req, res) => {
           items: {
             orderBy: { order: "asc" },
             select: {
+              durationMin: true,
+              priceCents: true,
               service: {
                 select: {
                   id: true,
@@ -123,8 +125,11 @@ adminPlanningRouter.get("/planning", async (req, res) => {
           },
           client: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
+              phone: true,
+              email: true,
             },
           },
           staffMember: {
@@ -238,7 +243,16 @@ adminPlanningRouter.get("/planning", async (req, res) => {
             ? `${firstService.name}${extraCount > 0 ? ` +${extraCount}` : ""}`
             : fallbackServiceName,
           serviceColorHex: firstService?.colorHex ?? null,
+          services: appointment.items.map((item) => ({
+            serviceId: item.service.id,
+            name: item.service.name,
+            durationMin: item.durationMin,
+            price: item.priceCents / 100,
+          })),
+          clientId: appointment.client.id,
           clientName: `${appointment.client.firstName} ${appointment.client.lastName}`.trim(),
+          clientPhone: appointment.client.phone,
+          clientEmail: appointment.client.email,
           staffId: appointment.staffMember.id,
           staffName: `${appointment.staffMember.firstName} ${appointment.staffMember.lastName}`.trim(),
           staffColorHex: appointment.staffMember.colorHex,

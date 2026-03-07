@@ -55,8 +55,15 @@
       <h3>Photos</h3>
       <div class="row-add">
         <input [value]="newAboutImageUrl()" (input)="newAboutImageUrl.set($any($event.target).value)" placeholder="URL image" />
+        <input #aboutPhotoUpload type="file" accept="image/*" class="sr-only" (change)="uploadAboutImage($event)" />
+        <button type="button" class="btn btn-ghost" [disabled]="uploadingAboutImage()" (click)="$any(aboutPhotoUpload).click()">
+          {{ uploadingAboutImage() ? 'Upload...' : 'Upload image' }}
+        </button>
         <button type="button" class="btn btn-ghost" (click)="addAboutImage()">Ajouter</button>
       </div>
+      @if (uploadErrorMessage()) {
+        <p class="error">{{ uploadErrorMessage() }}</p>
+      }
       <div class="images-list">
         @for (img of content().about.images; track $index) {
           <article class="img-row">

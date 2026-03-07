@@ -104,27 +104,17 @@ export class AppointmentsApiService {
   }
 
   updateAppointment(id: string, payload: AppointmentUpsertPayload): Observable<Appointment> {
-    return this.http.patch<Appointment>(`${this.adminBaseUrl}/${id}`, payload).pipe(
+    return this.http.patch<Appointment>(`${this.adminBaseUrl}/${id}`, payload);
+  }
+
+  deleteAppointment(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.adminBaseUrl}/${id}`).pipe(
+      map(() => {
+        this.fallbackAppointments = this.fallbackAppointments.filter((item) => item.id !== id);
+      }),
       catchError(() => {
-        // TODO: brancher endpoint backend d'edition admin des RDV.
-        const existing = this.fallbackAppointments.find((item) => item.id === id);
-        if (!existing) {
-          return throwError(() => new Error("Edition impossible: rendez-vous introuvable."));
-        }
-
-        const updated: Appointment = {
-          ...existing,
-          practitionerId: payload.practitionerId,
-          startAt: payload.startAt,
-          durationMin: payload.durationMin,
-          services: payload.services,
-          clientId: payload.clientId,
-          clientName: payload.clientDraft ? `${payload.clientDraft.firstName} ${payload.clientDraft.lastName}`.trim() : existing.clientName,
-          notes: payload.notes,
-          status: payload.status
-        };
-
-        return of(updated);
+        this.fallbackAppointments = this.fallbackAppointments.filter((item) => item.id !== id);
+        return of(void 0);
       })
     );
   }

@@ -11,7 +11,8 @@ import {
   FreeStartItem,
   EligibleServiceItem,
   CreateAppointmentResponse,
-  MonthDayMeta
+  MonthDayMeta,
+  AvailabilityDisplayMode
 } from '../../core/services/booking-api.service';
 import { BookingCalendar } from './components/booking-calendar/booking-calendar';
 import { PublicPromotionItem, PublicPromotionsApi } from '../../core/api/public-promotions.api';
@@ -118,7 +119,7 @@ export class Booking {
   protected readonly slotStepMin = signal(15);
   protected readonly eligibleServices = signal<EligibleServiceItem[]>([]);
   protected readonly dayMeta = signal<MonthDayMeta>({});
-  protected readonly showAvailabilityDots = signal(true);
+  protected readonly availabilityDisplayMode = signal<AvailabilityDisplayMode>('dots');
   protected readonly searchTerm = signal('');
   protected readonly selectedCategoryId = signal<string>('all');
   protected readonly confirmation = signal<CreateAppointmentResponse | null>(null);
@@ -126,6 +127,9 @@ export class Booking {
   protected readonly promoContext = signal<PromoBookingContext | null>(null);
   protected readonly promoError = signal('');
   protected readonly maxSelectedServices = 4;
+  protected readonly initialVisibleServices = 12;
+  protected readonly visibleServicesStep = 12;
+  protected readonly visibleServicesLimit = signal(this.initialVisibleServices);
   protected readonly stepItems = [
     { id: 1, label: 'Praticienne, date & horaire' },
     { id: 2, label: 'Soin' },
@@ -207,15 +211,26 @@ export class Booking {
     const term = this.searchTerm().trim().toLowerCase();
     const categoryId = this.selectedCategoryId();
     const catalogById = new Map(this.catalogServices().map((service) => [service.id, service]));
-
-    return this.eligibleServices().filter((service) => {
+    const filtered = this.eligibleServices().filter((service) => {
       const extra = catalogById.get(service.id);
       const haystack = `${service.name} ${extra?.description ?? ''}`.toLowerCase();
       const categoryMatch = categoryId === 'all' || service.categoryId === categoryId;
       const textMatch = term.length === 0 || haystack.includes(term);
       return categoryMatch && textMatch;
     });
+
+    return filtered.sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    );
   });
+
+  protected readonly visibleEligibleServices = computed(() =>
+    this.filteredEligibleServices().slice(0, this.visibleServicesLimit())
+  );
+
+  protected readonly hasMoreEligibleServices = computed(
+    () => this.filteredEligibleServices().length > this.visibleEligibleServices().length
+  );
 
   protected readonly categoryChoices = computed<CategoryChoice[]>(() => {
     const map = new Map<string, string>();
@@ -543,12 +558,22 @@ export class Booking {
 
   protected setSearch(value: string): void {
     this.searchTerm.set(value);
+    this.visibleServicesLimit.set(this.initialVisibleServices);
     this.saveDraft();
   }
 
   protected selectCategory(categoryId: string): void {
     this.selectedCategoryId.set(categoryId);
+    this.visibleServicesLimit.set(this.initialVisibleServices);
     this.saveDraft();
+  }
+
+  protected showMoreServices(): void {
+    this.visibleServicesLimit.update((current) => current + this.visibleServicesStep);
+  }
+
+  protected showLessServices(): void {
+    this.visibleServicesLimit.set(this.initialVisibleServices);
   }
 
   protected submit(): void {
@@ -589,7 +614,10 @@ export class Booking {
 
     this.bookingApi
       .createAppointment({
-        serviceId: primaryService.id,
+        services: basket.map((service) => ({
+          serviceId: service.id,
+          priceCents: service.priceCents
+        })),
         staffId: resolvedStaffId,
         startAt: raw.startAt,
         client: {
@@ -917,7 +945,8 @@ export class Booking {
         catchError(() =>
           of({
             dayMeta: this.buildMockMonthMeta(monthDate),
-            showAvailabilityDots: true
+            showAvailabilityDots: true,
+            availabilityDisplayMode: 'dots' as AvailabilityDisplayMode
           })
         ),
         finalize(() => {
@@ -927,7 +956,7 @@ export class Booking {
       )
       .subscribe((meta) => {
         const constrainedMeta = this.applyPromoWindowToMeta(meta.dayMeta);
-        this.showAvailabilityDots.set(meta.showAvailabilityDots !== false);
+        this.availabilityDisplayMode.set(meta.availabilityDisplayMode ?? 'dots');
         this.dayMeta.set(constrainedMeta);
         this.ensureDateSelectionFromMeta(constrainedMeta, monthDate);
         this.saveDraft();
@@ -979,6 +1008,7 @@ export class Booking {
     this.eligibleError.set('');
     this.searchTerm.set('');
     this.selectedCategoryId.set('all');
+    this.visibleServicesLimit.set(this.initialVisibleServices);
     this.selectionError.set('');
     this.confirmation.set(null);
     this.submitError.set('');
@@ -1001,6 +1031,7 @@ export class Booking {
     this.selectionError.set('');
     this.searchTerm.set('');
     this.selectedCategoryId.set('all');
+    this.visibleServicesLimit.set(this.initialVisibleServices);
     this.confirmation.set(null);
     this.submitError.set('');
     this.selectedServices.set([]);

@@ -24,6 +24,51 @@ export type CreateAdminClientPayload = {
 
 export type UpdateAdminClientPayload = Partial<CreateAdminClientPayload>;
 
+export type AdminClientStatsLiteAppointment = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  totalPrice: number;
+  staffName: string;
+  services: string[];
+};
+
+export type AdminClientStatsHistoryItem = AdminClientStatsLiteAppointment & {
+  createdAt: string;
+  notes: string | null;
+};
+
+export type AdminClientStats = {
+  client: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    phone: string | null;
+    createdAt: string;
+  };
+  totals: {
+    appointments: number;
+    pending: number;
+    cancelled: number;
+    noShow: number;
+    confirmedLike: number;
+  };
+  revenue: {
+    total: number;
+    averageBasket: number;
+  };
+  rates: {
+    cancellation: number;
+  };
+  timeline: {
+    lastAppointment: AdminClientStatsLiteAppointment | null;
+    nextAppointment: AdminClientStatsLiteAppointment | null;
+  };
+  history: AdminClientStatsHistoryItem[];
+};
+
 @Injectable({ providedIn: 'root' })
 export class AdminClientsApiService {
   private readonly http = inject(HttpClient);
@@ -45,5 +90,9 @@ export class AdminClientsApiService {
 
   delete(id: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.baseUrl}/${id}`);
+  }
+
+  getStats(id: string): Observable<AdminClientStats> {
+    return this.http.get<AdminClientStats>(`${this.baseUrl}/${id}/stats`);
   }
 }

@@ -54,6 +54,7 @@
 
         <div class="actions">
           <button type="button" class="btn btn-ghost" (click)="openEditModal(client); $event.stopPropagation()">Modifier</button>
+          <button type="button" class="btn btn-ghost" (click)="openStats(client); $event.stopPropagation()">Statistiques</button>
           @if (pendingDeleteId() === client.id) {
             <button
               type="button"
@@ -130,6 +131,80 @@
             {{ saving() ? 'Enregistrement...' : editingId() ? 'Sauvegarder' : 'Creer la cliente' }}
           </button>
         </form>
+      </article>
+    </div>
+  }
+
+  @if (statsOpen()) {
+    <div class="modal-overlay" (click)="closeStats()">
+      <article class="card modal-card stats-modal" (click)="$event.stopPropagation()">
+        <div class="modal-top">
+          <h2>Statistiques cliente</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeStats()">Fermer</button>
+        </div>
+
+        <p class="stats-subtitle">{{ activeStatsClient() ? fullName($any(activeStatsClient())) : '' }}</p>
+
+        @if (statsLoading()) {
+          <p>Chargement des statistiques...</p>
+        } @else if (statsError()) {
+          <p class="error-inline">{{ statsError() }}</p>
+        } @else if (clientStats(); as stats) {
+          <section class="grid stats-grid">
+            <article class="card stats-card">
+              <h3>Profil</h3>
+              <p><strong>Inscription:</strong> {{ formatDate(stats.client.createdAt) }}</p>
+              <p><strong>Email:</strong> {{ stats.client.email || '-' }}</p>
+              <p><strong>Telephone:</strong> {{ stats.client.phone || '-' }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Rendez-vous</h3>
+              <p><strong>Total:</strong> {{ stats.totals.appointments }}</p>
+              <p><strong>Confirmes/realises:</strong> {{ stats.totals.confirmedLike }}</p>
+              <p><strong>En attente:</strong> {{ stats.totals.pending }}</p>
+              <p><strong>Annules:</strong> {{ stats.totals.cancelled }}</p>
+              <p><strong>Absences:</strong> {{ stats.totals.noShow }}</p>
+              <p><strong>Taux annulation:</strong> {{ formatPercent(stats.rates.cancellation) }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Revenus</h3>
+              <p><strong>CA genere:</strong> {{ formatCurrency(stats.revenue.total) }}</p>
+              <p><strong>Panier moyen:</strong> {{ formatCurrency(stats.revenue.averageBasket) }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Timeline</h3>
+              <p><strong>Dernier RDV:</strong> {{ formatDate(stats.timeline.lastAppointment?.startsAt) }}</p>
+              <p><strong>Prochain RDV:</strong> {{ formatDate(stats.timeline.nextAppointment?.startsAt) }}</p>
+            </article>
+          </section>
+
+          <section class="stack history-block">
+            <h3>Historique des rendez-vous</h3>
+            @if (stats.history.length === 0) {
+              <p>Aucun rendez-vous pour cette cliente.</p>
+            } @else {
+              <div class="history-list">
+                @for (item of stats.history; track item.id) {
+                  <article class="history-item">
+                    <div class="history-top">
+                      <strong>{{ formatDate(item.startsAt) }}</strong>
+                      <span class="chip">{{ mapStatusLabel(item.status) }}</span>
+                    </div>
+                    <p><strong>Praticienne:</strong> {{ item.staffName }}</p>
+                    <p><strong>Services:</strong> {{ item.services.join(' + ') || '-' }}</p>
+                    <p><strong>Montant:</strong> {{ formatCurrency(item.totalPrice) }}</p>
+                    @if (item.notes) {
+                      <p><strong>Notes:</strong> {{ item.notes }}</p>
+                    }
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
       </article>
     </div>
   }

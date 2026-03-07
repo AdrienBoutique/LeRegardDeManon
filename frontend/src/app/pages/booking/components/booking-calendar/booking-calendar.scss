@@ -87,6 +87,36 @@
   border-color: #b88f70;
 }
 
+.day-cell.display-colors.level-none {
+  background: #efefef;
+  border-color: #e0e0e0;
+}
+
+.day-cell.display-colors.level-low {
+  background: #fdeaea;
+  border-color: #efb8b8;
+}
+
+.day-cell.display-colors.level-mid {
+  background: #fff6dc;
+  border-color: #efd9a2;
+}
+
+.day-cell.display-colors.level-high {
+  background: #eaf8ea;
+  border-color: #b9e3b9;
+}
+
+.day-cell.display-colors.selected {
+  border-width: 2px;
+  background: #b8d8b8;
+  border-color: #6ea36e;
+}
+
+.day-cell.display-colors.selected .day-number {
+  color: #1f3b1f;
+}
+
 .day-cell.disabled {
   opacity: 0.35;
   cursor: not-allowed;

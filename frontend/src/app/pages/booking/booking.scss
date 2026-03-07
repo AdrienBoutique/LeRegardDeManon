@@ -465,6 +465,19 @@ textarea {
   flex-wrap: wrap;
 }
 
+.service-list-actions {
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.service-list-actions .actions {
+  justify-content: flex-start;
+}
+
 .wizard-footer {
   display: flex;
   gap: 0.6rem;

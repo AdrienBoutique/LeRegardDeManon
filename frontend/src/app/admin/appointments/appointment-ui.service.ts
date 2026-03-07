@@ -57,7 +57,7 @@ export class AppointmentUiService {
       durationMin: appointment.durationMin,
       priceTotal: this.sumPrice(appointment.services ?? []),
       clientId: appointment.clientId,
-      clientDraft: this.nameToClientDraft(appointment.clientName),
+      clientDraft: this.toClientDraft(appointment),
       notes: appointment.notes,
       status: appointment.status
     });
@@ -125,7 +125,8 @@ export class AppointmentUiService {
     return services.reduce((sum, item) => sum + item.price, 0);
   }
 
-  private nameToClientDraft(fullName?: string): AppointmentDraft['clientDraft'] {
+  private toClientDraft(appointment: Appointment): AppointmentDraft['clientDraft'] {
+    const fullName = appointment.clientName;
     if (!fullName) {
       return undefined;
     }
@@ -133,7 +134,9 @@ export class AppointmentUiService {
     const [firstName, ...rest] = fullName.trim().split(/\s+/);
     return {
       firstName: firstName || '',
-      lastName: rest.join(' ')
+      lastName: rest.join(' '),
+      phone: appointment.clientPhone ?? '',
+      email: appointment.clientEmail ?? ''
     };
   }
 }

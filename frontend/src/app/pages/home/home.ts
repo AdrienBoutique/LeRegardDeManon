@@ -41,7 +41,8 @@ export class Home {
   }
 
   protected firstAboutImage(): string | null {
-    return '/assets/bgManon2.jpg?v=2';
+    const uploaded = this.content().about.images.find((url) => typeof url === 'string' && url.trim().length > 0)?.trim();
+    return uploaded ?? '/assets/bgManon2.jpg?v=2';
   }
 
   protected formatPrice(priceCents: number): string {

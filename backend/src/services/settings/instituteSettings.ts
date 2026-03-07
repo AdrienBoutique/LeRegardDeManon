@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../../lib/prisma";
 
 const SINGLETON_KEY = "default";
+type AvailabilityDisplayMode = "dots" | "colors";
 
 type InstituteSettingsRow = {
   id: string;
@@ -11,6 +12,7 @@ type InstituteSettingsRow = {
   createdAt: Date | string;
   updatedAt: Date | string;
   showAvailabilityDots?: boolean | null;
+  availabilityDisplayMode?: string | null;
 };
 
 type InstituteSettingsModel = {
@@ -18,14 +20,20 @@ type InstituteSettingsModel = {
   instituteId: string | null;
   bookingMode: BookingMode;
   showAvailabilityDots: boolean;
+  availabilityDisplayMode: AvailabilityDisplayMode;
   createdAt: Date;
   updatedAt: Date;
 };
 
 let showAvailabilityDotsColumnExists: boolean | null = null;
+let availabilityDisplayModeColumnExists: boolean | null = null;
 
 function normalizeBookingMode(value: BookingMode | string): BookingMode {
   return value === BookingMode.AUTO_INTELLIGENT ? BookingMode.AUTO_INTELLIGENT : BookingMode.MANUAL;
+}
+
+function normalizeAvailabilityDisplayMode(value: string | null | undefined): AvailabilityDisplayMode {
+  return value === "colors" ? "colors" : "dots";
 }
 
 function toDate(value: Date | string): Date {
@@ -33,11 +41,18 @@ function toDate(value: Date | string): Date {
 }
 
 function toInstituteSettingsModel(row: InstituteSettingsRow): InstituteSettingsModel {
+  const availabilityDisplayMode = row.availabilityDisplayMode
+    ? normalizeAvailabilityDisplayMode(row.availabilityDisplayMode)
+    : row.showAvailabilityDots === false
+      ? "colors"
+      : "dots";
+
   return {
     id: row.id,
     instituteId: row.instituteId,
     bookingMode: normalizeBookingMode(row.bookingMode),
-    showAvailabilityDots: row.showAvailabilityDots ?? true,
+    showAvailabilityDots: availabilityDisplayMode === "dots",
+    availabilityDisplayMode,
     createdAt: toDate(row.createdAt),
     updatedAt: toDate(row.updatedAt),
   };
@@ -62,45 +77,67 @@ async function hasShowAvailabilityDotsColumn(): Promise<boolean> {
   return showAvailabilityDotsColumnExists;
 }
 
-async function findFirstSettings(withShowDots: boolean): Promise<InstituteSettingsRow | null> {
-  const query = withShowDots
-    ? Prisma.sql`
-        SELECT
-          "id",
-          "instituteId",
-          "bookingMode",
-          "createdAt",
-          "updatedAt",
-          "showAvailabilityDots"
-        FROM "InstituteSettings"
-        ORDER BY "createdAt" ASC
-        LIMIT 1
-      `
-    : Prisma.sql`
-        SELECT
-          "id",
-          "instituteId",
-          "bookingMode",
-          "createdAt",
-          "updatedAt"
-        FROM "InstituteSettings"
-        ORDER BY "createdAt" ASC
-        LIMIT 1
-      `;
+async function hasAvailabilityDisplayModeColumn(): Promise<boolean> {
+  if (availabilityDisplayModeColumnExists !== null) {
+    return availabilityDisplayModeColumnExists;
+  }
+
+  const rows = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'InstituteSettings'
+        AND column_name = 'availabilityDisplayMode'
+    )::boolean AS "exists"
+  `;
+
+  availabilityDisplayModeColumnExists = Boolean(rows[0]?.exists);
+  return availabilityDisplayModeColumnExists;
+}
+
+async function findFirstSettings(withShowDots: boolean, withDisplayMode: boolean): Promise<InstituteSettingsRow | null> {
+  const showDotsSelect = withShowDots ? Prisma.sql`,"showAvailabilityDots"` : Prisma.empty;
+  const displayModeSelect = withDisplayMode ? Prisma.sql`,"availabilityDisplayMode"` : Prisma.empty;
+  const query = Prisma.sql`
+    SELECT
+      "id",
+      "instituteId",
+      "bookingMode",
+      "createdAt",
+      "updatedAt"
+      ${showDotsSelect}
+      ${displayModeSelect}
+    FROM "InstituteSettings"
+    ORDER BY "createdAt" ASC
+    LIMIT 1
+  `;
 
   const rows = await prisma.$queryRaw<InstituteSettingsRow[]>(query);
   return rows[0] ?? null;
 }
 
-async function createDefaultSettings(withShowDots: boolean): Promise<InstituteSettingsRow> {
+async function createDefaultSettings(withShowDots: boolean, withDisplayMode: boolean): Promise<InstituteSettingsRow> {
   const id = randomUUID();
-  const query = withShowDots
-    ? `INSERT INTO "InstituteSettings" ("id", "instituteId", "bookingMode", "showAvailabilityDots", "createdAt", "updatedAt")
-       VALUES ('${id}', '${SINGLETON_KEY}', '${BookingMode.MANUAL}'::"BookingMode", true, NOW(), NOW())
-       RETURNING "id", "instituteId", "bookingMode", "createdAt", "updatedAt", "showAvailabilityDots"`
-    : `INSERT INTO "InstituteSettings" ("id", "instituteId", "bookingMode", "createdAt", "updatedAt")
-       VALUES ('${id}', '${SINGLETON_KEY}', '${BookingMode.MANUAL}'::"BookingMode", NOW(), NOW())
-       RETURNING "id", "instituteId", "bookingMode", "createdAt", "updatedAt"`;
+  const insertColumns = [`"id"`, `"instituteId"`, `"bookingMode"`];
+  const insertValues = [`'${id}'`, `'${SINGLETON_KEY}'`, `'${BookingMode.MANUAL}'::"BookingMode"`];
+  const returnColumns = [`"id"`, `"instituteId"`, `"bookingMode"`, `"createdAt"`, `"updatedAt"`];
+
+  if (withShowDots) {
+    insertColumns.push(`"showAvailabilityDots"`);
+    insertValues.push(`true`);
+    returnColumns.push(`"showAvailabilityDots"`);
+  }
+
+  if (withDisplayMode) {
+    insertColumns.push(`"availabilityDisplayMode"`);
+    insertValues.push(`'dots'`);
+    returnColumns.push(`"availabilityDisplayMode"`);
+  }
+
+  const query = `INSERT INTO "InstituteSettings" (${insertColumns.join(", ")}, "createdAt", "updatedAt")
+     VALUES (${insertValues.join(", ")}, NOW(), NOW())
+     RETURNING ${returnColumns.join(", ")}`;
 
   const rows = await prisma.$queryRawUnsafe<InstituteSettingsRow[]>(query);
   return rows[0];
@@ -108,40 +145,55 @@ async function createDefaultSettings(withShowDots: boolean): Promise<InstituteSe
 
 export async function getInstituteSettings(): Promise<InstituteSettingsModel> {
   const withShowDots = await hasShowAvailabilityDotsColumn();
-  const existing = await findFirstSettings(withShowDots);
+  const withDisplayMode = await hasAvailabilityDisplayModeColumn();
+  const existing = await findFirstSettings(withShowDots, withDisplayMode);
   if (existing) {
     return toInstituteSettingsModel(existing);
   }
 
-  const created = await createDefaultSettings(withShowDots);
+  const created = await createDefaultSettings(withShowDots, withDisplayMode);
   return toInstituteSettingsModel(created);
 }
 
 export async function setInstituteSettings(input: {
   bookingMode?: BookingMode;
   showAvailabilityDots?: boolean;
+  availabilityDisplayMode?: AvailabilityDisplayMode;
 }): Promise<InstituteSettingsModel> {
   const current = await getInstituteSettings();
   const withShowDots = await hasShowAvailabilityDotsColumn();
+  const withDisplayMode = await hasAvailabilityDisplayModeColumn();
 
   const nextBookingMode = input.bookingMode ?? current.bookingMode;
   const bookingModeValue = normalizeBookingMode(nextBookingMode);
-  const nextShowDots = withShowDots ? (input.showAvailabilityDots ?? current.showAvailabilityDots) : true;
+  const nextAvailabilityDisplayMode = input.availabilityDisplayMode
+    ? normalizeAvailabilityDisplayMode(input.availabilityDisplayMode)
+    : input.showAvailabilityDots === undefined
+      ? current.availabilityDisplayMode
+      : input.showAvailabilityDots
+        ? "dots"
+        : "colors";
+  const nextShowDots = nextAvailabilityDisplayMode === "dots";
 
-  const query = withShowDots
-    ? `UPDATE "InstituteSettings"
-       SET
-         "bookingMode" = '${bookingModeValue}'::"BookingMode",
-         "showAvailabilityDots" = ${nextShowDots ? "true" : "false"},
-         "updatedAt" = NOW()
-       WHERE "id" = '${current.id}'
-       RETURNING "id", "instituteId", "bookingMode", "createdAt", "updatedAt", "showAvailabilityDots"`
-    : `UPDATE "InstituteSettings"
-       SET
-         "bookingMode" = '${bookingModeValue}'::"BookingMode",
-         "updatedAt" = NOW()
-       WHERE "id" = '${current.id}'
-       RETURNING "id", "instituteId", "bookingMode", "createdAt", "updatedAt"`;
+  const setClauses = [`"bookingMode" = '${bookingModeValue}'::"BookingMode"`];
+  const returnColumns = [`"id"`, `"instituteId"`, `"bookingMode"`, `"createdAt"`, `"updatedAt"`];
+
+  if (withShowDots) {
+    setClauses.push(`"showAvailabilityDots" = ${nextShowDots ? "true" : "false"}`);
+    returnColumns.push(`"showAvailabilityDots"`);
+  }
+
+  if (withDisplayMode) {
+    setClauses.push(`"availabilityDisplayMode" = '${nextAvailabilityDisplayMode}'`);
+    returnColumns.push(`"availabilityDisplayMode"`);
+  }
+
+  const query = `UPDATE "InstituteSettings"
+     SET
+       ${setClauses.join(",\n       ")},
+       "updatedAt" = NOW()
+     WHERE "id" = '${current.id}'
+     RETURNING ${returnColumns.join(", ")}`;
 
   const rows = await prisma.$queryRawUnsafe<InstituteSettingsRow[]>(query);
   const updated = rows[0];

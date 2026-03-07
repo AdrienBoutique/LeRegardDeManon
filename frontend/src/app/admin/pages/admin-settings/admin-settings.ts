@@ -1,6 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
-import { AdminSettingsApiService, BookingMode } from '../../../core/services/admin-settings-api.service';
+import {
+  AdminSettingsApiService,
+  AvailabilityDisplayMode,
+  BookingMode
+} from '../../../core/services/admin-settings-api.service';
 
 @Component({
   selector: 'app-admin-settings',
@@ -13,7 +17,7 @@ export class AdminSettings {
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly bookingMode = signal<BookingMode>('MANUAL');
-  protected readonly showAvailabilityDots = signal(true);
+  protected readonly availabilityDisplayMode = signal<AvailabilityDisplayMode>('dots');
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
 
@@ -29,7 +33,9 @@ export class AdminSettings {
       .subscribe({
         next: (settings) => {
           this.bookingMode.set(settings.bookingMode);
-          this.showAvailabilityDots.set(settings.showAvailabilityDots !== false);
+          this.availabilityDisplayMode.set(
+            settings.availabilityDisplayMode ?? (settings.showAvailabilityDots === false ? 'colors' : 'dots')
+          );
           this.errorMessage.set('');
         },
         error: (error: { error?: { error?: string } }) => {
@@ -49,7 +55,9 @@ export class AdminSettings {
       .subscribe({
         next: (settings) => {
           this.bookingMode.set(settings.bookingMode);
-          this.showAvailabilityDots.set(settings.showAvailabilityDots !== false);
+          this.availabilityDisplayMode.set(
+            settings.availabilityDisplayMode ?? (settings.showAvailabilityDots === false ? 'colors' : 'dots')
+          );
           this.successMessage.set('Reglages enregistres.');
           this.errorMessage.set('');
         },
@@ -59,19 +67,21 @@ export class AdminSettings {
       });
   }
 
-  protected saveShowAvailabilityDots(checked: boolean): void {
-    if (this.saving() || this.showAvailabilityDots() === checked) {
+  protected saveAvailabilityDisplayMode(mode: AvailabilityDisplayMode): void {
+    if (this.saving() || this.availabilityDisplayMode() === mode) {
       return;
     }
 
     this.saving.set(true);
     this.api
-      .updateSettings({ showAvailabilityDots: checked })
+      .updateSettings({ availabilityDisplayMode: mode })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: (settings) => {
           this.bookingMode.set(settings.bookingMode);
-          this.showAvailabilityDots.set(settings.showAvailabilityDots !== false);
+          this.availabilityDisplayMode.set(
+            settings.availabilityDisplayMode ?? (settings.showAvailabilityDots === false ? 'colors' : 'dots')
+          );
           this.successMessage.set('Reglages enregistres.');
           this.errorMessage.set('');
         },

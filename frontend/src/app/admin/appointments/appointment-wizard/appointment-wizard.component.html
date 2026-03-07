@@ -1,15 +1,25 @@
 <section class="wizard-shell">
-  <div class="wizard-steps">
-    <button type="button" class="step-pill" [class.active]="step() === 1" (click)="goToStep(1)">1. Creneau</button>
-    <button type="button" class="step-pill" [class.active]="step() === 2" [disabled]="!canGoStep2()" (click)="goToStep(2)">
-      2. Services
-    </button>
-    <button type="button" class="step-pill" [class.active]="step() === 3" [disabled]="!canGoStep3()" (click)="goToStep(3)">
-      3. Cliente
-    </button>
-    <button type="button" class="step-pill" [class.active]="step() === 4" [disabled]="!canGoStep4()" (click)="goToStep(4)">
-      4. Confirmation
-    </button>
+  <div class="wizard-top">
+    @if (mode() === 'edit') {
+      <div class="edit-context">
+        <p><strong>Mode edition</strong> : vous modifiez un rendez-vous existant.</p>
+      </div>
+    }
+
+    <div class="wizard-steps" [class.edit-mode]="mode() === 'edit'">
+      <button type="button" class="step-pill" [class.active]="step() === 1" (click)="goToStep(1)">
+        {{ mode() === 'create' ? '1. Creneau' : 'Creneau' }}
+      </button>
+      <button type="button" class="step-pill" [class.active]="step() === 2" [disabled]="!canGoStep2()" (click)="goToStep(2)">
+        {{ mode() === 'create' ? '2. Services' : 'Services' }}
+      </button>
+      <button type="button" class="step-pill" [class.active]="step() === 3" [disabled]="!canGoStep3()" (click)="goToStep(3)">
+        {{ mode() === 'create' ? '3. Cliente' : 'Cliente' }}
+      </button>
+      <button type="button" class="step-pill" [class.active]="step() === 4" [disabled]="!canGoStep4()" (click)="goToStep(4)">
+        {{ mode() === 'create' ? '4. Confirmation' : 'Validation' }}
+      </button>
+    </div>
   </div>
 
   @if (step() === 1) {
@@ -207,20 +217,39 @@
     <p class="error">{{ errorMessage() }}</p>
   }
 
+  @if (deleteConfirmOpen()) {
+    <section class="delete-confirm card">
+      <p>Supprimer ce rendez-vous ? Cette action annule le creneau dans le planning.</p>
+      <div class="delete-confirm-actions">
+        <button type="button" class="btn btn-ghost" [disabled]="deleting()" (click)="cancelDeleteConfirmation()">Annuler</button>
+        <button type="button" class="btn btn-primary btn-danger" [disabled]="deleting()" (click)="confirmDeleteCurrentAppointment()">
+          {{ deleting() ? 'Suppression...' : 'Confirmer la suppression' }}
+        </button>
+      </div>
+    </section>
+  }
+
   <footer class="wizard-actions">
-    <button type="button" class="btn btn-ghost" [disabled]="step() === 1" (click)="previousStep()">Retour</button>
+    <div class="wizard-actions-left">
+      <button type="button" class="btn btn-ghost" [disabled]="step() === 1 || deleting()" (click)="previousStep()">Retour</button>
+      @if (mode() === 'edit') {
+        <button type="button" class="btn btn-ghost btn-delete" [disabled]="saving() || deleting()" (click)="requestDeleteConfirmation()">
+          Supprimer
+        </button>
+      }
+    </div>
 
     @if (step() < 4) {
       <button
         type="button"
         class="btn btn-primary"
-        [disabled]="(step() === 1 && !canGoStep2()) || (step() === 2 && !canGoStep3()) || (step() === 3 && !canGoStep4())"
+        [disabled]="deleting() || (step() === 1 && !canGoStep2()) || (step() === 2 && !canGoStep3()) || (step() === 3 && !canGoStep4())"
         (click)="nextStep()"
       >
         Suivant
       </button>
     } @else {
-      <button type="button" class="btn btn-primary" [disabled]="saving() || !canSubmit()" (click)="save()">
+      <button type="button" class="btn btn-primary" [disabled]="saving() || deleting() || !canSubmit()" (click)="save()">
         {{ saving() ? 'Enregistrement...' : mode() === 'create' ? 'Creer' : 'Enregistrer' }}
       </button>
     }

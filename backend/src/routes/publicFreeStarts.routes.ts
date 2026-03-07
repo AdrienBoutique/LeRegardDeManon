@@ -348,6 +348,7 @@ publicFreeStartsRouter.get("/public/availability/month", async (req, res) => {
       staffId: query.staffId ?? null,
       dayMeta,
       showAvailabilityDots: settings.showAvailabilityDots,
+      availabilityDisplayMode: settings.availabilityDisplayMode,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

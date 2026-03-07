@@ -44,19 +44,6 @@ h2 {
   border-top: 1px solid var(--color-border-soft);
 }
 
-.check-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-weight: 600;
-  color: #4b3c31;
-}
-
-.check-row input {
-  width: 18px;
-  height: 18px;
-}
-
 .hint {
   margin: 0.4rem 0 0;
   color: var(--color-text-soft);

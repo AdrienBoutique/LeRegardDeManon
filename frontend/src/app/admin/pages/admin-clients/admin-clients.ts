@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { AdminClientItem, AdminClientsApiService } from '../../../core/services/admin-clients-api.service';
+import { AdminClientItem, AdminClientStats, AdminClientsApiService } from '../../../core/services/admin-clients-api.service';
 
 function contactValidator(control: AbstractControl): ValidationErrors | null {
   const email = (control.get('email')?.value as string | null)?.trim();
@@ -27,6 +27,11 @@ export class AdminClients {
   protected readonly modalOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
   protected readonly pendingDeleteId = signal<string | null>(null);
+  protected readonly statsOpen = signal(false);
+  protected readonly statsLoading = signal(false);
+  protected readonly statsError = signal('');
+  protected readonly activeStatsClient = signal<AdminClientItem | null>(null);
+  protected readonly clientStats = signal<AdminClientStats | null>(null);
 
   protected readonly form = this.formBuilder.group(
     {
@@ -102,6 +107,28 @@ export class AdminClients {
     this.modalOpen.set(false);
   }
 
+  protected openStats(client: AdminClientItem): void {
+    this.activeStatsClient.set(client);
+    this.clientStats.set(null);
+    this.statsError.set('');
+    this.statsOpen.set(true);
+    this.statsLoading.set(true);
+
+    this.api
+      .getStats(client.id)
+      .pipe(finalize(() => this.statsLoading.set(false)))
+      .subscribe({
+        next: (stats) => this.clientStats.set(stats),
+        error: () => this.statsError.set('Impossible de charger les statistiques de la cliente.')
+      });
+  }
+
+  protected closeStats(): void {
+    this.statsOpen.set(false);
+    this.statsError.set('');
+    this.clientStats.set(null);
+  }
+
   protected requestDelete(clientId: string): void {
     this.pendingDeleteId.set(clientId);
   }
@@ -166,5 +193,54 @@ export class AdminClients {
 
   protected fullName(client: AdminClientItem): string {
     return `${client.firstName} ${client.lastName}`.trim();
+  }
+
+  protected formatCurrency(value: number): string {
+    return new Intl.NumberFormat('fr-BE', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value ?? 0);
+  }
+
+  protected formatDate(dateIso: string | null | undefined): string {
+    if (!dateIso) {
+      return '-';
+    }
+    const date = new Date(dateIso);
+    if (Number.isNaN(date.getTime())) {
+      return '-';
+    }
+    return date.toLocaleString('fr-BE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  protected formatPercent(ratio: number): string {
+    return `${Math.round((ratio ?? 0) * 100)}%`;
+  }
+
+  protected mapStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDING':
+        return 'En attente';
+      case 'CONFIRMED':
+        return 'Confirme';
+      case 'COMPLETED':
+        return 'Termine';
+      case 'CANCELLED':
+        return 'Annule';
+      case 'NO_SHOW':
+        return 'Absence';
+      case 'REJECTED':
+        return 'Refuse';
+      default:
+        return status;
+    }
   }
 }

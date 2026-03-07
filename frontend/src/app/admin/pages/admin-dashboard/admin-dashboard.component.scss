@@ -26,9 +26,30 @@ h2 {
   gap: 0.65rem;
 }
 
+.goal-controls {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.goal-controls label {
+  display: grid;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: #5f4f42;
+}
+
+.goal-controls select,
+.goal-controls input {
+  width: 100%;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+}
+
 .stat-row {
   display: grid;
-  grid-template-columns: 1.3rem minmax(0, 1fr);
+  grid-template-columns: 2.5rem minmax(0, 1fr);
   align-items: center;
   gap: 0.45rem;
   border: 1px solid var(--color-border-soft);
@@ -39,12 +60,73 @@ h2 {
 
 .icon {
   text-align: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1px solid #ddc8b7;
+  background: #f6ede5;
+  color: #5f4f42;
+  border-radius: 999px;
+  padding: 0.2rem 0.15rem;
 }
 
 .stat-row strong {
   grid-column: 1 / -1;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.label-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.tip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid #d8c5b5;
+  background: #f8efe7;
+  color: #6a5646;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: help;
+  user-select: none;
+}
+
+.tip-wrap:focus-visible {
+  outline: 2px solid #8c6a52;
+  outline-offset: 2px;
+}
+
+.tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: min(280px, 70vw);
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: #2f241d;
+  color: #fff;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(24, 18, 14, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 3;
+}
+
+.tip-wrap:hover .tip,
+.tip-wrap:focus-visible .tip {
+  opacity: 1;
 }
 
 .stat-row--split span {
@@ -102,12 +184,16 @@ h2 {
 }
 
 @media (min-width: 980px) {
+  .goal-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
   .stat-row strong {
     grid-column: 3;
   }
 
   .stat-row {
-    grid-template-columns: 1.3rem minmax(0, 1fr) auto;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
   }
 
   .stat-row--split {

@@ -53,6 +53,8 @@ export interface Appointment {
   services: AppointmentServiceItem[];
   clientId?: string;
   clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
   notes?: string;
   status: AppointmentStatus;
 }
