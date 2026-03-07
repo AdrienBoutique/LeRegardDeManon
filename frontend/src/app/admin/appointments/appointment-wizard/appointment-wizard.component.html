@@ -202,7 +202,7 @@
         <select [ngModel]="draft().status" (ngModelChange)="updateStatus($event)">
           <option value="confirmed">Confirme</option>
           <option value="pending">En attente</option>
-          <option value="blocked">Bloque</option>
+          <option value="blocked">Absence / ne s'est pas presentee</option>
         </select>
       </label>
 
@@ -219,11 +219,11 @@
 
   @if (deleteConfirmOpen()) {
     <section class="delete-confirm card">
-      <p>Supprimer ce rendez-vous ? Cette action annule le creneau dans le planning.</p>
+      <p>Annuler ce rendez-vous ? Il disparaitra du planning actif et comptera comme annule dans les statistiques.</p>
       <div class="delete-confirm-actions">
-        <button type="button" class="btn btn-ghost" [disabled]="deleting()" (click)="cancelDeleteConfirmation()">Annuler</button>
+        <button type="button" class="btn btn-ghost" [disabled]="deleting()" (click)="cancelDeleteConfirmation()">Retour</button>
         <button type="button" class="btn btn-primary btn-danger" [disabled]="deleting()" (click)="confirmDeleteCurrentAppointment()">
-          {{ deleting() ? 'Suppression...' : 'Confirmer la suppression' }}
+          {{ deleting() ? 'Annulation...' : 'Confirmer l annulation' }}
         </button>
       </div>
     </section>
@@ -234,7 +234,7 @@
       <button type="button" class="btn btn-ghost" [disabled]="step() === 1 || deleting()" (click)="previousStep()">Retour</button>
       @if (mode() === 'edit') {
         <button type="button" class="btn btn-ghost btn-delete" [disabled]="saving() || deleting()" (click)="requestDeleteConfirmation()">
-          Supprimer
+          Annuler le rendez-vous
         </button>
       }
     </div>

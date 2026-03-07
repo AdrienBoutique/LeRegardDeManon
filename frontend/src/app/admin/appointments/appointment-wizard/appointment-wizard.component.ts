@@ -378,7 +378,7 @@ export class AppointmentWizardComponent {
     if (status === 'pending') {
       return 'En attente';
     }
-    return 'Bloque';
+    return 'Absence';
   }
 
   protected conflictLabel(): string {

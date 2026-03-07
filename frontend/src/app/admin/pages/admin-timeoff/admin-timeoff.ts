@@ -24,8 +24,23 @@ export class AdminTimeOff {
   protected readonly toastMessage = signal('');
   protected readonly staff = signal<AdminStaffItem[]>([]);
   protected readonly selectedStaffId = signal<string | null>('institut');
+  protected readonly selectedMonth = signal(new Date().getMonth());
   protected readonly timeOff = signal<AdminTimeOffItem[]>([]);
   protected readonly globalTimeOff = signal<AdminTimeOffItem[]>([]);
+  protected readonly monthLabels = [
+    'Janvier',
+    'Fevrier',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Aout',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Decembre'
+  ];
 
   protected readonly hasStaff = computed(() => this.staff().length > 0 || this.selectedStaffId() === 'institut');
   protected readonly isStaffUser = computed(() => this.authService.getCurrentUser()?.role === 'STAFF');
@@ -35,6 +50,16 @@ export class AdminTimeOff {
       .filter((item) => new Date(item.endsAt).getTime() >= now)
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   });
+  protected readonly visibleYear = computed(() => {
+    const firstUpcoming = this.upcomingTimeOff()[0];
+    return firstUpcoming ? new Date(firstUpcoming.startsAt).getFullYear() : new Date().getFullYear();
+  });
+  protected readonly filteredUpcomingTimeOff = computed(() =>
+    this.upcomingTimeOff().filter((item) => {
+      const start = new Date(item.startsAt);
+      return start.getFullYear() === this.visibleYear() && start.getMonth() === this.selectedMonth();
+    })
+  );
 
   protected readonly form = this.formBuilder.nonNullable.group({
     isAllDay: [true],
@@ -248,6 +273,10 @@ export class AdminTimeOff {
           this.errorMessage.set('Suppression conge impossible.');
         }
       });
+  }
+
+  protected selectMonth(monthIndex: number): void {
+    this.selectedMonth.set(monthIndex);
   }
 
   protected formatRange(item: AdminTimeOffItem): string {

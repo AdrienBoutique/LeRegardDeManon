@@ -92,8 +92,25 @@
       } @else if (!upcomingTimeOff().length) {
         <p class="muted">Aucun conge a venir.</p>
       } @else {
+        <div class="month-filter" role="tablist" aria-label="Filtrer les conges par mois">
+          @for (label of monthLabels; track label; let monthIndex = $index) {
+            <button
+              type="button"
+              class="month-chip"
+              [class.active-month]="selectedMonth() === monthIndex"
+              (click)="selectMonth(monthIndex)"
+            >
+              {{ label }}
+            </button>
+          }
+        </div>
+        <p class="muted month-caption">Conges affiches pour {{ monthLabels[selectedMonth()] }} {{ visibleYear() }}</p>
+
+        @if (!filteredUpcomingTimeOff().length) {
+          <p class="muted">Aucun conge a venir pour ce mois.</p>
+        } @else {
         <div class="stack timeoff-list">
-          @for (item of upcomingTimeOff(); track item.id) {
+          @for (item of filteredUpcomingTimeOff(); track item.id) {
             <article class="card timeoff-item">
               <p class="line">
                 <strong>{{ formatRange(item) }}</strong>
@@ -112,6 +129,7 @@
             </article>
           }
         </div>
+        }
       }
     </article>
   } @else if (!loadingStaff()) {

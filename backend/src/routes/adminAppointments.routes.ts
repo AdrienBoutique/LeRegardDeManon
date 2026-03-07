@@ -73,6 +73,247 @@ function fromDraftStatus(status: "confirmed" | "pending" | "blocked"): Appointme
 export const adminAppointmentsRouter = Router();
 adminAppointmentsRouter.use(authAdmin);
 
+adminAppointmentsRouter.post("/appointments", async (req, res) => {
+  try {
+    const payload = upsertSchema.parse(req.body ?? {});
+    const startAtUtc = new Date(payload.startAt);
+    if (Number.isNaN(startAtUtc.getTime())) {
+      res.status(400).json({ error: "Invalid startAt" });
+      return;
+    }
+
+    const uniqueServiceIds = Array.from(new Set(payload.services.map((service) => service.serviceId)));
+
+    const created = await prisma.$transaction(async (tx) => {
+      const activeServices = await tx.service.findMany({
+        where: {
+          id: { in: uniqueServiceIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          durationMin: true,
+          priceCents: true,
+        },
+      });
+      const byId = new Map(activeServices.map((service) => [service.id, service]));
+      if (activeServices.length !== uniqueServiceIds.length) {
+        throw new Error("One or more services are inactive or missing");
+      }
+
+      const items = payload.services.map((service, index) => {
+        const linked = byId.get(service.serviceId)!;
+        return {
+          order: index,
+          serviceId: linked.id,
+          serviceName: linked.name,
+          durationMin: linked.durationMin,
+          priceCents: Math.max(0, Math.round((service.price ?? linked.priceCents / 100) * 100)),
+        };
+      });
+
+      const totalDurationMin = items.reduce((sum, item) => sum + item.durationMin, 0);
+      const totalPriceCents = items.reduce((sum, item) => sum + item.priceCents, 0);
+      const endAtUtc = new Date(startAtUtc.getTime() + totalDurationMin * 60_000);
+
+      const available = await isSlotAvailable({
+        practitionerId: payload.practitionerId,
+        startAtUtc,
+        durationMin: totalDurationMin,
+      });
+      if (!available) {
+        throw new Error("Conflict: slot is not available");
+      }
+
+      const selectedClientId = payload.clientId;
+      let client = selectedClientId
+        ? await tx.client.findUnique({
+            where: { id: selectedClientId },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          })
+        : null;
+
+      if (!client && !payload.clientDraft) {
+        throw new Error("Client not found");
+      }
+
+      if (!client && payload.clientDraft) {
+        const clientEmail = payload.clientDraft.email?.trim().toLowerCase() || undefined;
+        const clientPhone = payload.clientDraft.phone?.trim() || undefined;
+        const [clientByEmail, clientByPhone] = await Promise.all([
+          clientEmail ? tx.client.findUnique({ where: { email: clientEmail } }) : Promise.resolve(null),
+          clientPhone ? tx.client.findUnique({ where: { phone: clientPhone } }) : Promise.resolve(null),
+        ]);
+
+        if (clientByEmail && clientByPhone && clientByEmail.id !== clientByPhone.id) {
+          throw new Error("Client identity conflict");
+        }
+
+        client = clientByEmail ?? clientByPhone;
+
+        if (!client) {
+          client = await tx.client.create({
+            data: {
+              firstName: payload.clientDraft.firstName.trim(),
+              lastName: payload.clientDraft.lastName.trim(),
+              phone: clientPhone ?? null,
+              email: clientEmail ?? null,
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          });
+        } else {
+          client = await tx.client.update({
+            where: { id: client.id },
+            data: {
+              firstName: payload.clientDraft.firstName.trim(),
+              lastName: payload.clientDraft.lastName.trim(),
+              phone: clientPhone ?? client.phone ?? null,
+              email: clientEmail ?? client.email ?? null,
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          });
+        }
+      } else if (client && payload.clientDraft) {
+        const clientPhone = payload.clientDraft.phone?.trim() || client.phone || undefined;
+        const clientEmail = payload.clientDraft.email?.trim().toLowerCase() || client.email || undefined;
+
+        client = await tx.client.update({
+          where: { id: client.id },
+          data: {
+            firstName: payload.clientDraft.firstName.trim(),
+            lastName: payload.clientDraft.lastName.trim(),
+            phone: clientPhone ?? null,
+            email: clientEmail ?? null,
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+          },
+        });
+      }
+
+      if (!client) {
+        throw new Error("Client not found");
+      }
+
+      const appointment = await tx.appointment.create({
+        data: {
+          staffMemberId: payload.practitionerId,
+          clientId: client.id,
+          startsAt: startAtUtc,
+          endsAt: endAtUtc,
+          totalPrice: totalPriceCents / 100,
+          notes: payload.notes ?? null,
+          status: AppointmentStatus.CONFIRMED,
+          confirmedAt: new Date(),
+          canceledAt: null,
+          clientPhone: payload.clientDraft?.phone?.trim() || client.phone || null,
+          smsConsent: true,
+        },
+        select: {
+          id: true,
+          startsAt: true,
+          endsAt: true,
+          notes: true,
+          status: true,
+          staffMember: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      await tx.appointmentItem.createMany({
+        data: items.map((item) => ({
+          appointmentId: appointment.id,
+          serviceId: item.serviceId,
+          order: item.order,
+          durationMin: item.durationMin,
+          priceCents: item.priceCents,
+        })),
+      });
+
+      return {
+        id: appointment.id,
+        practitionerId: appointment.staffMember.id,
+        practitionerName: `${appointment.staffMember.firstName} ${appointment.staffMember.lastName}`.trim(),
+        startAt: appointment.startsAt,
+        durationMin: totalDurationMin,
+        services: items.map((item) => ({
+          serviceId: item.serviceId,
+          name: item.serviceName,
+          durationMin: item.durationMin,
+          price: item.priceCents / 100,
+        })),
+        clientId: appointment.client.id,
+        clientName: `${appointment.client.firstName} ${appointment.client.lastName}`.trim(),
+        clientPhone: appointment.client.phone ?? undefined,
+        clientEmail: appointment.client.email ?? undefined,
+        notes: appointment.notes ?? undefined,
+        status: toDraftStatus(appointment.status),
+      };
+    });
+
+    res.status(201).json(created);
+    void sendConfirmedIfNeeded(created.id);
+    void sendAppointmentConfirmationSms(created.id);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid appointment payload" });
+      return;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message.toLowerCase().includes("conflict")) {
+      res.status(409).json({ error: "Conflit detecte: ce creneau est deja pris." });
+      return;
+    }
+    if (message.toLowerCase().includes("client")) {
+      res.status(400).json({ error: "Cliente introuvable." });
+      return;
+    }
+    if (message.toLowerCase().includes("service")) {
+      res.status(400).json({ error: "Un ou plusieurs services sont invalides." });
+      return;
+    }
+    console.error("[adminAppointments.post]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 adminAppointmentsRouter.get("/appointments/conflicts", async (req, res) => {
   try {
     const query = conflictQuerySchema.parse(req.query);

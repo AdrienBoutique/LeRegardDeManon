@@ -169,6 +169,7 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       pendingAppointments,
       cancelledAppointments,
       noShowAppointments,
+      confirmedAppointments,
       revenueAgg,
       revenueCount,
       lastAppointment,
@@ -186,6 +187,12 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       }),
       prisma.appointment.count({
         where: { clientId: id, status: AppointmentStatus.NO_SHOW },
+      }),
+      prisma.appointment.count({
+        where: {
+          clientId: id,
+          status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED] },
+        },
       }),
       prisma.appointment.aggregate({
         where: {
@@ -295,10 +302,7 @@ adminClientsRouter.get("/:id/stats", async (req, res) => {
       }),
     ]);
 
-    const confirmedLikeAppointments = Math.max(
-      0,
-      totalAppointments - pendingAppointments - cancelledAppointments
-    );
+    const confirmedLikeAppointments = confirmedAppointments;
     const cancellationDenominator = confirmedLikeAppointments + cancelledAppointments;
     const cancellationRate = cancellationDenominator > 0 ? cancelledAppointments / cancellationDenominator : 0;
     const revenueTotal = revenueAgg._sum.totalPrice ?? 0;

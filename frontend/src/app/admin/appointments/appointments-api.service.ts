@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -56,7 +56,11 @@ export class AppointmentsApiService {
 
   createAppointment(payload: AppointmentUpsertPayload): Observable<Appointment> {
     return this.http.post<Appointment>(this.adminBaseUrl, payload).pipe(
-      catchError(() => {
+      catchError((error: unknown) => {
+        if (!(error instanceof HttpErrorResponse) || ![404, 405, 501].includes(error.status)) {
+          return throwError(() => error);
+        }
+
         const firstService = payload.services[0];
         const client = payload.clientDraft;
 

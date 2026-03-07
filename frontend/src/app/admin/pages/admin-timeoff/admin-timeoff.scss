@@ -70,6 +70,44 @@ input {
   gap: 0.55rem;
 }
 
+.month-filter {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  margin-top: 0.7rem;
+  scrollbar-width: thin;
+}
+
+.month-chip {
+  flex: 0 0 auto;
+  border: 1px solid #dcc8b8;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: #5b483a;
+  padding: 0.42rem 0.8rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.month-chip:hover {
+  border-color: #c3a48d;
+  background: #f7efe7;
+}
+
+.month-chip.active-month {
+  background: #8c6a52;
+  border-color: #8c6a52;
+  color: #fff;
+}
+
+.month-caption {
+  margin-top: 0.45rem;
+}
+
 .timeoff-item {
   padding: 0.85rem;
 }
