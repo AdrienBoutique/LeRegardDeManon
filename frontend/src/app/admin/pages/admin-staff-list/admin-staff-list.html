@@ -33,7 +33,7 @@
           </div>
         </div>
 
-        <p>{{ member.email }}</p>
+        <p>{{ member.email || 'Aucun email de connexion' }}</p>
         <p class="muted">Acces planning: {{ member.hasAccount ? 'Oui' : 'Non' }}</p>
         @if (member.defaultDiscountPercent !== null) {
           <p class="muted">Reduction par defaut: {{ member.defaultDiscountPercent }}%</p>
@@ -41,16 +41,27 @@
 
         <div class="actions">
           <a class="btn btn-ghost" [routerLink]="['/admin/staff', member.id]">Ouvrir</a>
-          @if (pendingDeleteId() === member.id) {
+          <button type="button" class="btn btn-ghost" (click)="openStats(member)">Statistiques</button>
+          @if (pendingAction()?.id === member.id && pendingAction()?.action === 'delete') {
             <button type="button" class="btn btn-danger-lite" [disabled]="saving()" (click)="deleteStaff(member)">
-              Confirmer
+              Confirmer la suppression
             </button>
-            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="cancelDelete()">
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="cancelAction()">
+              Annuler
+            </button>
+          } @else if (pendingAction()?.id === member.id && pendingAction()?.action === 'deactivate') {
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="deactivateStaff(member)">
+              Confirmer la desactivation
+            </button>
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="cancelAction()">
               Annuler
             </button>
           } @else {
-            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="requestDelete(member.id)">
+            <button type="button" class="btn btn-ghost btn-compact" [disabled]="saving()" (click)="requestAction(member.id, 'deactivate')">
               Desactiver
+            </button>
+            <button type="button" class="btn btn-danger-lite btn-compact" [disabled]="saving()" (click)="requestAction(member.id, 'delete')">
+              Supprimer
             </button>
           }
         </div>
@@ -101,6 +112,10 @@
             </label>
           </div>
 
+          @if (!createForm.controls.accessPlanning.value) {
+            <p class="muted">Sans acces planning, aucun email de connexion ne sera affiche sur la fiche.</p>
+          }
+
           <p class="muted">
             La praticienne devra changer son mot de passe au 1er login.
           </p>
@@ -140,6 +155,123 @@
             </article>
           }
         </form>
+      </article>
+    </div>
+  }
+
+  @if (statsOpen()) {
+    <div class="modal-overlay" (click)="closeStats()">
+      <article class="card modal-card stats-modal" (click)="$event.stopPropagation()">
+        <div class="modal-top">
+          <h2>Statistiques praticienne</h2>
+          <button type="button" class="btn btn-ghost" (click)="closeStats()">Fermer</button>
+        </div>
+
+        <p class="stats-subtitle">{{ activeStatsPractitioner()?.name || '' }}</p>
+
+        <label class="stats-filter">
+          Periode
+          <select [value]="statsPeriod()" (change)="setStatsPeriod($any($event.target).value)">
+            <option value="month">Mois</option>
+            <option value="quarter">Trimestre</option>
+            <option value="year">Annee</option>
+          </select>
+        </label>
+
+        @if (statsLoading()) {
+          <p>Chargement des statistiques...</p>
+        } @else if (statsError()) {
+          <p class="error-inline">{{ statsError() }}</p>
+        } @else if (practitionerStats(); as stats) {
+          <section class="grid stats-grid">
+            <article class="card stats-card">
+              <h3>Revenus</h3>
+              <p><strong>CA periode:</strong> {{ formatCurrency(stats.periodSummary.revenue) }}</p>
+              <p><strong>Panier moyen:</strong> {{ formatCurrency(stats.periodSummary.averageBasket) }}</p>
+              <p><strong>CA / heure travaillee:</strong> {{ formatCurrency(stats.periodSummary.revenuePerWorkedHour) }}</p>
+              <p><strong>CA / jour travaille:</strong> {{ formatCurrency(stats.periodSummary.revenuePerWorkedDay) }}</p>
+              <p><strong>CA / heure planifiee:</strong> {{ stats.periodSummary.revenuePerScheduledHour === null ? '-' : formatCurrency(stats.periodSummary.revenuePerScheduledHour) }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Charge de travail</h3>
+              <p><strong>RDV periode:</strong> {{ stats.periodSummary.appointments }}</p>
+              <p><strong>RDV realises:</strong> {{ stats.periodSummary.confirmedLike }}</p>
+              <p><strong>Heures travaillees:</strong> {{ formatNumber(stats.periodSummary.workedHours) }} h</p>
+              <p><strong>Jours travailles:</strong> {{ stats.periodSummary.workedDays }}</p>
+              <p><strong>RDV / jour travaille:</strong> {{ formatNumber(stats.periodSummary.appointmentsPerWorkedDay) }}</p>
+              <p><strong>Taux occupation theorique:</strong> {{ formatPercent(stats.periodSummary.utilizationRate) }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Qualite planning</h3>
+              <p><strong>Heures planifiees:</strong> {{ formatNumber(stats.periodSummary.scheduledHours) }} h</p>
+              <p><strong>En attente:</strong> {{ stats.periodSummary.pending }}</p>
+              <p><strong>Annules:</strong> {{ stats.periodSummary.cancelled }}</p>
+              <p><strong>Absences:</strong> {{ stats.periodSummary.noShow }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Historique global</h3>
+              <p><strong>CA total:</strong> {{ formatCurrency(stats.lifetimeSummary.revenue) }}</p>
+              <p><strong>RDV realises total:</strong> {{ stats.lifetimeSummary.confirmedLike }}</p>
+              <p><strong>Heures travaillees total:</strong> {{ formatNumber(stats.lifetimeSummary.workedHours) }} h</p>
+              <p><strong>Jours travailles total:</strong> {{ stats.lifetimeSummary.workedDays }}</p>
+              <p><strong>CA horaire moyen total:</strong> {{ formatCurrency(stats.lifetimeSummary.revenuePerWorkedHour) }}</p>
+            </article>
+          </section>
+
+          <section class="grid stats-grid extra-stats">
+            <article class="card stats-card">
+              <h3>Timeline</h3>
+              <p><strong>Dernier RDV:</strong> {{ formatDate(stats.timeline.lastAppointment?.startsAt) }}</p>
+              <p><strong>Prochain RDV:</strong> {{ formatDate(stats.timeline.nextAppointment?.startsAt) }}</p>
+            </article>
+
+            <article class="card stats-card">
+              <h3>Top soins</h3>
+              @if (stats.insights.topServices.length === 0) {
+                <p>Aucun soin realise sur la periode.</p>
+              } @else {
+                @for (item of stats.insights.topServices; track item.name) {
+                  <p><strong>{{ item.name }}</strong>: {{ item.count }} ventes, {{ formatCurrency(item.revenue) }}</p>
+                }
+              }
+            </article>
+
+            <article class="card stats-card">
+              <h3>Jours les plus charges</h3>
+              @if (stats.insights.weekdayBreakdown.length === 0) {
+                <p>Aucune activite sur la periode.</p>
+              } @else {
+                @for (day of stats.insights.weekdayBreakdown; track day.label) {
+                  <p><strong>{{ day.label }}</strong>: {{ day.count }} rendez-vous</p>
+                }
+              }
+            </article>
+          </section>
+
+          <section class="stack history-block">
+            <h3>Historique recent</h3>
+            @if (stats.history.length === 0) {
+              <p>Aucun rendez-vous pour cette praticienne.</p>
+            } @else {
+              <div class="history-list">
+                @for (item of stats.history; track item.id) {
+                  <article class="history-item">
+                    <div class="history-top">
+                      <strong>{{ formatDate(item.startsAt) }}</strong>
+                      <span class="chip">{{ mapStatusLabel(item.status) }}</span>
+                    </div>
+                    <p><strong>Cliente:</strong> {{ item.clientName }}</p>
+                    <p><strong>Services:</strong> {{ item.services.join(' + ') || '-' }}</p>
+                    <p><strong>Montant:</strong> {{ formatCurrency(item.totalPrice) }}</p>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
       </article>
     </div>
   }

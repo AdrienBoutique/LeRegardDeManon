@@ -5,6 +5,8 @@ import { finalize } from 'rxjs';
 import {
   AdminPractitionerItem,
   AdminPractitionersApiService,
+  PractitionerStatsPeriod,
+  PractitionerStatsResponse,
   PractitionerStatus
 } from '../../../core/services/admin-practitioners-api.service';
 import { PASTEL_COLOR_OPTIONS } from '../../shared/pastel-colors';
@@ -34,10 +36,16 @@ export class AdminStaffList {
   protected readonly saving = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly practitioners = signal<AdminPractitionerItem[]>([]);
-  protected readonly pendingDeleteId = signal<string | null>(null);
+  protected readonly pendingAction = signal<{ id: string; action: 'delete' | 'deactivate' } | null>(null);
   protected readonly createModalOpen = signal(false);
   protected readonly tempPassword = signal<string | null>(null);
   protected readonly colorOptions = PASTEL_COLOR_OPTIONS;
+  protected readonly statsOpen = signal(false);
+  protected readonly statsLoading = signal(false);
+  protected readonly statsError = signal('');
+  protected readonly statsPeriod = signal<PractitionerStatsPeriod>('month');
+  protected readonly activeStatsPractitioner = signal<StaffCardItem | null>(null);
+  protected readonly practitionerStats = signal<PractitionerStatsResponse | null>(null);
 
   protected readonly createForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required]],
@@ -143,23 +151,45 @@ export class AdminStaffList {
     this.errorMessage.set('');
 
     this.api
+      .deletePractitioner(member.id)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: () => {
+          this.pendingAction.set(null);
+          this.fetchStaff();
+        },
+        error: (error: { error?: { error?: string } }) =>
+          this.errorMessage.set(error.error?.error ?? 'Suppression impossible.')
+      });
+  }
+
+  protected deactivateStaff(member: StaffCardItem): void {
+    if (this.saving()) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.errorMessage.set('');
+
+    this.api
       .updateStatus(member.id, 'inactive')
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
-          this.pendingDeleteId.set(null);
+          this.pendingAction.set(null);
           this.fetchStaff();
         },
-        error: () => this.errorMessage.set('Desactivation impossible.')
+        error: (error: { error?: { error?: string } }) =>
+          this.errorMessage.set(error.error?.error ?? 'Desactivation impossible.')
       });
   }
 
-  protected requestDelete(memberId: string): void {
-    this.pendingDeleteId.set(memberId);
+  protected requestAction(memberId: string, action: 'delete' | 'deactivate'): void {
+    this.pendingAction.set({ id: memberId, action });
   }
 
-  protected cancelDelete(): void {
-    this.pendingDeleteId.set(null);
+  protected cancelAction(): void {
+    this.pendingAction.set(null);
   }
 
   protected openCreateModal(): void {
@@ -171,6 +201,88 @@ export class AdminStaffList {
   protected closeCreateModal(): void {
     this.createModalOpen.set(false);
     this.tempPassword.set(null);
+  }
+
+  protected openStats(member: StaffCardItem): void {
+    this.activeStatsPractitioner.set(member);
+    this.practitionerStats.set(null);
+    this.statsError.set('');
+    this.statsOpen.set(true);
+    this.loadStats(member.id);
+  }
+
+  protected closeStats(): void {
+    this.statsOpen.set(false);
+    this.statsError.set('');
+    this.practitionerStats.set(null);
+  }
+
+  protected setStatsPeriod(value: string): void {
+    const period: PractitionerStatsPeriod = value === 'year' ? 'year' : value === 'quarter' ? 'quarter' : 'month';
+    this.statsPeriod.set(period);
+    const member = this.activeStatsPractitioner();
+    if (member) {
+      this.loadStats(member.id);
+    }
+  }
+
+  protected formatCurrency(value: number): string {
+    return new Intl.NumberFormat('fr-BE', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value ?? 0);
+  }
+
+  protected formatNumber(value: number): string {
+    return new Intl.NumberFormat('fr-BE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    }).format(value ?? 0);
+  }
+
+  protected formatPercent(ratio: number | null): string {
+    if (ratio === null || Number.isNaN(ratio)) {
+      return '-';
+    }
+    return `${Math.round(ratio * 100)}%`;
+  }
+
+  protected formatDate(dateIso: string | null | undefined): string {
+    if (!dateIso) {
+      return '-';
+    }
+    const date = new Date(dateIso);
+    if (Number.isNaN(date.getTime())) {
+      return '-';
+    }
+    return date.toLocaleString('fr-BE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  protected mapStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDING':
+        return 'En attente';
+      case 'CONFIRMED':
+        return 'Confirme';
+      case 'COMPLETED':
+        return 'Termine';
+      case 'CANCELLED':
+        return 'Annule';
+      case 'NO_SHOW':
+        return 'Absence';
+      case 'REJECTED':
+        return 'Refuse';
+      default:
+        return status;
+    }
   }
 
   protected hasColorOption(hex: string | null | undefined): boolean {
@@ -188,5 +300,20 @@ export class AdminStaffList {
     }
 
     navigator.clipboard.writeText(password).catch(() => undefined);
+  }
+
+  private loadStats(practitionerId: string): void {
+    this.statsLoading.set(true);
+    this.statsError.set('');
+
+    this.api
+      .getStats(practitionerId, this.statsPeriod())
+      .pipe(finalize(() => this.statsLoading.set(false)))
+      .subscribe({
+        next: (stats) => this.practitionerStats.set(stats),
+        error: (error: { error?: { error?: string } }) => {
+          this.statsError.set(error.error?.error ?? 'Impossible de charger les statistiques de la praticienne.');
+        }
+      });
   }
 }

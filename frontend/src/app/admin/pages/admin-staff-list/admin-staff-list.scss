@@ -162,6 +162,11 @@ input {
   overflow: auto;
 }
 
+.stats-modal {
+  width: min(980px, 100%);
+  padding: 1rem;
+}
+
 .modal-top {
   display: flex;
   align-items: center;
@@ -200,6 +205,65 @@ input {
   border: 1px solid var(--color-border);
 }
 
+.error-inline {
+  color: #9f1f1f;
+  margin: 0;
+}
+
+.stats-subtitle {
+  margin: 0 0 0.75rem;
+}
+
+.stats-filter {
+  margin-bottom: 0.9rem;
+  max-width: 220px;
+}
+
+.stats-grid {
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+
+.extra-stats {
+  margin-top: 0.8rem;
+}
+
+.stats-card {
+  padding: 0.85rem;
+}
+
+.stats-card p {
+  margin: 0.35rem 0 0;
+}
+
+.history-block {
+  margin-top: 0.9rem;
+}
+
+.history-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.history-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  background: #fffdf9;
+}
+
+.history-item p {
+  margin: 0.25rem 0 0;
+}
+
+.history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 @media (min-width: 860px) {
   .two-cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -210,6 +274,10 @@ input {
   }
 
   .staff-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

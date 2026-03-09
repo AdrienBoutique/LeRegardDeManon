@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { finalize, firstValueFrom } from 'rxjs';
 import {
   AdminAvailabilityItem,
@@ -42,6 +43,7 @@ export class AdminStaffDetail {
   private readonly api = inject(AdminInstituteApiService);
   private readonly servicesApi = inject(AdminServicesApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private successTimer: ReturnType<typeof setTimeout> | null = null;
@@ -51,6 +53,7 @@ export class AdminStaffDetail {
   protected readonly saving = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
+  protected readonly pendingDangerAction = signal<'delete' | 'deactivate' | null>(null);
 
   protected readonly staff = signal<AdminStaffItem | null>(null);
   protected readonly allServices = signal<AdminServiceItem[]>([]);
@@ -60,7 +63,7 @@ export class AdminStaffDetail {
 
   protected readonly infoForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required]],
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.email]],
     active: [true],
     isTrainee: [false],
     colorHex: ['#8C6A52'],
@@ -140,13 +143,20 @@ export class AdminStaffDetail {
     }
 
     const raw = this.infoForm.getRawValue();
+    const email = raw.email.trim().toLowerCase();
+
+    if (member.hasAccount && !email) {
+      this.errorMessage.set("L'email est obligatoire pour une praticienne avec acces planning.");
+      return;
+    }
+
     this.saving.set(true);
     this.successMessage.set('');
 
     this.api
       .updateStaff(member.id, {
         name: raw.name.trim(),
-        email: raw.email.trim().toLowerCase(),
+        ...(email ? { email } : {}),
         active: raw.active,
         isTrainee: raw.isTrainee,
         colorHex: raw.colorHex,
@@ -162,6 +172,72 @@ export class AdminStaffDetail {
         error: (error: { error?: { error?: string } }) => {
           this.successMessage.set('');
           this.errorMessage.set(error.error?.error ?? 'Mise a jour impossible.');
+        }
+      });
+  }
+
+  protected requestDelete(): void {
+    this.pendingDangerAction.set('delete');
+    this.errorMessage.set('');
+    this.successMessage.set('');
+  }
+
+  protected requestDeactivate(): void {
+    this.pendingDangerAction.set('deactivate');
+    this.errorMessage.set('');
+    this.successMessage.set('');
+  }
+
+  protected cancelDangerAction(): void {
+    this.pendingDangerAction.set(null);
+  }
+
+  protected deleteStaff(): void {
+    const member = this.staff();
+    if (!member || this.saving()) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    this.api
+      .deleteStaff(member.id)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: async () => {
+          this.pendingDangerAction.set(null);
+          await this.router.navigate(['/admin/staff']);
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? 'Suppression impossible.');
+        }
+      });
+  }
+
+  protected deactivateStaff(): void {
+    const member = this.staff();
+    if (!member || this.saving()) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    this.api
+      .updateStaff(member.id, { active: false })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (updated) => {
+          this.staff.set(updated);
+          this.pendingDangerAction.set(null);
+          this.errorMessage.set('');
+          this.setSuccess('Praticienne desactivee.');
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? 'Desactivation impossible.');
         }
       });
   }
@@ -361,7 +437,7 @@ export class AdminStaffDetail {
         if (member) {
           this.infoForm.reset({
             name: member.name,
-            email: member.email,
+            email: member.email ?? '',
             active: member.active,
             isTrainee: member.isTrainee,
             colorHex: member.colorHex,

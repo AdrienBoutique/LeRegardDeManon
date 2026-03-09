@@ -140,31 +140,72 @@
             <p class="error-inline">L'expediteur ne peut pas depasser 30 caracteres.</p>
           }
 
+          <article class="sms-help card">
+            <div>
+              <h3>Variables disponibles</h3>
+              <p class="hint">Clique sur une variable pour l'inserer au curseur dans le modele ouvert.</p>
+            </div>
+
+            <div class="variables-row">
+              @for (variable of smsVariables; track variable.key) {
+                <button
+                  type="button"
+                  class="variable-chip"
+                  [disabled]="smsOptionsDisabled() || !activeSmsEditor() || !activeSmsTextarea()"
+                  (click)="activeSmsEditor() && activeSmsTextarea() && insertSmsVariable($any(activeSmsEditor()), variable.token, $any(activeSmsTextarea()))"
+                >
+                  {{ variable.token }}
+                </button>
+              }
+            </div>
+
+            <p class="hint variables-preview">
+              Exemple:
+              @for (variable of smsVariables; track variable.key) {
+                <span><strong>{{ variable.token }}</strong> = {{ variable.preview }}</span>
+              }
+            </p>
+          </article>
+
           <div class="templates-grid">
-            <label>
-              Modele confirmation
-              <textarea rows="3" formControlName="smsTemplateConfirmation" [disabled]="smsOptionsDisabled()"></textarea>
-            </label>
+            @for (template of smsTemplateConfigs; track template.key) {
+              <article class="template-card" [class.template-card-active]="activeSmsEditor() === template.key">
+                <label>
+                  <span>{{ template.label }}</span>
+                  <small class="hint">{{ template.description }}</small>
+                  <textarea
+                    #activeTextarea
+                    rows="4"
+                    [formControlName]="template.key"
+                    [disabled]="smsOptionsDisabled()"
+                    (focus)="setActiveSmsEditor(template.key, activeTextarea)"
+                    (click)="setActiveSmsEditor(template.key, activeTextarea)"
+                  ></textarea>
+                </label>
 
-            <label>
-              Modele rappel 24h
-              <textarea rows="3" formControlName="smsTemplateReminder24h" [disabled]="smsOptionsDisabled()"></textarea>
-            </label>
+                <div class="template-tools">
+                  <div class="variables-row variables-row-inline">
+                    @for (variable of smsVariables; track variable.key) {
+                      <button
+                        type="button"
+                        class="variable-chip variable-chip-inline"
+                        [disabled]="smsOptionsDisabled()"
+                        (click)="insertSmsVariable(template.key, variable.token, activeTextarea)"
+                      >
+                        {{ variable.label }}
+                      </button>
+                    }
+                  </div>
 
-            <label>
-              Modele rappel 2h
-              <textarea rows="3" formControlName="smsTemplateReminder2h" [disabled]="smsOptionsDisabled()"></textarea>
-            </label>
+                  <span class="char-count">{{ countSmsCharacters(template.key) }} caracteres</span>
+                </div>
 
-            <label>
-              Modele annulation
-              <textarea rows="3" formControlName="smsTemplateCancellation" [disabled]="smsOptionsDisabled()"></textarea>
-            </label>
-
-            <label>
-              Modele modification de rendez-vous
-              <textarea rows="3" formControlName="smsTemplateReschedule" [disabled]="smsOptionsDisabled()"></textarea>
-            </label>
+                <div class="sms-preview-box">
+                  <strong>Apercu</strong>
+                  <p>{{ previewSmsTemplate(template.key) }}</p>
+                </div>
+              </article>
+            }
           </div>
         </div>
 

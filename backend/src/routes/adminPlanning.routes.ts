@@ -109,7 +109,6 @@ adminPlanningRouter.get("/planning", async (req, res) => {
               AppointmentStatus.CONFIRMED,
               AppointmentStatus.COMPLETED,
               AppointmentStatus.NO_SHOW,
-              AppointmentStatus.CANCELLED,
             ],
           },
         },

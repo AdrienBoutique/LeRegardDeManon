@@ -29,6 +29,65 @@ export type CreatePractitionerResponse = AdminPractitionerItem & {
   tempPassword: string | null;
 };
 
+export type PractitionerStatsPeriod = 'month' | 'quarter' | 'year';
+
+export type PractitionerStatsLiteAppointment = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  totalPrice: number;
+  clientName: string;
+  services: string[];
+};
+
+export type PractitionerStatsResponse = {
+  practitioner: {
+    id: string;
+    name: string;
+    email: string;
+    active: boolean;
+    isTrainee: boolean;
+    createdAt: string;
+    colorHex: string;
+  };
+  period: PractitionerStatsPeriod;
+  periodSummary: {
+    appointments: number;
+    confirmedLike: number;
+    pending: number;
+    cancelled: number;
+    noShow: number;
+    revenue: number;
+    averageBasket: number;
+    workedHours: number;
+    workedDays: number;
+    revenuePerWorkedHour: number;
+    revenuePerWorkedDay: number;
+    appointmentsPerWorkedDay: number;
+    scheduledHours: number;
+    utilizationRate: number | null;
+    revenuePerScheduledHour: number | null;
+  };
+  lifetimeSummary: {
+    confirmedLike: number;
+    revenue: number;
+    averageBasket: number;
+    workedHours: number;
+    workedDays: number;
+    revenuePerWorkedHour: number;
+  };
+  timeline: {
+    lastAppointment: PractitionerStatsLiteAppointment | null;
+    nextAppointment: PractitionerStatsLiteAppointment | null;
+  };
+  insights: {
+    topServices: Array<{ name: string; count: number; revenue: number }>;
+    weekdayBreakdown: Array<{ label: string; count: number }>;
+  };
+  history: PractitionerStatsLiteAppointment[];
+};
+
 @Injectable({ providedIn: 'root' })
 export class AdminPractitionersApiService {
   private readonly http = inject(HttpClient);
@@ -58,5 +117,13 @@ export class AdminPractitionersApiService {
 
   updateStatus(id: string, status: PractitionerStatus): Observable<{ id: string; status: PractitionerStatus }> {
     return this.http.patch<{ id: string; status: PractitionerStatus }>(`${this.baseUrl}/${id}/status`, { status });
+  }
+
+  deletePractitioner(id: string): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(`${this.baseUrl}/${id}`);
+  }
+
+  getStats(id: string, period: PractitionerStatsPeriod): Observable<PractitionerStatsResponse> {
+    return this.http.get<PractitionerStatsResponse>(`${this.baseUrl}/${id}/stats?period=${period}`);
   }
 }

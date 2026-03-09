@@ -5,7 +5,7 @@
         <span class="color-dot" [style.background]="member.colorHex"></span>
         {{ member.name }}
       </h1>
-      <p>{{ member.email }}</p>
+      <p>{{ member.email || 'Aucun email renseigne' }}</p>
     </header>
 
     @if (errorMessage()) {
@@ -35,6 +35,10 @@
               <input type="email" formControlName="email" />
             </label>
           </div>
+
+          @if (!member.hasAccount) {
+            <p class="muted">Aucun acces planning sur ce profil. L'email peut rester vide.</p>
+          }
 
           <div class="grid three-cols">
             <label class="check-row">
@@ -74,6 +78,39 @@
           <button type="submit" class="btn btn-primary btn-small" [disabled]="saving()">
             {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
           </button>
+
+          <div class="danger-zone">
+            <p class="muted">Desactiver masque la praticienne sans effacer ses donnees. Supprimer efface vraiment le profil si aucun rendez-vous n'y est rattache.</p>
+
+            @if (pendingDangerAction() === 'delete') {
+              <div class="danger-actions">
+                <button type="button" class="btn btn-danger-lite btn-small" [disabled]="saving()" (click)="deleteStaff()">
+                  {{ saving() ? 'Suppression...' : 'Confirmer la suppression' }}
+                </button>
+                <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="cancelDangerAction()">
+                  Annuler
+                </button>
+              </div>
+            } @else if (pendingDangerAction() === 'deactivate') {
+              <div class="danger-actions">
+                <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="deactivateStaff()">
+                  {{ saving() ? 'Desactivation...' : 'Confirmer la desactivation' }}
+                </button>
+                <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="cancelDangerAction()">
+                  Annuler
+                </button>
+              </div>
+            } @else {
+              <div class="danger-actions">
+                <button type="button" class="btn btn-ghost btn-small" [disabled]="saving() || !member.active" (click)="requestDeactivate()">
+                  Desactiver la praticienne
+                </button>
+                <button type="button" class="btn btn-danger-lite btn-small" [disabled]="saving()" (click)="requestDelete()">
+                  Supprimer la praticienne
+                </button>
+              </div>
+            }
+          </div>
         </form>
       </article>
     }

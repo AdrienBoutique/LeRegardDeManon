@@ -7,6 +7,7 @@ export type AdminStaffItem = {
   id: string;
   name: string;
   email: string;
+  hasAccount?: boolean;
   active: boolean;
   isTrainee: boolean;
   colorHex: string;

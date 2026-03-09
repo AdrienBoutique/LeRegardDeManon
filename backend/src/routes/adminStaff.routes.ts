@@ -20,6 +20,10 @@ function splitName(name: string): { firstName: string; lastName: string } {
   return { firstName, lastName };
 }
 
+function toDisplayEmail(email: string): string {
+  return email.endsWith("@no-login.local") ? "" : email;
+}
+
 const createStaffSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -83,19 +87,33 @@ adminStaffRouter.get("/", authRequired, requireRole(Role.ADMIN, Role.STAFF), asy
   try {
     const staff = await prisma.staffMember.findMany({
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        isActive: true,
+        isTrainee: true,
+        colorHex: true,
+        defaultDiscountPercent: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+      },
     });
 
     res.json(
       staff.map((member) => ({
         id: member.id,
         name: `${member.firstName} ${member.lastName}`.trim(),
-        email: member.email,
+        email: toDisplayEmail(member.email),
         active: member.isActive,
         isTrainee: member.isTrainee,
         colorHex: member.colorHex,
         defaultDiscountPercent: member.defaultDiscountPercent,
         createdAt: member.createdAt,
         updatedAt: member.updatedAt,
+        hasAccount: Boolean(member.userId),
       }))
     );
   } catch (error) {
@@ -121,18 +139,32 @@ adminStaffRouter.post("/", ...authAdmin, async (req, res) => {
         colorHex: payload.colorHex,
         defaultDiscountPercent: payload.defaultDiscountPercent ?? null,
       },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        isActive: true,
+        isTrainee: true,
+        colorHex: true,
+        defaultDiscountPercent: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+      },
     });
 
     res.status(201).json({
       id: created.id,
       name: `${created.firstName} ${created.lastName}`.trim(),
-      email: created.email,
+      email: toDisplayEmail(created.email),
       active: created.isActive,
       isTrainee: created.isTrainee,
       colorHex: created.colorHex,
       defaultDiscountPercent: created.defaultDiscountPercent,
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
+      hasAccount: Boolean(created.userId),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -170,18 +202,32 @@ adminStaffRouter.patch("/:id", ...authAdmin, async (req, res) => {
               ? "Stagiaire"
               : "Staff",
       },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        isActive: true,
+        isTrainee: true,
+        colorHex: true,
+        defaultDiscountPercent: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+      },
     });
 
     res.json({
       id: updated.id,
       name: `${updated.firstName} ${updated.lastName}`.trim(),
-      email: updated.email,
+      email: toDisplayEmail(updated.email),
       active: updated.isActive,
       isTrainee: updated.isTrainee,
       colorHex: updated.colorHex,
       defaultDiscountPercent: updated.defaultDiscountPercent,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
+      hasAccount: Boolean(updated.userId),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -289,9 +335,41 @@ adminStaffRouter.post("/:id/services", ...authAdmin, async (req, res) => {
 adminStaffRouter.delete("/:id", ...authAdmin, async (req, res) => {
   try {
     const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    await prisma.staffMember.update({
+    const existing = await prisma.staffMember.findUnique({
       where: { id: staffId },
-      data: { isActive: false },
+      select: {
+        id: true,
+        userId: true,
+        _count: {
+          select: {
+            appointments: true,
+          },
+        },
+      },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: "Praticienne introuvable." });
+      return;
+    }
+
+    if (existing._count.appointments > 0) {
+      res.status(409).json({
+        error: "Suppression impossible: cette praticienne a deja des rendez-vous. Desactivez-la a la place.",
+      });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.staffMember.delete({
+        where: { id: staffId },
+      });
+
+      if (existing.userId) {
+        await tx.user.delete({
+          where: { id: existing.userId },
+        });
+      }
     });
 
     res.json({ ok: true });
