@@ -81,16 +81,25 @@
             {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
           </button>
 
-          @if (member.hasAccount) {
-            @if (member.userRole === 'ADMIN') {
-              <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="updateAdminRole('STAFF')">
-                {{ saving() ? 'Mise à jour...' : 'Retirer admin' }}
-              </button>
-            } @else {
-              <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="updateAdminRole('ADMIN')">
-                {{ saving() ? 'Promotion...' : 'Rendre admin' }}
-              </button>
-            }
+          @if (canManageRoles()) {
+            <div class="role-actions">
+              @if (member.hasAccount) {
+                @if (member.userRole === 'ADMIN') {
+                  <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="updateAdminRole('STAFF')">
+                    {{ saving() ? 'Mise à jour...' : 'Retirer admin' }}
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="updateAdminRole('ADMIN')">
+                    {{ saving() ? 'Promotion...' : 'Rendre admin' }}
+                  </button>
+                }
+              } @else {
+                <button type="button" class="btn btn-ghost btn-small" disabled>
+                  Rendre admin
+                </button>
+                <p class="muted">Ce profil n’a pas encore de compte de connexion lié.</p>
+              }
+            </div>
           }
 
           <div class="danger-zone">

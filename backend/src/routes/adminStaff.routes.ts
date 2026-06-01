@@ -69,6 +69,8 @@ const updateStaffRoleSchema = z.object({
   role: z.enum([Role.ADMIN, Role.STAFF]),
 });
 
+const ROLE_OWNER_EMAIL = "contact@leregarddemanon.com";
+
 function computeEffectivePrice(
   basePriceCents: number,
   priceCentsOverride: number | null,
@@ -291,6 +293,11 @@ adminStaffRouter.patch("/:id/role", ...authAdmin, async (req, res) => {
 
     if (!existing.userId || !existing.user) {
       res.status(409).json({ error: "Aucun compte de connexion n'est lie a ce profil." });
+      return;
+    }
+
+    if (authReq.user.email.toLowerCase() !== ROLE_OWNER_EMAIL) {
+      res.status(403).json({ error: "Seul le compte contact@leregarddemanon.com peut gerer les droits administrateur." });
       return;
     }
 

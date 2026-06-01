@@ -10,6 +10,7 @@ import {
   AdminStaffServiceItem
 } from '../../../core/services/admin-institute-api.service';
 import { AdminServicesApiService, AdminServiceItem } from '../../../core/services/admin-services-api.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { PASTEL_COLOR_OPTIONS } from '../../shared/pastel-colors';
 
 type TabKey = 'info' | 'services' | 'availability';
@@ -46,7 +47,9 @@ export class AdminStaffDetail {
   private readonly router = inject(Router);
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
   private successTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly roleOwnerEmail = 'contact@leregarddemanon.com';
 
   protected readonly tab = signal<TabKey>('info');
   protected readonly loading = signal(false);
@@ -113,6 +116,10 @@ export class AdminStaffDetail {
   protected readonly allServicesSelected = computed(() => {
     const rows = this.serviceRows();
     return rows.length > 0 && rows.every((row) => row.enabled);
+  });
+  protected readonly canManageRoles = computed(() => {
+    const user = this.authService.getCurrentUser();
+    return user?.email?.toLowerCase() === this.roleOwnerEmail;
   });
 
   constructor() {
