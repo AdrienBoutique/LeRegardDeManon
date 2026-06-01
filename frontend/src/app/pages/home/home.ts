@@ -6,7 +6,6 @@ import {
   PublicPromotionsApi
 } from '../../core/api/public-promotions.api';
 import {
-  defaultHomeContent,
   HomeContentApi,
   HomeContentPayload
 } from '../../core/api/home-content.api';
@@ -25,9 +24,9 @@ export class Home {
   private readonly homeContentApi = inject(HomeContentApi);
 
   protected readonly activePromotions$ = this.publicPromotionsApi.getActivePromotions();
-  protected readonly content = signal<HomeContentPayload>(defaultHomeContent());
+  protected readonly content = signal<HomeContentPayload | null>(null);
   protected readonly contentError = signal('');
-  protected readonly hasAboutImage = computed(() => this.content().about.images.length > 0);
+  protected readonly hasAboutImage = computed(() => (this.content()?.about.images.length ?? 0) > 0);
 
   constructor() {
     this.homeContentApi.getPublicContent().subscribe({
@@ -41,8 +40,8 @@ export class Home {
   }
 
   protected firstAboutImage(): string | null {
-    const uploaded = this.content().about.images.find((url) => typeof url === 'string' && url.trim().length > 0)?.trim();
-    return uploaded ?? '/assets/bgManon2.jpg?v=2';
+    const uploaded = this.content()?.about.images.find((url) => typeof url === 'string' && url.trim().length > 0)?.trim();
+    return uploaded ?? '/assets/1.jpg';
   }
 
   protected formatPrice(priceCents: number): string {

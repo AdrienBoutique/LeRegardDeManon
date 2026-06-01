@@ -2,184 +2,184 @@
   <section class="panel offers-empty">
     <p>{{ contentError() }}</p>
   </section>
-}
+} @else if (content(); as homeContent) {
+  @if (homeContent.hero.visible) {
+    <section class="hero" id="top">
+      <div class="hero-overlay"></div>
 
-@if (content().hero.visible) {
-  <section class="hero" id="top">
-    <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1>{{ homeContent.hero.title }}</h1>
+          <p class="subtitle">{{ homeContent.hero.badge }}</p>
+        </div>
 
-    <div class="hero-content">
-      <div class="hero-text">
-        <h1>{{ content().hero.title }}</h1>
-        <p class="subtitle">{{ content().hero.badge }}</p>
-      </div>
-
-      <div class="hero-buttons">
-        <button type="button" class="btn-primary" routerLink="/rdv">{{ content().hero.primaryButtonLabel }}</button>
-        <button type="button" class="btn-secondary" routerLink="/formations">{{ content().hero.secondaryButtonLabel }}</button>
-      </div>
-    </div>
-  </section>
-}
-
-@if (activePromotions$ | async; as promotions) {
-  @if (content().offers.visible && promotions.length > 0) {
-    <section class="panel offers-panel" id="offres">
-      <app-section-title [title]="content().offers.title" [subtitle]="content().offers.subtitle"></app-section-title>
-
-      <div class="offers-rail-head">
-        @if (promotions.length > 3) {
-          <p class="offers-rail-hint">Faites glisser ou utilisez les fleches pour voir toutes les offres.</p>
-        }
-      </div>
-
-      <div class="offers-rail-wrap">
-        @if (promotions.length > 3) {
-          <button type="button" class="rail-btn rail-btn-left" (click)="scrollOffers(-1)" aria-label="Voir les offres precedentes">
-            <span aria-hidden="true">&#8249;</span>
-          </button>
-          <button type="button" class="rail-btn rail-btn-right" (click)="scrollOffers(1)" aria-label="Voir les offres suivantes">
-            <span aria-hidden="true">&#8250;</span>
-          </button>
-        }
-
-        <div class="offers-rail" #offersRail>
-          @for (promo of promotions; track promo.id) {
-            <article
-              class="offer-card"
-              [class.offer-card-single]="promo.services.length === 1"
-              [class.offer-card-two]="promo.services.length === 2"
-              [class.offer-card-multi]="promo.services.length > 1"
-              [style.--offer-index]="$index"
-            >
-              <div class="offer-head">
-                <span class="offer-badge limited">Edition limitee</span>
-                <span class="offer-badge discount">{{ promo.computedDiscountLabel }}</span>
-              </div>
-
-              <div class="offer-main">
-                <h3>{{ promo.title }}</h3>
-                @if (promo.subtitle) {
-                  <p class="offer-subtitle">{{ promo.subtitle }}</p>
-                }
-                <p class="offer-deadline">{{ formatUntilDate(promo.endAt) }}</p>
-              </div>
-
-              @if (promo.services.length > 1) {
-                <p class="offer-count">{{ promo.services.length }} prestations incluses</p>
-              }
-
-              <ul class="offer-services">
-                @for (service of promo.services; track service.id) {
-                  <li>
-                    <div class="service-head">
-                      <strong class="service-name">{{ service.name }}</strong>
-                      <span class="service-duration">{{ service.durationMin }} min</span>
-                    </div>
-
-                    @if (promo.services.length === 1) {
-                      <div class="service-foot">
-                        <div class="price-wrap">
-                          <s>{{ formatPrice(service.priceCents) }}</s>
-                          <strong>{{ formatPrice(service.discountedPriceCents) }}</strong>
-                        </div>
-
-                        <a
-                          routerLink="/rdv"
-                          [queryParams]="{ promoId: promo.id, serviceId: service.id }"
-                          class="btn btn-ghost btn-reserve"
-                        >
-                          Reserver
-                        </a>
-                      </div>
-                    }
-                  </li>
-                }
-              </ul>
-
-              @if (promo.services.length > 1) {
-                <div class="offer-total">
-                  <span>Total offre</span>
-                  <div class="price-wrap">
-                    <s>{{ formatPrice(promoBaseTotal(promo)) }}</s>
-                    <strong>{{ formatPrice(promoDiscountedTotal(promo)) }}</strong>
-                  </div>
-                </div>
-
-                <a
-                  routerLink="/rdv"
-                  [queryParams]="{ promoId: promo.id }"
-                  class="btn btn-ghost btn-reserve btn-reserve-total"
-                >
-                  Reserver l'offre
-                </a>
-              }
-            </article>
-          }
+        <div class="hero-buttons">
+          <button type="button" class="btn-primary" routerLink="/rdv">{{ homeContent.hero.primaryButtonLabel }}</button>
+          <button type="button" class="btn-secondary" routerLink="/formations">{{ homeContent.hero.secondaryButtonLabel }}</button>
         </div>
       </div>
     </section>
   }
-}
 
-@if (content().about.visible) {
-  <section class="panel about" id="apropos">
-    <div>
-      <h2>{{ content().about.title }}</h2>
-      <p>{{ content().about.text }}</p>
-      <div class="actions">
-        <a routerLink="/a-propos" class="btn btn-ghost">{{ content().about.buttonLabel }}</a>
-      </div>
-    </div>
+  @if (activePromotions$ | async; as promotions) {
+    @if (homeContent.offers.visible && promotions.length > 0) {
+      <section class="panel offers-panel" id="offres">
+        <app-section-title [title]="homeContent.offers.title" [subtitle]="homeContent.offers.subtitle"></app-section-title>
 
-    @if (firstAboutImage(); as imageUrl) {
-      <div class="photo photo-real">
-        <img [src]="imageUrl" alt="Photo de l'institut" />
-      </div>
-    } @else {
-      <div class="photo" role="img" aria-label="Cabine de soins"></div>
+        <div class="offers-rail-head">
+          @if (promotions.length > 3) {
+            <p class="offers-rail-hint">Faites glisser ou utilisez les fleches pour voir toutes les offres.</p>
+          }
+        </div>
+
+        <div class="offers-rail-wrap">
+          @if (promotions.length > 3) {
+            <button type="button" class="rail-btn rail-btn-left" (click)="scrollOffers(-1)" aria-label="Voir les offres precedentes">
+              <span aria-hidden="true">&#8249;</span>
+            </button>
+            <button type="button" class="rail-btn rail-btn-right" (click)="scrollOffers(1)" aria-label="Voir les offres suivantes">
+              <span aria-hidden="true">&#8250;</span>
+            </button>
+          }
+
+          <div class="offers-rail" #offersRail>
+            @for (promo of promotions; track promo.id) {
+              <article
+                class="offer-card"
+                [class.offer-card-single]="promo.services.length === 1"
+                [class.offer-card-two]="promo.services.length === 2"
+                [class.offer-card-multi]="promo.services.length > 1"
+                [style.--offer-index]="$index"
+              >
+                <div class="offer-head">
+                  <span class="offer-badge limited">Edition limitee</span>
+                  <span class="offer-badge discount">{{ promo.computedDiscountLabel }}</span>
+                </div>
+
+                <div class="offer-main">
+                  <h3>{{ promo.title }}</h3>
+                  @if (promo.subtitle) {
+                    <p class="offer-subtitle">{{ promo.subtitle }}</p>
+                  }
+                  <p class="offer-deadline">{{ formatUntilDate(promo.endAt) }}</p>
+                </div>
+
+                @if (promo.services.length > 1) {
+                  <p class="offer-count">{{ promo.services.length }} prestations incluses</p>
+                }
+
+                <ul class="offer-services">
+                  @for (service of promo.services; track service.id) {
+                    <li>
+                      <div class="service-head">
+                        <strong class="service-name">{{ service.name }}</strong>
+                        <span class="service-duration">{{ service.durationMin }} min</span>
+                      </div>
+
+                      @if (promo.services.length === 1) {
+                        <div class="service-foot">
+                          <div class="price-wrap">
+                            <s>{{ formatPrice(service.priceCents) }}</s>
+                            <strong>{{ formatPrice(service.discountedPriceCents) }}</strong>
+                          </div>
+
+                          <a
+                            routerLink="/rdv"
+                            [queryParams]="{ promoId: promo.id, serviceId: service.id }"
+                            class="btn btn-ghost btn-reserve"
+                          >
+                            Reserver
+                          </a>
+                        </div>
+                      }
+                    </li>
+                  }
+                </ul>
+
+                @if (promo.services.length > 1) {
+                  <div class="offer-total">
+                    <span>Total offre</span>
+                    <div class="price-wrap">
+                      <s>{{ formatPrice(promoBaseTotal(promo)) }}</s>
+                      <strong>{{ formatPrice(promoDiscountedTotal(promo)) }}</strong>
+                    </div>
+                  </div>
+
+                  <a
+                    routerLink="/rdv"
+                    [queryParams]="{ promoId: promo.id }"
+                    class="btn btn-ghost btn-reserve btn-reserve-total"
+                  >
+                    Reserver l'offre
+                  </a>
+                }
+              </article>
+            }
+          </div>
+        </div>
+      </section>
     }
-  </section>
-}
+  }
 
-@if (content().reasons.visible) {
-  <section class="why">
-    <h2 class="why-title">{{ content().reasons.title }}</h2>
+  @if (homeContent.about.visible) {
+    <section class="panel about" id="apropos">
+      <div>
+        <h2>{{ homeContent.about.title }}</h2>
+        <p>{{ homeContent.about.text }}</p>
+        <div class="actions">
+          <a routerLink="/a-propos" class="btn btn-ghost">{{ homeContent.about.buttonLabel }}</a>
+        </div>
+      </div>
 
-    <div class="why-grid">
-      @for (item of content().reasons.items; track $index) {
-        <article class="why-item">
-          <h3 class="why-item-title">{{ item.title }}</h3>
-          <span class="shine-underline" aria-hidden="true"></span>
-          <img class="why-icon" [src]="reasonIcon($index)" [alt]="item.title" />
-          <p>{{ item.text }}</p>
-        </article>
+      @if (firstAboutImage(); as imageUrl) {
+        <div class="photo photo-real">
+          <img [src]="imageUrl" alt="Photo de l'institut" />
+        </div>
+      } @else {
+        <div class="photo" role="img" aria-label="Cabine de soins"></div>
       }
-    </div>
-  </section>
-}
+    </section>
+  }
 
-@if (content().testimonials.visible) {
-  <section class="panel" id="avis">
-    <h2>{{ content().testimonials.title }}</h2>
-    <div class="cards-grid">
-      @for (item of content().testimonials.items; track $index) {
-        <article class="card testimonial">
-          <p class="rating">{{ stars(item.rating) }}</p>
-          <p>{{ item.text }}</p>
-          <p class="meta">{{ item.name }}</p>
-        </article>
-      }
-    </div>
-  </section>
-}
+  @if (homeContent.reasons.visible) {
+    <section class="why">
+      <h2 class="why-title">{{ homeContent.reasons.title }}</h2>
 
-@if (content().ctaFinal.visible) {
-  <section class="cta-final">
-    <h2>{{ content().ctaFinal.title }}</h2>
-    <div class="actions" style="justify-content:center;">
-      <a routerLink="/rdv" class="btn btn-primary">{{ content().ctaFinal.buttonLabel }}</a>
-      <a routerLink="/formations" class="btn btn-ghost">Voir les formations</a>
-    </div>
-  </section>
+      <div class="why-grid">
+        @for (item of homeContent.reasons.items; track $index) {
+          <article class="why-item">
+            <h3 class="why-item-title">{{ item.title }}</h3>
+            <span class="shine-underline" aria-hidden="true"></span>
+            <img class="why-icon" [src]="reasonIcon($index)" [alt]="item.title" />
+            <p>{{ item.text }}</p>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  @if (homeContent.testimonials.visible) {
+    <section class="panel" id="avis">
+      <h2>{{ homeContent.testimonials.title }}</h2>
+      <div class="cards-grid">
+        @for (item of homeContent.testimonials.items; track $index) {
+          <article class="card testimonial">
+            <p class="rating">{{ stars(item.rating) }}</p>
+            <p>{{ item.text }}</p>
+            <p class="meta">{{ item.name }}</p>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  @if (homeContent.ctaFinal.visible) {
+    <section class="cta-final">
+      <h2>{{ homeContent.ctaFinal.title }}</h2>
+      <div class="actions" style="justify-content:center;">
+        <a routerLink="/rdv" class="btn btn-primary">{{ homeContent.ctaFinal.buttonLabel }}</a>
+        <a routerLink="/formations" class="btn btn-ghost">Voir les formations</a>
+      </div>
+    </section>
+  }
 }

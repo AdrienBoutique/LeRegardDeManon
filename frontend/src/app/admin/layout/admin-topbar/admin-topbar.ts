@@ -26,6 +26,10 @@ export class AdminTopbar {
           this.pendingCount.set(data?.pendingCount ?? 0);
         });
     }
+
+    this.destroyRef.onDestroy(() => {
+      this.dashboardState.stopAutoRefresh();
+    });
   }
 
   protected isAdminUser(): boolean {
@@ -55,6 +59,7 @@ export class AdminTopbar {
   }
 
   protected logout(): void {
+    this.dashboardState.stopAutoRefresh();
     this.authService.logout();
     this.router.navigateByUrl('/admin/login');
   }
