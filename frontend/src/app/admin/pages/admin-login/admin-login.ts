@@ -62,9 +62,13 @@ export class AdminLogin {
           this.router.navigateByUrl('/admin/planning');
         }
       },
-      error: () => {
+      error: (error: { status?: number; error?: { error?: string } }) => {
         this.loading.set(false);
-        this.errorMessage.set('Email ou mot de passe invalide.');
+        if (error.status === 403) {
+          this.errorMessage.set(error.error?.error ?? 'Compte desactive. Contactez l’administration.');
+          return;
+        }
+        this.errorMessage.set(error.error?.error ?? 'Email ou mot de passe invalide.');
       }
     });
   }

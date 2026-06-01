@@ -70,6 +70,10 @@ async function findOrProvisionUserFromAdmin(email: string, password: string) {
   return user;
 }
 
+function logLoginFailure(email: string, reason: "not_found" | "inactive" | "password_mismatch" | "admin_fallback_failed"): void {
+  console.warn(`[auth.login] failed: ${reason} email=${email.toLowerCase()}`);
+}
+
 async function buildLoginResult(userId: string): Promise<LoginResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -91,7 +95,7 @@ async function buildLoginResult(userId: string): Promise<LoginResult> {
     throw new Error("Invalid user");
   }
 
-  const token = signAuthToken({ sub: user.id, role: user.role });
+  const token = signAuthToken({ sub: user.id, role: user.role, email: user.email });
   return {
     token,
     user: {
@@ -115,23 +119,41 @@ authRouter.post("/login", async (req, res) => {
       where: { email: normalizedEmail },
       select: {
         id: true,
+        email: true,
         passwordHash: true,
         isActive: true,
+        role: true,
       },
     });
 
-    if (!user || !user.isActive || !(await comparePassword(password, user.passwordHash))) {
+    if (!user) {
       const provisioned = await findOrProvisionUserFromAdmin(normalizedEmail, password);
       if (!provisioned) {
-        res.status(401).json({ error: "Invalid credentials" });
+        logLoginFailure(normalizedEmail, "not_found");
+        res.status(401).json({ error: "Email ou mot de passe invalide." });
         return;
       }
 
+      console.info(`[auth.login] success email=${provisioned.email} role=${provisioned.role}`);
       const payload = await buildLoginResult(provisioned.id);
       res.json(payload);
       return;
     }
 
+    if (!user.isActive) {
+      logLoginFailure(normalizedEmail, "inactive");
+      res.status(403).json({ error: "Compte desactive. Contactez l'administration." });
+      return;
+    }
+
+    const validPassword = await comparePassword(password, user.passwordHash);
+    if (!validPassword) {
+      logLoginFailure(normalizedEmail, "password_mismatch");
+      res.status(401).json({ error: "Email ou mot de passe invalide." });
+      return;
+    }
+
+    console.info(`[auth.login] success email=${user.email} role=${user.role}`);
     const payload = await buildLoginResult(user.id);
     res.json(payload);
   } catch (error) {

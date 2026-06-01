@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 export type AuthJwtPayload = {
   sub: string;
   role: Role;
+  email?: string;
 };
 
 function getJwtSecret(): string {
@@ -27,7 +28,7 @@ export function verifyAuthToken(token: string): AuthJwtPayload {
     throw new Error("Invalid token payload");
   }
 
-  const { sub, role } = decoded as { sub?: unknown; role?: unknown };
+  const { sub, role, email } = decoded as { sub?: unknown; role?: unknown; email?: unknown };
 
   if (typeof sub !== "string") {
     throw new Error("Invalid token payload shape");
@@ -36,6 +37,10 @@ export function verifyAuthToken(token: string): AuthJwtPayload {
   if (role !== "ADMIN" && role !== "STAFF") {
     throw new Error("Invalid token role");
   }
-//d
-  return { sub, role };
+
+  return {
+    sub,
+    role,
+    email: typeof email === "string" ? email : undefined,
+  };
 }

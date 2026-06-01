@@ -43,11 +43,6 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    if (user.role !== payload.role) {
-      res.status(401).json({ error: "Invalid token role" });
-      return;
-    }
-
     (req as AuthenticatedRequest).user = user;
     next();
   } catch {

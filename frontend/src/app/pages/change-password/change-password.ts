@@ -47,8 +47,13 @@ export class ChangePassword {
           this.router.navigateByUrl('/admin/planning');
         }
       },
-      error: (error: { error?: { error?: string } }) => {
+      error: (error: { status?: number; error?: { error?: string } }) => {
         this.loading.set(false);
+        if (error.status === 401 || error.status === 403) {
+          this.authService.logout();
+          this.errorMessage.set(error.error?.error ?? 'Session invalide. Reconnecte-toi.');
+          return;
+        }
         this.errorMessage.set(error.error?.error ?? 'Impossible de changer le mot de passe.');
       }
     });

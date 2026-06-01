@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { Role } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword } from "../src/lib/password";
 import { createInterface } from "node:readline/promises";
@@ -75,23 +76,31 @@ async function main(): Promise<void> {
   const email = values.email.toLowerCase();
   const passwordHash = await hashPassword(values.password);
 
-  const existing = await prisma.adminUser.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  if (existing) {
-    await prisma.adminUser.update({
+  await prisma.$transaction([
+    prisma.adminUser.upsert({
       where: { email },
-      data: { passwordHash },
-    });
-    console.log(`[admin:create] Mot de passe mis a jour pour ${email}`);
-  } else {
-    await prisma.adminUser.create({
-      data: { email, passwordHash },
-    });
-    console.log(`[admin:create] Compte admin cree: ${email}`);
-  }
+      update: { passwordHash },
+      create: { email, passwordHash },
+    }),
+    prisma.user.upsert({
+      where: { email },
+      update: {
+        passwordHash,
+        role: Role.ADMIN,
+        isActive: true,
+        mustChangePassword: false,
+      },
+      create: {
+        email,
+        passwordHash,
+        role: Role.ADMIN,
+        isActive: true,
+        mustChangePassword: false,
+      },
+    }),
+  ]);
+
+  console.log(`[admin:create] Compte admin synchronise: ${email}`);
 }
 
 main()

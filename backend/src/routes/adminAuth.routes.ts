@@ -80,7 +80,7 @@ adminAuthRouter.post("/login", async (req, res) => {
       return;
     }
 
-    const token = signAuthToken({ sub: user.id, role: user.role });
+    const token = signAuthToken({ sub: user.id, role: user.role, email: user.email });
     res.json({
       token,
       user: {

@@ -23,6 +23,23 @@ async function main() {
     },
   });
 
+  await prisma.user.upsert({
+    where: { email: "admin@lrdm.local" },
+    update: {
+      passwordHash: adminPasswordHash,
+      role: "ADMIN",
+      isActive: true,
+      mustChangePassword: false,
+    },
+    create: {
+      email: "admin@lrdm.local",
+      passwordHash: adminPasswordHash,
+      role: "ADMIN",
+      isActive: true,
+      mustChangePassword: false,
+    },
+  });
+
   const manon = await prisma.staffMember.upsert({
     where: { email: "manon@leregarddemanon.fr" },
     update: {
