@@ -58,6 +58,10 @@ export class AdminTopbar {
     return this.pendingCount() > 0;
   }
 
+  protected accountRoute(): string {
+    return this.router.url.startsWith('/admin') ? '/admin/compte' : '/espace-pro/compte';
+  }
+
   protected logout(): void {
     this.dashboardState.stopAutoRefresh();
     this.authService.logout();

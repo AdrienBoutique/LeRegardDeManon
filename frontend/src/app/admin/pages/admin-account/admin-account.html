@@ -1,0 +1,60 @@
+<section class="account-page stack">
+  <article class="card panel account-summary">
+    <span class="chip">Espace Pro</span>
+    <h1>Compte</h1>
+    <p class="muted">Gerez votre acces et modifiez votre mot de passe en toute autonomie.</p>
+
+    @if (user(); as currentUser) {
+      <dl class="account-meta">
+        <div>
+          <dt>Email</dt>
+          <dd>{{ currentUser.email }}</dd>
+        </div>
+        <div>
+          <dt>Role</dt>
+          <dd>{{ roleLabel() }}</dd>
+        </div>
+        <div>
+          <dt>Acces</dt>
+          <dd>{{ currentUser.practitionerId ? 'Lie a une praticienne' : 'Compte independant' }}</dd>
+        </div>
+      </dl>
+    }
+  </article>
+
+  <article class="card panel security-card">
+    <div class="section-head">
+      <h2>Changer le mot de passe</h2>
+      <p>Votre mot de passe actuel est requis pour enregistrer une nouvelle valeur.</p>
+    </div>
+
+    <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
+      <label>
+        Mot de passe actuel
+        <input type="password" formControlName="currentPassword" autocomplete="current-password" />
+      </label>
+
+      <label>
+        Nouveau mot de passe
+        <input type="password" formControlName="newPassword" autocomplete="new-password" />
+      </label>
+
+      <label>
+        Confirmer le nouveau mot de passe
+        <input type="password" formControlName="confirmPassword" autocomplete="new-password" />
+      </label>
+
+      @if (successMessage()) {
+        <p class="success">{{ successMessage() }}</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="error">{{ errorMessage() }}</p>
+      }
+
+      <button type="submit" class="btn btn-primary" [disabled]="loading()">
+        {{ loading() ? 'Enregistrement...' : 'Mettre à jour' }}
+      </button>
+    </form>
+  </article>
+</section>

@@ -21,9 +21,9 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   if (!user.mustChangePassword && state.url === '/change-password') {
     if (user.role === 'ADMIN') {
-      return router.createUrlTree(['/espace-pro/services']);
+      return router.createUrlTree(['/espace-pro/compte']);
     }
-    return router.createUrlTree(['/admin/planning']);
+    return router.createUrlTree(['/admin/compte']);
   }
 
   return true;

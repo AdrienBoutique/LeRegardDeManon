@@ -1,27 +1,36 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-change-password',
+  selector: 'app-admin-account',
   imports: [ReactiveFormsModule],
-  templateUrl: './change-password.html',
-  styleUrl: './change-password.scss'
+  templateUrl: './admin-account.html',
+  styleUrl: './admin-account.scss'
 })
-export class ChangePassword {
+export class AdminAccount {
   private readonly authService = inject(AuthService);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly router = inject(Router);
 
   protected readonly loading = signal(false);
+  protected readonly successMessage = signal('');
   protected readonly errorMessage = signal('');
+  protected readonly user = signal(this.authService.getCurrentUser());
 
   protected readonly form = this.formBuilder.nonNullable.group({
-    currentPassword: [''],
+    currentPassword: ['', [Validators.required]],
     newPassword: ['', [Validators.required, Validators.minLength(8)]],
     confirmPassword: ['', [Validators.required]]
   });
+
+  protected roleLabel(): string {
+    const user = this.user();
+    if (!user) {
+      return 'Compte';
+    }
+
+    return user.role === 'ADMIN' ? 'Administration' : 'Praticienne';
+  }
 
   protected submit(): void {
     if (this.form.invalid || this.loading()) {
@@ -37,11 +46,18 @@ export class ChangePassword {
 
     this.loading.set(true);
     this.errorMessage.set('');
+    this.successMessage.set('');
 
-    this.authService.changePassword(raw.currentPassword || undefined, raw.newPassword).subscribe({
+    this.authService.changePassword(raw.currentPassword, raw.newPassword).subscribe({
       next: (user) => {
         this.loading.set(false);
-        this.router.navigateByUrl(user.role === 'ADMIN' ? '/espace-pro/compte' : '/admin/compte');
+        this.user.set(user);
+        this.form.reset({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        this.successMessage.set('Mot de passe mis à jour.');
       },
       error: (error: { status?: number; error?: { error?: string } }) => {
         this.loading.set(false);

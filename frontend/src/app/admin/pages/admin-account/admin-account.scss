@@ -1,0 +1,91 @@
+.account-page {
+  max-width: 920px;
+  margin-inline: auto;
+  padding: 0.5rem 0 1rem;
+}
+
+.panel {
+  padding: 1.25rem;
+}
+
+.account-summary {
+  display: grid;
+  gap: 0.8rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  color: var(--color-text);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.section-head {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.account-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.35rem 0 0;
+}
+
+.account-meta > div {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: #fffaf6;
+  padding: 0.85rem 0.95rem;
+}
+
+.account-meta dt {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-soft);
+  margin-bottom: 0.25rem;
+}
+
+.account-meta dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+input {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.68rem 0.75rem;
+  background: #fff;
+}
+
+.success {
+  color: #2f6a3f;
+  margin: 0;
+}
+
+.error {
+  color: #9f1f1f;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .account-meta {
+    grid-template-columns: 1fr;
+  }
+}

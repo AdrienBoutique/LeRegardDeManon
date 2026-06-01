@@ -22,6 +22,7 @@
       }
       <a routerLink="/admin/conges" routerLinkActive="active">Conges</a>
       <a routerLink="/admin/planning" routerLinkActive="active">Planning</a>
+      <a [routerLink]="accountRoute()" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Compte</a>
     </nav>
 
     <div class="topbar-actions">
