@@ -417,6 +417,6 @@ export async function listPublicActivePromotions(_req: Request, res: Response): 
     res.json(promotions.map(mapPromotion));
   } catch (error) {
     console.error("[publicPromotions.active]", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.json([]);
   }
 }

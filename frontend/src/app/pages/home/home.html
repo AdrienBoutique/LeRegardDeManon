@@ -10,13 +10,13 @@
 
     <div class="hero-content">
       <div class="hero-text">
-        <h1>Le regard de Manon</h1>
-        <p class="subtitle">Beaute et bien-etre</p>
+        <h1>{{ content().hero.title }}</h1>
+        <p class="subtitle">{{ content().hero.badge }}</p>
       </div>
 
       <div class="hero-buttons">
-        <button type="button" class="btn-primary" routerLink="/rdv">Prendre rendez-vous</button>
-        <button type="button" class="btn-secondary" routerLink="/soins">Voir les soins</button>
+        <button type="button" class="btn-primary" routerLink="/rdv">{{ content().hero.primaryButtonLabel }}</button>
+        <button type="button" class="btn-secondary" routerLink="/formations">{{ content().hero.secondaryButtonLabel }}</button>
       </div>
     </div>
   </section>
@@ -179,6 +179,7 @@
     <h2>{{ content().ctaFinal.title }}</h2>
     <div class="actions" style="justify-content:center;">
       <a routerLink="/rdv" class="btn btn-primary">{{ content().ctaFinal.buttonLabel }}</a>
+      <a routerLink="/formations" class="btn btn-ghost">Voir les formations</a>
     </div>
   </section>
 }

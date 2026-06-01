@@ -22,7 +22,7 @@ function formatDate(input: Date): string {
 }
 
 function shortInstituteName(): string {
-  return process.env.INSTITUTE_NAME?.trim() || "Le Regard de Manon";
+  return process.env.INSTITUTE_NAME?.trim() || "MA Beauty Academy";
 }
 
 function shortInfoUrl(): string {

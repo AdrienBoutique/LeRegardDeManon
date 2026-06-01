@@ -51,7 +51,7 @@ export class AdminAboutContent {
       next: (payload) => {
         this.content.set(normalizeAboutPageContent(payload));
         this.saving.set(false);
-        this.toastMessage.set('Page A propos mise a jour.');
+        this.toastMessage.set('Page À propos mise à jour.');
         setTimeout(() => this.toastMessage.set(''), 2200);
       },
       error: (error: { error?: { error?: string } }) => {

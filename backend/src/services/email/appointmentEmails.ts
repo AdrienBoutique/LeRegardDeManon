@@ -54,7 +54,7 @@ type AppointmentEmailRecord = Prisma.AppointmentGetPayload<{
 
 function getInstituteEmailInfo(): InstituteEmailInfo {
   return {
-    name: process.env.INSTITUTE_NAME?.trim() || "Le Regard de Manon",
+    name: process.env.INSTITUTE_NAME?.trim() || "MA Beauty Academy",
     address: process.env.INSTITUTE_ADDRESS?.trim() || null,
     manageUrl: process.env.BOOKING_MANAGE_URL?.trim() || null,
   };

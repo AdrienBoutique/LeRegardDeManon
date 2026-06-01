@@ -20,7 +20,7 @@ adminEmailRouter.get("/test-email", ...authAdmin, async (req, res) => {
     const to = parsed.data.to.toLowerCase();
     const sent = await sendMail({
       to,
-      subject: "Test SMTP - Le Regard de Manon",
+      subject: "Test SMTP - MA Beauty Academy",
       text: "Email de test SMTP envoye avec succes.",
       html: "<p>Email de test SMTP envoye avec succes.</p>",
     });

@@ -154,7 +154,7 @@ function buildTemplatePayload(appointment: SmsAppointmentRecord) {
     date: startsAt.toFormat("dd/MM/yyyy"),
     time: startsAt.toFormat("HH:mm"),
     datetime: startsAt.toFormat("dd/MM 'a' HH:mm"),
-    establishmentName: process.env.INSTITUTE_NAME?.trim() || "Le Regard de Manon",
+    establishmentName: process.env.INSTITUTE_NAME?.trim() || "MA Beauty Academy",
   };
 }
 

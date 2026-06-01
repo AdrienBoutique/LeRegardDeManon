@@ -78,28 +78,28 @@ export function defaultAboutPageContent(): AboutPageContent {
   return {
     hero: {
       visible: true,
-      title: 'A propos',
+      title: 'À propos',
       intro:
-        "Le regard de Manon est ne d'une passion pour la precision du geste et l'elegance des resultats naturels. Chaque rendez-vous commence par une ecoute attentive de vos attentes."
+        "MA Beauty Academy est un institut de beauté et un centre de formation dédié à l’univers de l’esthétique. Nous accompagnons nos clientes avec des prestations soignées, personnalisées et réalisées avec précision, tout en transmettant notre savoir-faire à celles et ceux qui souhaitent se former aux métiers de la beauté. Notre objectif est simple : offrir une expérience professionnelle, humaine et élégante, que ce soit pour sublimer votre beauté ou pour développer vos compétences dans le secteur esthétique."
     },
     blocks: [
       {
         id: 'approach',
         visible: true,
         title: 'Notre approche',
-        text: 'Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils simples pour prolonger les effets a la maison.'
+        text: 'Nous privilégions des techniques maîtrisées, un rythme adapté à chaque cliente, et des conseils simples pour prolonger les effets à la maison.'
       },
       {
         id: 'hygiene',
         visible: true,
-        title: 'Hygiene et securite',
-        text: 'Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.'
+        title: 'Hygiène et sécurité',
+        text: 'Matériel désinfecté, consommables individuels et protocoles stricts sont appliqués à chaque soin.'
       },
       {
         id: 'trainee',
         visible: true,
         title: 'Stagiaire',
-        text: "Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise sans validation prealable et votre accord."
+        text: "Selon les périodes, une stagiaire peut être présente en observation. Aucun geste n'est réalisé sans validation préalable et votre accord."
       }
     ]
   };
@@ -133,9 +133,9 @@ export function defaultContactPageContent(): ContactPageContent {
     },
     info: {
       visible: true,
-      address: '12 rue des Lilas, 59000 Lille',
+      address: 'Chaussée de Bruxelles 121, 7800 Ath',
       phone: '06 00 00 00 00',
-      email: 'contact@leregarddemanon.fr',
+      email: 'contact@mabeautyacademy.be',
       hoursLabel: 'Lun-Sam, 9h30 - 19h00',
       weeklyHours: [
         { day: 'Lundi', closed: false, start: '09:30', end: '19:00' },
@@ -151,8 +151,8 @@ export function defaultContactPageContent(): ContactPageContent {
       visible: true,
       title: 'FAQ',
       items: [
-        { question: 'Annulation', answer: "Merci de prevenir 24h a l'avance pour toute annulation." },
-        { question: 'Retard', answer: 'Au-dela de 10 minutes de retard, la prestation peut etre adaptee.' }
+        { question: 'Annulation', answer: "Merci de prévenir 24h à l'avance pour toute annulation." },
+        { question: 'Retard', answer: 'Au-delà de 10 minutes de retard, la prestation peut être adaptée.' }
       ]
     }
   };

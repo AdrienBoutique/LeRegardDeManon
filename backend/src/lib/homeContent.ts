@@ -192,11 +192,11 @@ export function defaultHomeContent(): HomeContentPayload {
   return {
     hero: {
       visible: true,
-      badge: "Institut de beaute du regard",
-      title: "Le regard de Manon",
-      lead: "Un institut dedie a la beaute du regard, avec une approche douce, precise et elegante.",
+      badge: "INSTITUT DE BEAUTÉ & CENTRE DE FORMATION",
+      title: "MA Beauty Academy",
+      lead: "Un institut de beauté et un centre de formation dédié à l’esthétique, avec des prestations soignées et un savoir-faire transmis avec précision.",
       primaryButtonLabel: "Prendre rendez-vous",
-      secondaryButtonLabel: "Voir les soins",
+      secondaryButtonLabel: "Découvrir les formations",
     },
     offers: {
       visible: true,
@@ -205,8 +205,8 @@ export function defaultHomeContent(): HomeContentPayload {
     },
     about: {
       visible: true,
-      title: "A propos",
-      text: "Manon vous accueille dans un espace calme et lumineux, avec un diagnostic personnalise pour respecter votre visage et vos attentes.",
+      title: "À propos",
+      text: "MA Beauty Academy est un institut de beauté et un centre de formation dédié à l’univers de l’esthétique. Nous accompagnons nos clientes avec des prestations soignées, personnalisées et réalisées avec précision, tout en transmettant notre savoir-faire à celles et ceux qui souhaitent se former aux métiers de la beauté. Notre objectif est simple : offrir une expérience professionnelle, humaine et élégante, que ce soit pour sublimer votre beauté ou pour développer vos compétences dans le secteur esthétique.",
       buttonLabel: "En savoir plus",
       images: [],
     },
@@ -215,16 +215,16 @@ export function defaultHomeContent(): HomeContentPayload {
       title: "Pourquoi nous choisir",
       items: [
         {
-          title: "Precision",
-          text: "Des gestes minutieux pour un resultat net et naturel.",
+          title: "Expertise",
+          text: "Des prestations et formations réalisées avec sérieux, précision et passion.",
         },
         {
-          title: "Hygiene stricte",
-          text: "Protocoles d'hygiene renforces a chaque prestation.",
+          title: "Hygiène stricte",
+          text: "Des protocoles professionnels respectés à chaque prestation et formation.",
         },
         {
-          title: "Conseil personnalise",
-          text: "Chaque soin est adapte a votre morphologie et votre rythme.",
+          title: "Accompagnement",
+          text: "Un suivi personnalisé, que vous soyez cliente ou apprenante.",
         },
       ],
     },
@@ -252,14 +252,14 @@ export function defaultHomeContent(): HomeContentPayload {
     contact: {
       visible: true,
       title: "Contact rapide",
-      address: "12 rue des Lilas, 59000 Lille",
+      address: "Chaussée de Bruxelles 121, 7800 Ath",
       hours: "Lun-Sam: 9h30 - 19h00",
       contactButtonLabel: "Page contact",
       instagramButtonLabel: "Instagram",
     },
     ctaFinal: {
       visible: true,
-      title: "Prete a sublimer votre regard ?",
+      title: "Prête à révéler votre potentiel beauté ?",
       buttonLabel: "Prendre RDV",
     },
   };
@@ -269,28 +269,28 @@ export function defaultAboutPageContent(): AboutPageContentPayload {
   return {
     hero: {
       visible: true,
-      title: "A propos",
+      title: "À propos",
       intro:
-        "Le regard de Manon est ne d'une passion pour la precision du geste et l'elegance des resultats naturels. Chaque rendez-vous commence par une ecoute attentive de vos attentes.",
+        "MA Beauty Academy est un institut de beauté et un centre de formation dédié à l’univers de l’esthétique. Nous accompagnons nos clientes avec des prestations soignées, personnalisées et réalisées avec précision, tout en transmettant notre savoir-faire à celles et ceux qui souhaitent se former aux métiers de la beauté. Notre objectif est simple : offrir une expérience professionnelle, humaine et élégante, que ce soit pour sublimer votre beauté ou pour développer vos compétences dans le secteur esthétique.",
     },
     blocks: [
       {
         id: "approach",
         visible: true,
         title: "Notre approche",
-        text: "Nous privilegions des techniques maitrisees, un rythme adapte a chaque cliente, et des conseils simples pour prolonger les effets a la maison.",
+        text: "Nous privilégions des techniques maîtrisées, un rythme adapté à chaque cliente, et des conseils simples pour prolonger les effets à la maison.",
       },
       {
         id: "hygiene",
         visible: true,
-        title: "Hygiene et securite",
-        text: "Materiel desinfecte, consommables individuels et protocoles stricts sont appliques a chaque soin.",
+        title: "Hygiène et sécurité",
+        text: "Matériel désinfecté, consommables individuels et protocoles stricts sont appliqués à chaque soin.",
       },
       {
         id: "trainee",
         visible: true,
         title: "Stagiaire",
-        text: "Selon les periodes, une stagiaire peut etre presente en observation. Aucun geste n'est realise sans validation prealable et votre accord.",
+        text: "Selon les périodes, une stagiaire peut être présente en observation. Aucun geste n'est réalisé sans validation préalable et votre accord.",
       },
     ],
   };
@@ -304,9 +304,9 @@ export function defaultContactPageContent(): ContactPageContentPayload {
     },
     info: {
       visible: true,
-      address: "12 rue des Lilas, 59000 Lille",
+      address: "Chaussée de Bruxelles 121, 7800 Ath",
       phone: "06 00 00 00 00",
-      email: "contact@leregarddemanon.fr",
+      email: "contact@mabeautyacademy.be",
       hoursLabel: "Lun-Sam, 9h30 - 19h00",
       weeklyHours: defaultContactWeeklyHours(),
     },
@@ -316,11 +316,11 @@ export function defaultContactPageContent(): ContactPageContentPayload {
       items: [
         {
           question: "Annulation",
-          answer: "Merci de prevenir 24h a l'avance pour toute annulation.",
+          answer: "Merci de prévenir 24h à l'avance pour toute annulation.",
         },
         {
           question: "Retard",
-          answer: "Au-dela de 10 minutes de retard, la prestation peut etre adaptee.",
+          answer: "Au-delà de 10 minutes de retard, la prestation peut être adaptée.",
         },
       ],
     },

@@ -32,7 +32,7 @@ export class AdminSettings {
   private readonly api = inject(AdminSettingsApiService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly previewValues: Record<SmsVariableKey, string> = {
-    establishmentName: 'Le Regard de Manon',
+    establishmentName: 'MA Beauty Academy',
     clientName: 'Sophie',
     date: '18/03/2026',
     time: '14:30'

@@ -17,6 +17,6 @@ publicHomeContentRouter.get("/public/home-content", async (_req, res) => {
     res.json(content);
   } catch (error) {
     console.error("[publicHomeContent.get]", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.json(defaultHomeContent());
   }
 });

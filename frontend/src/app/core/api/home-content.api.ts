@@ -64,11 +64,11 @@ export function defaultHomeContent(): HomeContentPayload {
   return {
     hero: {
       visible: true,
-      badge: 'Institut de beaute du regard',
-      title: 'Le regard de Manon',
-      lead: 'Un institut dedie a la beaute du regard, avec une approche douce, precise et elegante.',
+      badge: 'INSTITUT DE BEAUTÉ & CENTRE DE FORMATION',
+      title: 'MA Beauty Academy',
+      lead: "Un institut de beauté et un centre de formation dédié à l'esthétique, avec des prestations soignées et un savoir-faire transmis avec précision.",
       primaryButtonLabel: 'Prendre rendez-vous',
-      secondaryButtonLabel: 'Voir les soins'
+      secondaryButtonLabel: 'Découvrir les formations'
     },
     offers: {
       visible: true,
@@ -77,8 +77,9 @@ export function defaultHomeContent(): HomeContentPayload {
     },
     about: {
       visible: true,
-      title: 'A propos',
-      text: 'Manon vous accueille dans un espace calme et lumineux, avec un diagnostic personnalise pour respecter votre visage et vos attentes.',
+      title: 'À propos',
+      text:
+        "MA Beauty Academy est un institut de beauté et un centre de formation dédié à l’univers de l’esthétique. Nous accompagnons nos clientes avec des prestations soignées, personnalisées et réalisées avec précision, tout en transmettant notre savoir-faire à celles et ceux qui souhaitent se former aux métiers de la beauté. Notre objectif est simple : offrir une expérience professionnelle, humaine et élégante, que ce soit pour sublimer votre beauté ou pour développer vos compétences dans le secteur esthétique.",
       buttonLabel: 'En savoir plus',
       images: []
     },
@@ -86,9 +87,9 @@ export function defaultHomeContent(): HomeContentPayload {
       visible: true,
       title: 'Pourquoi nous choisir',
       items: [
-        { title: 'Precision', text: 'Des gestes minutieux pour un resultat net et naturel.' },
-        { title: 'Hygiene stricte', text: "Protocoles d'hygiene renforces a chaque prestation." },
-        { title: 'Conseil personnalise', text: 'Chaque soin est adapte a votre morphologie et votre rythme.' }
+        { title: 'Expertise', text: 'Des prestations et formations réalisées avec sérieux, précision et passion.' },
+        { title: 'Hygiène stricte', text: 'Des protocoles professionnels respectés à chaque prestation et formation.' },
+        { title: 'Accompagnement', text: 'Un suivi personnalisé, que vous soyez cliente ou apprenante.' }
       ]
     },
     testimonials: {
@@ -103,14 +104,14 @@ export function defaultHomeContent(): HomeContentPayload {
     contact: {
       visible: true,
       title: 'Contact rapide',
-      address: '12 rue des Lilas, 59000 Lille',
+      address: 'Chaussée de Bruxelles 121, 7800 Ath',
       hours: 'Lun-Sam: 9h30 - 19h00',
       contactButtonLabel: 'Page contact',
       instagramButtonLabel: 'Instagram'
     },
     ctaFinal: {
       visible: true,
-      title: 'Prete a sublimer votre regard ?',
+      title: 'Prête à révéler votre potentiel beauté ?',
       buttonLabel: 'Prendre RDV'
     }
   };

@@ -45,7 +45,7 @@
 
     <article class="card panel" [class.hidden-block]="!content().about.visible">
       <div class="block-header">
-        <h2>A propos</h2>
+        <h2>À propos</h2>
         <label><input type="checkbox" [checked]="content().about.visible" (change)="updateAbout('visible', $any($event.target).checked)" /> Visible</label>
       </div>
       <label>Titre <input [value]="content().about.title" (input)="updateAbout('title', $any($event.target).value)" /></label>

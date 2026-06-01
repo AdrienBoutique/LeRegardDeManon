@@ -111,7 +111,7 @@ export class PushService {
       const response = await firstValueFrom(
         this.http.post<{ sentCount?: number; failedCount?: number }>(`${environment.apiUrl}/api/admin/push/test`, {
           title: 'Test notification',
-          body: 'Test push Le Regard de Manon'
+          body: 'Test push MA Beauty Academy'
         })
       );
 

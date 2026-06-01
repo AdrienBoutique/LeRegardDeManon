@@ -25,7 +25,7 @@ export class About {
   constructor() {
     this.pageContentApi.getPublicContent<AboutPageContent>('about').subscribe({
       next: (payload) => this.content.set(normalizeAboutPageContent(payload)),
-      error: () => this.errorMessage.set("Impossible de charger la page A propos.")
+      error: () => this.errorMessage.set("Impossible de charger la page À propos.")
     });
   }
 }
