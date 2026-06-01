@@ -37,6 +37,8 @@ const allowedOrigins = [
   "http://localhost",
   "capacitor://localhost",
   "ionic://localhost",
+  "https://mabeautyacademy.be",
+  "https://www.mabeautyacademy.be",
   "https://leregarddemanon.com",
   "https://www.leregarddemanon.com",
   "https://le-regard-de-manon.vercel.app",
