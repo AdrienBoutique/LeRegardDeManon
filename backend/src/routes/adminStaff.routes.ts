@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { authRequired, requireRole } from "../middlewares/auth";
+import { authRequired, requireRole, type AuthenticatedRequest } from "../middlewares/auth";
 import { authAdmin } from "../middlewares/authAdmin";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
@@ -65,6 +65,10 @@ const assignStaffServiceSchema = z
     { message: "Use either priceCentsOverride or discountPercentOverride, not both" }
   );
 
+const updateStaffRoleSchema = z.object({
+  role: z.enum([Role.ADMIN, Role.STAFF]),
+});
+
 function computeEffectivePrice(
   basePriceCents: number,
   priceCentsOverride: number | null,
@@ -99,6 +103,11 @@ adminStaffRouter.get("/", authRequired, requireRole(Role.ADMIN, Role.STAFF), asy
         createdAt: true,
         updatedAt: true,
         userId: true,
+        user: {
+          select: {
+            role: true,
+          },
+        },
       },
     });
 
@@ -114,6 +123,7 @@ adminStaffRouter.get("/", authRequired, requireRole(Role.ADMIN, Role.STAFF), asy
         createdAt: member.createdAt,
         updatedAt: member.updatedAt,
         hasAccount: Boolean(member.userId),
+        userRole: member.user?.role ?? null,
       }))
     );
   } catch (error) {
@@ -151,6 +161,11 @@ adminStaffRouter.post("/", ...authAdmin, async (req, res) => {
         createdAt: true,
         updatedAt: true,
         userId: true,
+        user: {
+          select: {
+            role: true,
+          },
+        },
       },
     });
 
@@ -165,6 +180,7 @@ adminStaffRouter.post("/", ...authAdmin, async (req, res) => {
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
       hasAccount: Boolean(created.userId),
+      userRole: created.user?.role ?? null,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -214,6 +230,11 @@ adminStaffRouter.patch("/:id", ...authAdmin, async (req, res) => {
         createdAt: true,
         updatedAt: true,
         userId: true,
+        user: {
+          select: {
+            role: true,
+          },
+        },
       },
     });
 
@@ -228,6 +249,7 @@ adminStaffRouter.patch("/:id", ...authAdmin, async (req, res) => {
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
       hasAccount: Boolean(updated.userId),
+      userRole: updated.user?.role ?? null,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -236,6 +258,77 @@ adminStaffRouter.patch("/:id", ...authAdmin, async (req, res) => {
     }
 
     console.error("[adminStaff.update]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminStaffRouter.patch("/:id/role", ...authAdmin, async (req, res) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const payload = parseOrThrow(updateStaffRoleSchema, req.body);
+
+    const existing = await prisma.staffMember.findUnique({
+      where: { id: staffId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        userId: true,
+        user: {
+          select: {
+            id: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: "Praticienne introuvable." });
+      return;
+    }
+
+    if (!existing.userId || !existing.user) {
+      res.status(409).json({ error: "Aucun compte de connexion n'est lie a ce profil." });
+      return;
+    }
+
+    if (payload.role === Role.STAFF && existing.user.id === authReq.user.id) {
+      res.status(409).json({ error: "Vous ne pouvez pas retirer vos propres droits administrateur depuis cette fiche." });
+      return;
+    }
+
+    if (existing.user.role === Role.ADMIN) {
+      if (payload.role === Role.ADMIN) {
+        res.json({
+          id: existing.id,
+          name: `${existing.firstName} ${existing.lastName}`.trim(),
+          hasAccount: true,
+          userRole: existing.user.role,
+        });
+        return;
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: existing.user.id },
+      data: {
+        role: payload.role,
+      },
+      select: {
+        role: true,
+      },
+    });
+
+    res.json({
+      id: existing.id,
+      name: `${existing.firstName} ${existing.lastName}`.trim(),
+      hasAccount: true,
+      userRole: updated.role,
+    });
+  } catch (error) {
+    console.error("[adminStaff.promoteToAdmin]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

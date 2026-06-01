@@ -38,6 +38,8 @@
 
           @if (!member.hasAccount) {
             <p class="muted">Aucun acces planning sur ce profil. L'email peut rester vide.</p>
+          } @else if (member.userRole === 'ADMIN') {
+            <p class="muted">Ce compte a deja les droits administrateur.</p>
           }
 
           <div class="grid three-cols">
@@ -78,6 +80,18 @@
           <button type="submit" class="btn btn-primary btn-small" [disabled]="saving()">
             {{ saving() ? 'Sauvegarde...' : 'Sauvegarder' }}
           </button>
+
+          @if (member.hasAccount) {
+            @if (member.userRole === 'ADMIN') {
+              <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="updateAdminRole('STAFF')">
+                {{ saving() ? 'Mise à jour...' : 'Retirer admin' }}
+              </button>
+            } @else {
+              <button type="button" class="btn btn-ghost btn-small" [disabled]="saving()" (click)="updateAdminRole('ADMIN')">
+                {{ saving() ? 'Promotion...' : 'Rendre admin' }}
+              </button>
+            }
+          }
 
           <div class="danger-zone">
             <p class="muted">Desactiver masque la praticienne sans effacer ses donnees. Supprimer efface vraiment le profil si aucun rendez-vous n'y est rattache.</p>

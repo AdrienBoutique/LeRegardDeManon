@@ -6,4 +6,10 @@ import { Component } from '@angular/core';
   templateUrl: './legal.html',
   styleUrl: './legal.scss'
 })
-export class Legal {}
+export class Legal {
+  protected readonly lastUpdated = new Intl.DateTimeFormat('fr-BE', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  }).format(new Date());
+}

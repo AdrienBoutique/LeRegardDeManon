@@ -242,6 +242,38 @@ export class AdminStaffDetail {
       });
   }
 
+  protected updateAdminRole(role: 'ADMIN' | 'STAFF'): void {
+    const member = this.staff();
+    if (!member || this.saving() || !member.hasAccount || member.userRole === role) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    this.api
+      .updateStaffRole(member.id, role)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (updated) => {
+          this.staff.update((current) =>
+            current
+              ? {
+                  ...current,
+                  hasAccount: Boolean(updated.hasAccount),
+                  userRole: updated.userRole ?? current.userRole ?? role
+                }
+              : current
+          );
+          this.setSuccess(role === 'ADMIN' ? 'Compte promu administrateur.' : 'Droits administrateur retires.');
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? 'Mise a jour du role impossible.');
+        }
+      });
+  }
+
   protected toggleService(serviceId: string, enabled: boolean): void {
     const member = this.staff();
     if (!member || this.saving()) {

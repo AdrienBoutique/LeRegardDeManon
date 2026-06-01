@@ -8,6 +8,7 @@ export type AdminStaffItem = {
   name: string;
   email: string;
   hasAccount?: boolean;
+  userRole?: 'ADMIN' | 'STAFF' | null;
   active: boolean;
   isTrainee: boolean;
   colorHex: string;
@@ -105,6 +106,16 @@ export class AdminInstituteApiService {
 
   deleteStaff(id: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.adminBaseUrl}/staff/${id}`);
+  }
+
+  updateStaffRole(
+    id: string,
+    role: 'ADMIN' | 'STAFF'
+  ): Observable<Pick<AdminStaffItem, 'id' | 'name' | 'hasAccount' | 'userRole'>> {
+    return this.http.patch<Pick<AdminStaffItem, 'id' | 'name' | 'hasAccount' | 'userRole'>>(
+      `${this.adminBaseUrl}/staff/${id}/role`,
+      { role }
+    );
   }
 
   listAvailability(staffId: string): Observable<AdminAvailabilityItem[]> {
