@@ -1,7 +1,8 @@
 import { NgStyle } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { AdminInstituteApiService, AvailabilityMode, CustomWorkingDayItem, StaffPlanningSettings } from '../../../core/services/admin-institute-api.service';
 import { AdminServicesApiService } from '../../../core/services/admin-services-api.service';
 import { AdminClientsApiService } from '../../../core/services/admin-clients-api.service';
 import {
@@ -29,6 +30,7 @@ const TOTAL_MIN = (END_HOUR - START_HOUR) * 60;
 })
 export class AdminPlanning {
   private readonly planningApi = inject(AdminPlanningService);
+  private readonly instituteApi = inject(AdminInstituteApiService);
   private readonly servicesApi = inject(AdminServicesApiService);
   private readonly clientsApi = inject(AdminClientsApiService);
   private readonly appointmentUi = inject(AppointmentUiService);
@@ -54,6 +56,8 @@ export class AdminPlanning {
   protected readonly staffAvailability = signal<
     Array<{ staffId: string; weekday: number; startTime: string; endTime: string }>
   >([]);
+  protected readonly staffScheduleModes = signal<Record<string, AvailabilityMode>>({});
+  protected readonly staffCustomDays = signal<Record<string, CustomWorkingDayItem[]>>({});
   protected readonly weekStart = signal(this.getMonday(new Date()));
   protected readonly isMobile = signal(typeof window !== 'undefined' ? window.innerWidth < 900 : true);
   protected readonly mobileDayIndex = signal(0);
@@ -155,6 +159,13 @@ export class AdminPlanning {
     }
 
     return map;
+  });
+
+  protected readonly hasCustomModeVisibleStaff = computed(() => {
+    const filter = this.staffFilter();
+    const visibleStaffIds = filter === 'all' ? this.staff().map((member) => member.id) : [filter];
+
+    return visibleStaffIds.some((staffId) => (this.staffScheduleModes()[staffId] ?? 'WEEKLY') === 'CUSTOM_DAYS');
   });
 
   protected readonly filteredAppointments = computed(() => {
@@ -341,6 +352,10 @@ export class AdminPlanning {
   }
 
   protected getDayShadingStyle(dayKey: string): { topHeight: string; bottomTop: string; bottomHeight: string } | null {
+    if (this.hasCustomModeVisibleStaff()) {
+      return null;
+    }
+
     const day = new Date(dayKey);
     const weekday = day.getDay();
     const filter = this.staffFilter();
@@ -373,6 +388,97 @@ export class AdminPlanning {
       topHeight: `${topHeight}px`,
       bottomTop: `${bottomTop}px`,
       bottomHeight: `${bottomHeight}px`
+    };
+  }
+
+  protected getDayAvailabilitySummaries(dayKey: string): Array<{
+    staffId: string;
+    staffName: string;
+    label: string;
+    tone: 'open' | 'closed' | 'unconfigured';
+    colorHex: string;
+  }> {
+    const day = new Date(dayKey);
+    const weekday = day.getDay();
+    const filter = this.staffFilter();
+    const visibleStaff = filter === 'all' ? this.staff() : this.staff().filter((member) => member.id === filter);
+    const modes = this.staffScheduleModes();
+    const customDaysByStaff = this.staffCustomDays();
+
+    return visibleStaff.map((staff) => {
+      const mode = modes[staff.id] ?? 'WEEKLY';
+      const colorHex = this.sanitizeHex(staff.colorHex, this.fallbackStaffColor);
+
+      if (mode === 'CUSTOM_DAYS') {
+        const customDay = customDaysByStaff[staff.id]?.find((item) => item.date === dayKey) ?? null;
+
+        if (!customDay) {
+          return {
+            staffId: staff.id,
+            staffName: staff.name,
+            label: 'Non configure',
+            tone: 'unconfigured' as const,
+            colorHex
+          };
+        }
+
+        if (customDay.isClosed || customDay.slots.length === 0) {
+          return {
+            staffId: staff.id,
+            staffName: staff.name,
+            label: 'Ferme',
+            tone: 'closed' as const,
+            colorHex
+          };
+        }
+
+        return {
+          staffId: staff.id,
+          staffName: staff.name,
+          label: customDay.slots
+            .map((slot) => `${slot.startTime} - ${slot.endTime}`)
+            .join(' / '),
+          tone: 'open' as const,
+          colorHex
+        };
+      }
+
+      const matchingRules = this.staffAvailability().filter(
+        (rule) => rule.staffId === staff.id && rule.weekday === weekday
+      );
+
+      if (!matchingRules.length) {
+        return {
+          staffId: staff.id,
+          staffName: staff.name,
+          label: 'Ferme',
+          tone: 'closed' as const,
+          colorHex
+        };
+      }
+
+      return {
+        staffId: staff.id,
+        staffName: staff.name,
+        label: matchingRules.map((rule) => `${rule.startTime} - ${rule.endTime}`).join(' / '),
+        tone: 'open' as const,
+        colorHex
+      };
+    });
+  }
+
+  protected getAvailabilityBadgeStyle(colorHex: string, tone: 'open' | 'closed' | 'unconfigured'): Record<string, string> {
+    const border = this.sanitizeHex(colorHex, this.fallbackStaffColor);
+    const bg =
+      tone === 'open'
+        ? this.hexToRgba(border, 0.16)
+        : tone === 'closed'
+          ? 'rgba(155, 88, 47, 0.08)'
+          : 'rgba(108, 90, 76, 0.08)';
+    return {
+      '--availBorder': border,
+      '--availBg': bg,
+      '--availText': this.pickTextColor(border)
     };
   }
 
@@ -537,13 +643,88 @@ export class AdminPlanning {
       planning: this.planningApi.getPlanning(start, end),
       clients: this.clientsApi.list().pipe(catchError(() => of([])))
     })
-      .pipe(finalize(() => this.loading.set(false)))
+      .pipe(
+        switchMap(({ planning: response, clients }) => {
+          const staffIds = response.staff.map((item) => item.id);
+          if (staffIds.length === 0) {
+            return of({
+              response,
+              clients,
+              planningSettings: [] as StaffPlanningSettings[],
+              customDays: [] as Array<{ staffId: string; days: CustomWorkingDayItem[] }>
+            });
+          }
+
+          return forkJoin({
+            planningSettings: forkJoin(
+              staffIds.map((staffId) =>
+                this.instituteApi.getStaffPlanningSettings(staffId).pipe(
+                  catchError(() =>
+                    of<StaffPlanningSettings>({
+                      staffId,
+                      availabilityMode: 'WEEKLY',
+                      createdAt: null,
+                      updatedAt: null
+                    })
+                  )
+                )
+              )
+            )
+          }).pipe(
+            switchMap(({ planningSettings }) => {
+              const customDaysRequests = planningSettings.map((setting) =>
+                setting.availabilityMode === 'CUSTOM_DAYS'
+                  ? this.instituteApi.listCustomWorkingDays(setting.staffId, start, end).pipe(
+                      catchError(() =>
+                        of({
+                          staffId: setting.staffId,
+                          start,
+                          end,
+                          days: [] as CustomWorkingDayItem[]
+                        })
+                      )
+                    )
+                  : of({
+                      staffId: setting.staffId,
+                      start,
+                      end,
+                      days: [] as CustomWorkingDayItem[]
+                    })
+              );
+
+              return forkJoin({
+                customDays: forkJoin(customDaysRequests)
+              }).pipe(
+                map(({ customDays }) => ({
+                  response,
+                  clients,
+                  planningSettings,
+                  customDays
+                }))
+              );
+            })
+          );
+        }),
+        finalize(() => this.loading.set(false))
+      )
       .subscribe({
-        next: ({ planning: response, clients }) => {
+        next: ({ response, clients, planningSettings, customDays }) => {
+          const settingsByStaff: Record<string, AvailabilityMode> = {};
+          const customDaysByStaff: Record<string, CustomWorkingDayItem[]> = {};
+
+          for (const setting of planningSettings) {
+            settingsByStaff[setting.staffId] = setting.availabilityMode;
+          }
+          for (const entry of customDays) {
+            customDaysByStaff[entry.staffId] = entry.days;
+          }
+
           this.staff.set(response.staff);
           this.appointments.set(response.appointments);
           this.staffAvailability.set(response.staffAvailability ?? []);
           this.timeOff.set(response.timeOff ?? []);
+          this.staffScheduleModes.set(settingsByStaff);
+          this.staffCustomDays.set(customDaysByStaff);
 
           const mappedAppointments = response.appointments.map((item) => this.toAppointment(item));
           const staffAvailability: AvailabilityRuleLite[] = (response.staffAvailability ?? []).map((rule) => ({
@@ -571,7 +752,9 @@ export class AdminPlanning {
                   }))
                 : this.buildClients(mappedAppointments),
             staffAvailability,
-            instituteAvailability
+            instituteAvailability,
+            staffScheduleModes: settingsByStaff,
+            staffCustomDays: customDaysByStaff
           });
           this.appointmentsApi.setFallbackAppointments(mappedAppointments);
 

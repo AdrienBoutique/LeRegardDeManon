@@ -8,11 +8,13 @@ import { AdminInstituteApiService } from '../../../core/services/admin-institute
 import { AdminServicesApiService } from '../../../core/services/admin-services-api.service';
 import { AppointmentsApiService } from '../appointments-api.service';
 import {
+  AvailabilityMode,
   AvailabilityRuleLite,
   Appointment,
   AppointmentDraft,
   AppointmentServiceItem,
   AppointmentUpsertPayload,
+  CustomWorkingDayLite,
   ClientLite
 } from '../appointment.models';
 import { AppointmentUiService } from '../appointment-ui.service';
@@ -42,6 +44,8 @@ export class AppointmentWizardComponent {
   protected readonly services = signal<AppointmentServiceItem[]>([]);
   protected readonly staffAvailability = signal<AvailabilityRuleLite[]>([]);
   protected readonly instituteAvailability = signal<AvailabilityRuleLite[]>([]);
+  protected readonly staffScheduleModes = signal<Record<string, AvailabilityMode>>({});
+  protected readonly staffCustomDays = signal<Record<string, CustomWorkingDayLite[]>>({});
   protected readonly serviceQuery = signal('');
   protected readonly clientMode = signal<'existing' | 'new'>('existing');
   protected readonly clientQuery = signal('');
@@ -142,6 +146,8 @@ export class AppointmentWizardComponent {
     this.ui.appointments$.pipe(takeUntilDestroyed()).subscribe((value) => this.appointments.set(value));
     this.ui.staffAvailability$.pipe(takeUntilDestroyed()).subscribe((value) => this.staffAvailability.set(value));
     this.ui.instituteAvailability$.pipe(takeUntilDestroyed()).subscribe((value) => this.instituteAvailability.set(value));
+    this.ui.staffScheduleModes$.pipe(takeUntilDestroyed()).subscribe((value) => this.staffScheduleModes.set(value));
+    this.ui.staffCustomDays$.pipe(takeUntilDestroyed()).subscribe((value) => this.staffCustomDays.set(value));
     this.ui.servicesCatalog$.pipe(takeUntilDestroyed()).subscribe((value) => {
       if (value.length) {
         this.services.set(value);
@@ -728,10 +734,14 @@ export class AppointmentWizardComponent {
       return null;
     }
 
-    const byStaff = this.remainingMinutesFromRules(
-      start,
-      this.staffAvailability().filter((rule) => rule.staffId === draft.practitionerId)
-    );
+    const mode = this.staffScheduleModes()[draft.practitionerId] ?? 'WEEKLY';
+    const byStaff =
+      mode === 'CUSTOM_DAYS'
+        ? this.remainingMinutesFromCustomDay(start, draft.practitionerId)
+        : this.remainingMinutesFromRules(
+            start,
+            this.staffAvailability().filter((rule) => rule.staffId === draft.practitionerId)
+          );
     const byInstitute = this.remainingMinutesFromRules(start, this.instituteAvailability());
     const byNextAppointment = this.remainingMinutesBeforeNextAppointment(start, draft.practitionerId, this.editingId() ?? undefined);
 
@@ -741,6 +751,44 @@ export class AppointmentWizardComponent {
     }
 
     return Math.max(0, Math.min(...candidates));
+  }
+
+  private remainingMinutesFromCustomDay(start: Date, practitionerId: string): number | null {
+    const dayKey = this.toYmd(start);
+    const customDay = this.staffCustomDays()[practitionerId]?.find((item) => item.date === dayKey);
+
+    if (!customDay) {
+      return 0;
+    }
+
+    if (customDay.isClosed) {
+      return 0;
+    }
+
+    const startMinute = start.getHours() * 60 + start.getMinutes();
+    const candidates = customDay.slots
+      .map((slot) => {
+        const startRuleMin = this.timeToMinutes(slot.startTime);
+        const endRuleMin = this.timeToMinutes(slot.endTime);
+        if (startMinute < startRuleMin || startMinute >= endRuleMin) {
+          return null;
+        }
+        return Math.max(0, endRuleMin - startMinute);
+      })
+      .filter((value): value is number => value !== null);
+
+    if (!candidates.length) {
+      return 0;
+    }
+
+    return Math.max(...candidates);
+  }
+
+  private toYmd(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private remainingMinutesFromRules(start: Date, rules: AvailabilityRuleLite[]): number | null {

@@ -1,15 +1,18 @@
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, AvailabilityMode } from "@prisma/client";
 import { DateTime } from "luxon";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import {
   BRUSSELS_TIMEZONE,
-  buildDateTimeForDay,
-  intersectIntervals,
   intervalsOverlap,
 } from "../lib/time";
-import { buildInstituteIntervals } from "../lib/availability";
+import {
+  buildInstituteIntervals,
+  buildStaffWorkIntervalsByMode,
+  StaffCustomWorkingDay,
+  StaffScheduleMode,
+} from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const STEP_MIN = 15;
@@ -85,19 +88,14 @@ publicSlotsRouter.get("/slots", async (req, res) => {
       return;
     }
 
-    const [availabilityRules, instituteRules, timeOffs, appointments] = await Promise.all([
-      prisma.availabilityRule.findMany({
+    const [settings, instituteRules, timeOffs, appointments] = await Promise.all([
+      prisma.practitionerScheduleSettings.findMany({
         where: {
           staffMemberId: { in: staffIds },
-          dayOfWeek: weekday,
-          isActive: true,
         },
         select: {
           staffMemberId: true,
-          startTime: true,
-          endTime: true,
-          effectiveFrom: true,
-          effectiveTo: true,
+          availabilityMode: true,
         },
       }),
       prisma.instituteAvailabilityRule.findMany({
@@ -137,30 +135,63 @@ publicSlotsRouter.get("/slots", async (req, res) => {
         },
       }),
     ]);
+    const modeByStaff = new Map<string, StaffScheduleMode>(
+      staffIds.map((id) => [id, settings.find((setting) => setting.staffMemberId === id)?.availabilityMode ?? AvailabilityMode.WEEKLY])
+    );
+    const weeklyStaffIds = staffIds.filter((id) => modeByStaff.get(id) !== AvailabilityMode.CUSTOM_DAYS);
+    const customStaffIds = staffIds.filter((id) => modeByStaff.get(id) === AvailabilityMode.CUSTOM_DAYS);
+
+    const [weeklyRules, customDays] = await Promise.all([
+      weeklyStaffIds.length > 0
+        ? prisma.availabilityRule.findMany({
+            where: {
+              staffMemberId: { in: weeklyStaffIds },
+              dayOfWeek: weekday,
+              isActive: true,
+            },
+            select: {
+              staffMemberId: true,
+              startTime: true,
+              endTime: true,
+              effectiveFrom: true,
+              effectiveTo: true,
+            },
+          })
+        : Promise.resolve([]),
+      customStaffIds.length > 0
+        ? prisma.practitionerCustomWorkingDay.findMany({
+            where: {
+              staffMemberId: { in: customStaffIds },
+              workingDate: query.date,
+            },
+            select: {
+              staffMemberId: true,
+              workingDate: true,
+              isClosed: true,
+              timeSlots: {
+                orderBy: { startTime: "asc" },
+                select: {
+                  startTime: true,
+                  endTime: true,
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
     const instituteIntervals = buildInstituteIntervals(query.date, dayStartLocal, instituteRules);
-
-    const rulesByStaff = new Map<string, typeof availabilityRules>();
-
-    for (const rule of availabilityRules) {
-      const effectiveFrom = rule.effectiveFrom
-        ? DateTime.fromJSDate(rule.effectiveFrom, { zone: BRUSSELS_TIMEZONE }).startOf("day")
-        : null;
-      const effectiveTo = rule.effectiveTo
-        ? DateTime.fromJSDate(rule.effectiveTo, { zone: BRUSSELS_TIMEZONE }).endOf("day")
-        : null;
-
-      const isApplicable =
-        (!effectiveFrom || dayStartLocal >= effectiveFrom) &&
-        (!effectiveTo || dayStartLocal <= effectiveTo);
-
-      if (!isApplicable) {
-        continue;
-      }
-
-      const staffRules = rulesByStaff.get(rule.staffMemberId) ?? [];
-      staffRules.push(rule);
-      rulesByStaff.set(rule.staffMemberId, staffRules);
-    }
+    const workIntervalsByStaff = buildStaffWorkIntervalsByMode(
+      query.date,
+      dayStartLocal,
+      instituteIntervals,
+      staffIds.map((staffMemberId) => ({
+        staffMemberId,
+        availabilityMode: modeByStaff.get(staffMemberId) ?? AvailabilityMode.WEEKLY,
+        weeklyRules: weeklyRules.filter((rule) => rule.staffMemberId === staffMemberId),
+        customWorkingDay:
+          customDays.find((day) => day.staffMemberId === staffMemberId) as StaffCustomWorkingDay | null | undefined,
+      }))
+    );
 
     const blockedByStaff = new Map<string, BlockInterval[]>();
 
@@ -191,58 +222,44 @@ publicSlotsRouter.get("/slots", async (req, res) => {
     const dedupe = new Set<string>();
 
     for (const staff of staffMembers) {
-      const staffRules = rulesByStaff.get(staff.id) ?? [];
       const blocks = blockedByStaff.get(staff.id) ?? [];
       const staffName = `${staff.firstName} ${staff.lastName}`.trim();
+      const workIntervals = workIntervalsByStaff.get(staff.id) ?? [];
 
-      for (const rule of staffRules) {
-        const workStart = buildDateTimeForDay(query.date, rule.startTime).toUTC().toMillis();
-        const workEnd = buildDateTimeForDay(query.date, rule.endTime).toUTC().toMillis();
+      for (const interval of workIntervals) {
+        const latestStartMs = interval.endMs - service.durationMin * 60_000;
 
-        if (workEnd <= workStart) {
-          continue;
-        }
+        for (
+          let cursorMs = interval.startMs;
+          cursorMs <= latestStartMs;
+          cursorMs += STEP_MIN * 60_000
+        ) {
+          const slotStartUtc = DateTime.fromMillis(cursorMs, { zone: "utc" });
+          const slotEndUtc = slotStartUtc.plus({ minutes: service.durationMin });
+          const slotStartMs = slotStartUtc.toMillis();
+          const slotEndMs = slotEndUtc.toMillis();
 
-        const scopedIntervals = intersectIntervals(
-          [{ startMs: workStart, endMs: workEnd }],
-          instituteIntervals
-        );
+          const hasConflict = blocks.some((block) =>
+            intervalsOverlap(slotStartMs, slotEndMs, block.startMs, block.endMs)
+          );
 
-        for (const interval of scopedIntervals) {
-          const latestStartMs = interval.endMs - service.durationMin * 60_000;
-
-          for (
-            let cursorMs = interval.startMs;
-            cursorMs <= latestStartMs;
-            cursorMs += STEP_MIN * 60_000
-          ) {
-            const slotStartUtc = DateTime.fromMillis(cursorMs, { zone: "utc" });
-            const slotEndUtc = slotStartUtc.plus({ minutes: service.durationMin });
-            const slotStartMs = slotStartUtc.toMillis();
-            const slotEndMs = slotEndUtc.toMillis();
-
-            const hasConflict = blocks.some((block) =>
-              intervalsOverlap(slotStartMs, slotEndMs, block.startMs, block.endMs)
-            );
-
-            if (hasConflict) {
-              continue;
-            }
-
-            const key = `${staff.id}|${slotStartUtc.toISO()}`;
-            if (dedupe.has(key)) {
-              continue;
-            }
-
-            dedupe.add(key);
-
-            slots.push({
-              startAt: slotStartUtc.toISO() ?? new Date(slotStartMs).toISOString(),
-              endAt: slotEndUtc.toISO() ?? new Date(slotEndMs).toISOString(),
-              staffId: staff.id,
-              staffName,
-            });
+          if (hasConflict) {
+            continue;
           }
+
+          const key = `${staff.id}|${slotStartUtc.toISO()}`;
+          if (dedupe.has(key)) {
+            continue;
+          }
+
+          dedupe.add(key);
+
+          slots.push({
+            startAt: slotStartUtc.toISO() ?? new Date(slotStartMs).toISOString(),
+            endAt: slotEndUtc.toISO() ?? new Date(slotEndMs).toISOString(),
+            staffId: staff.id,
+            staffName,
+          });
         }
       }
     }

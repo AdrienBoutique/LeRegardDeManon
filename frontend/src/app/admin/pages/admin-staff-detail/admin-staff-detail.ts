@@ -6,14 +6,23 @@ import { finalize, firstValueFrom } from 'rxjs';
 import {
   AdminAvailabilityItem,
   AdminInstituteApiService,
+  AvailabilityMode,
+  CustomWorkingDayItem,
   AdminStaffItem,
-  AdminStaffServiceItem
+  AdminStaffServiceItem,
+  StaffPlanningSettings
 } from '../../../core/services/admin-institute-api.service';
 import { AdminServicesApiService, AdminServiceItem } from '../../../core/services/admin-services-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PASTEL_COLOR_OPTIONS } from '../../shared/pastel-colors';
 
 type TabKey = 'info' | 'services' | 'availability';
+
+type CustomDayDraft = {
+  date: string;
+  isClosed: boolean;
+  slots: Array<{ startTime: string; endTime: string }>;
+};
 
 type DayRow = {
   weekday: number;
@@ -62,6 +71,17 @@ export class AdminStaffDetail {
   protected readonly allServices = signal<AdminServiceItem[]>([]);
   protected readonly staffServices = signal<AdminStaffServiceItem[]>([]);
   protected readonly availability = signal<AdminAvailabilityItem[]>([]);
+  protected readonly planningSettings = signal<StaffPlanningSettings | null>(null);
+  protected readonly customDays = signal<CustomWorkingDayItem[]>([]);
+  protected readonly customDaysLoading = signal(false);
+  protected readonly customDaysSaving = signal(false);
+  protected readonly customDaysError = signal('');
+  protected readonly customDaysSuccess = signal('');
+  protected readonly customDayDraft = signal<CustomDayDraft>({
+    date: '',
+    isClosed: false,
+    slots: [{ startTime: '09:00', endTime: '12:00' }]
+  });
   protected readonly colorOptions = PASTEL_COLOR_OPTIONS;
 
   protected readonly infoForm = this.formBuilder.nonNullable.group({
@@ -81,6 +101,10 @@ export class AdminStaffDetail {
       startTime: '09:00',
       endTime: '18:00'
     }))
+  );
+  protected readonly planningMode = computed<AvailabilityMode>(() => this.planningSettings()?.availabilityMode ?? 'WEEKLY');
+  protected readonly customDaysSorted = computed(() =>
+    [...this.customDays()].sort((a, b) => a.date.localeCompare(b.date))
   );
 
   protected readonly serviceRows = computed(() => {
@@ -426,6 +450,155 @@ export class AdminStaffDetail {
       .finally(() => this.saving.set(false));
   }
 
+  protected setPlanningMode(mode: AvailabilityMode): void {
+    const member = this.staff();
+    if (!member || this.saving()) {
+      return;
+    }
+
+    if (this.planningMode() === mode) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.errorMessage.set('');
+    this.api
+      .updateStaffPlanningSettings(member.id, { availabilityMode: mode })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (settings) => {
+          this.planningSettings.set(settings);
+          this.errorMessage.set('');
+          this.setSuccess(mode === 'CUSTOM_DAYS' ? 'Mode de planning passe en jours personnalises.' : 'Mode de planning passe en horaires hebdomadaires.');
+          if (mode === 'CUSTOM_DAYS') {
+            this.refreshCustomDays(member.id);
+          }
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.errorMessage.set(error.error?.error ?? 'Mise a jour du mode de planning impossible.');
+        }
+      });
+  }
+
+  protected addCustomDraftSlot(): void {
+    this.customDayDraft.update((draft) => ({
+      ...draft,
+      slots: [...draft.slots, { startTime: '09:00', endTime: '12:00' }]
+    }));
+  }
+
+  protected removeCustomDraftSlot(index: number): void {
+    this.customDayDraft.update((draft) => ({
+      ...draft,
+      slots: draft.slots.filter((_, slotIndex) => slotIndex !== index)
+    }));
+  }
+
+  protected updateCustomDraftSlot(index: number, key: 'startTime' | 'endTime', value: string): void {
+    this.customDayDraft.update((draft) => ({
+      ...draft,
+      slots: draft.slots.map((slot, slotIndex) => (slotIndex === index ? { ...slot, [key]: value } : slot))
+    }));
+  }
+
+  protected setCustomDraftDate(value: string): void {
+    this.customDayDraft.update((draft) => ({ ...draft, date: value }));
+  }
+
+  protected setCustomDraftClosed(value: boolean): void {
+    this.customDayDraft.update((draft) => ({ ...draft, isClosed: value }));
+  }
+
+  protected editCustomDay(day: CustomWorkingDayItem): void {
+    this.customDayDraft.set({
+      date: day.date,
+      isClosed: day.isClosed,
+      slots: day.slots.length > 0 ? day.slots.map((slot) => ({ startTime: slot.startTime, endTime: slot.endTime })) : [{ startTime: '09:00', endTime: '12:00' }]
+    });
+  }
+
+  protected startNewCustomDay(): void {
+    this.customDayDraft.set({
+      date: this.toYmd(new Date()),
+      isClosed: false,
+      slots: [{ startTime: '09:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }]
+    });
+  }
+
+  protected saveCustomDay(): void {
+    const member = this.staff();
+    if (!member || this.customDaysSaving()) {
+      return;
+    }
+
+    const draft = this.customDayDraft();
+    const validationError = this.validateCustomDayDraft(draft);
+    if (validationError) {
+      this.customDaysError.set(validationError);
+      return;
+    }
+
+    this.customDaysSaving.set(true);
+    this.customDaysError.set('');
+    this.api
+      .upsertCustomWorkingDay(member.id, draft.date, {
+        isClosed: draft.isClosed,
+        slots: draft.isClosed ? [] : draft.slots
+      })
+      .pipe(finalize(() => this.customDaysSaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.refreshCustomDays(member.id);
+          this.customDaysSuccess.set('Jour personnalise enregistre.');
+          this.setSuccess('');
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.customDaysError.set(error.error?.error ?? 'Sauvegarde du jour personnalise impossible.');
+        }
+      });
+  }
+
+  protected deleteCustomDay(day: CustomWorkingDayItem): void {
+    const member = this.staff();
+    if (!member || this.customDaysSaving()) {
+      return;
+    }
+
+    this.customDaysSaving.set(true);
+    this.customDaysError.set('');
+    this.api
+      .deleteCustomWorkingDay(member.id, day.date)
+      .pipe(finalize(() => this.customDaysSaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.refreshCustomDays(member.id);
+          this.customDaysSuccess.set('Jour personnalise supprime.');
+        },
+        error: (error: { error?: { error?: string } }) => {
+          this.customDaysError.set(error.error?.error ?? 'Suppression impossible.');
+        }
+      });
+  }
+
+  protected deleteCustomSlot(day: CustomWorkingDayItem, slotId: string): void {
+    const member = this.staff();
+    if (!member || this.customDaysSaving()) {
+      return;
+    }
+
+    this.customDaysSaving.set(true);
+    this.customDaysError.set('');
+    this.api
+      .deleteCustomWorkingDaySlot(member.id, day.date, slotId)
+      .pipe(finalize(() => this.customDaysSaving.set(false)))
+      .subscribe({
+        next: () => this.refreshCustomDays(member.id),
+        error: (error: { error?: { error?: string } }) => {
+          this.customDaysError.set(error.error?.error ?? 'Suppression de plage impossible.');
+        }
+      });
+  }
+
   protected formatPrice(priceCents: number): string {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -464,14 +637,23 @@ export class AdminStaffDetail {
       firstValueFrom(this.api.listStaff()),
       firstValueFrom(this.servicesApi.list()),
       firstValueFrom(this.api.listStaffServices(staffId)),
-      firstValueFrom(this.api.listAvailability(staffId))
+      firstValueFrom(this.api.listAvailability(staffId)),
+      firstValueFrom(this.api.getStaffPlanningSettings(staffId)).catch(() => null),
+      firstValueFrom(this.api.listCustomWorkingDays(staffId, this.getMonthStartYmd(), this.getMonthEndYmd())).catch(() => ({
+        staffId,
+        start: this.getMonthStartYmd(),
+        end: this.getMonthEndYmd(),
+        days: []
+      }))
     ])
-      .then(([staff, services, staffServices, availability]) => {
+      .then(([staff, services, staffServices, availability, settings, customDays]) => {
         const member = (staff ?? []).find((item) => item.id === staffId) ?? null;
         this.staff.set(member);
         this.allServices.set(services ?? []);
         this.staffServices.set(staffServices ?? []);
         this.availability.set(availability ?? []);
+        this.planningSettings.set(settings ?? null);
+        this.customDays.set(customDays?.days ?? []);
 
         if (member) {
           this.infoForm.reset({
@@ -485,6 +667,14 @@ export class AdminStaffDetail {
         }
 
         this.patchDayRows();
+        if (this.customDays().length > 0) {
+          const first = this.customDaysSorted()[0];
+          if (first) {
+            this.editCustomDay(first);
+          }
+        } else {
+          this.startNewCustomDay();
+        }
         this.errorMessage.set(member ? '' : 'Praticienne introuvable.');
       })
       .catch(() => this.errorMessage.set('Chargement impossible.'))
@@ -534,6 +724,73 @@ export class AdminStaffDetail {
       },
       error: () => this.errorMessage.set('Chargement des horaires impossible.')
     });
+  }
+
+  private refreshCustomDays(staffId: string): void {
+    this.api.listCustomWorkingDays(staffId, this.getMonthStartYmd(), this.getMonthEndYmd()).subscribe({
+      next: (response) => {
+        this.customDays.set(response.days ?? []);
+        this.customDaysError.set('');
+        if (this.customDays().length > 0) {
+          const first = this.customDaysSorted()[0];
+          if (first) {
+            this.editCustomDay(first);
+          }
+        } else {
+          this.startNewCustomDay();
+        }
+      },
+      error: () => this.customDaysError.set('Chargement des jours personnalises impossible.')
+    });
+  }
+
+  private getMonthStartYmd(): string {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  private getMonthEndYmd(): string {
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return this.toYmd(end);
+  }
+
+  private validateCustomDayDraft(draft: CustomDayDraft): string | null {
+    if (!draft.date || !/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) {
+      return 'Veuillez choisir une date valide.';
+    }
+
+    if (draft.isClosed) {
+      return null;
+    }
+
+    if (draft.slots.length === 0) {
+      return 'Ajoutez au moins une plage horaire.';
+    }
+
+    const sorted = [...draft.slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    for (let index = 0; index < sorted.length; index += 1) {
+      const current = sorted[index];
+      if (!/^\d{2}:\d{2}$/.test(current.startTime) || !/^\d{2}:\d{2}$/.test(current.endTime)) {
+        return 'Format horaire invalide.';
+      }
+      if (current.startTime >= current.endTime) {
+        return 'Une plage doit finir apres son debut.';
+      }
+      const previous = sorted[index - 1];
+      if (previous && current.startTime < previous.endTime) {
+        return 'Les plages horaires ne doivent pas se chevaucher.';
+      }
+    }
+
+    return null;
+  }
+
+  private toYmd(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private setSuccess(message: string): void {

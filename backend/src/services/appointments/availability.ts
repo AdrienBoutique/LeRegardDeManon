@@ -1,6 +1,10 @@
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, AvailabilityMode } from "@prisma/client";
 import { DateTime } from "luxon";
-import { buildInstituteIntervals, buildStaffWorkIntervals } from "../../lib/availability";
+import {
+  buildCustomDayIntervals,
+  buildInstituteIntervals,
+  buildStaffWorkIntervals,
+} from "../../lib/availability";
 import { prisma } from "../../lib/prisma";
 import { BRUSSELS_TIMEZONE, subtractIntervals } from "../../lib/time";
 
@@ -27,7 +31,13 @@ export async function isSlotAvailable(input: SlotAvailabilityInput): Promise<boo
   const startMs = startUtc.toMillis();
   const endMs = endUtc.toMillis();
 
-  const [rules, instituteRules, timeOffs, appointments] = await Promise.all([
+  const [settings, rules, instituteRules, timeOffs, appointments, customDay] = await Promise.all([
+    prisma.practitionerScheduleSettings.findUnique({
+      where: { staffMemberId: input.practitionerId },
+      select: {
+        availabilityMode: true,
+      },
+    }),
     prisma.availabilityRule.findMany({
       where: {
         staffMemberId: input.practitionerId,
@@ -77,11 +87,34 @@ export async function isSlotAvailable(input: SlotAvailabilityInput): Promise<boo
         endsAt: true,
       },
     }),
+    prisma.practitionerCustomWorkingDay.findUnique({
+      where: {
+        staffMemberId_workingDate: {
+          staffMemberId: input.practitionerId,
+          workingDate: dateIso,
+        },
+      },
+      select: {
+        staffMemberId: true,
+        workingDate: true,
+        isClosed: true,
+        timeSlots: {
+          orderBy: { startTime: "asc" },
+          select: {
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+    }),
   ]);
 
   const instituteIntervals = buildInstituteIntervals(dateIso, dayStartLocal, instituteRules);
-  const workByStaff = buildStaffWorkIntervals(dateIso, dayStartLocal, rules, instituteIntervals);
-  const workIntervals = workByStaff.get(input.practitionerId) ?? [];
+  const availabilityMode = settings?.availabilityMode ?? AvailabilityMode.WEEKLY;
+  const workIntervals =
+    availabilityMode === AvailabilityMode.CUSTOM_DAYS
+      ? buildCustomDayIntervals(dateIso, dayStartLocal, customDay, instituteIntervals)
+      : buildStaffWorkIntervals(dateIso, dayStartLocal, rules, instituteIntervals).get(input.practitionerId) ?? [];
   if (workIntervals.length === 0) {
     return false;
   }

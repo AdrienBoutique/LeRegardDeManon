@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
+  AvailabilityMode,
   AvailabilityRuleLite,
   Appointment,
   AppointmentDraft,
   AppointmentServiceItem,
   ClientLite,
+  CustomWorkingDayLite,
   PractitionerLite
 } from './appointment.models';
 
@@ -31,6 +33,8 @@ export class AppointmentUiService {
   readonly appointments$ = new BehaviorSubject<Appointment[]>([]);
   readonly staffAvailability$ = new BehaviorSubject<AvailabilityRuleLite[]>([]);
   readonly instituteAvailability$ = new BehaviorSubject<AvailabilityRuleLite[]>([]);
+  readonly staffScheduleModes$ = new BehaviorSubject<Record<string, AvailabilityMode>>({});
+  readonly staffCustomDays$ = new BehaviorSubject<Record<string, CustomWorkingDayLite[]>>({});
 
   readonly saved$ = new Subject<void>();
 
@@ -92,6 +96,8 @@ export class AppointmentUiService {
     appointments?: Appointment[];
     staffAvailability?: AvailabilityRuleLite[];
     instituteAvailability?: AvailabilityRuleLite[];
+    staffScheduleModes?: Record<string, AvailabilityMode>;
+    staffCustomDays?: Record<string, CustomWorkingDayLite[]>;
   }): void {
     if (input.practitioners) {
       this.practitioners$.next(input.practitioners);
@@ -110,6 +116,12 @@ export class AppointmentUiService {
     }
     if (input.instituteAvailability) {
       this.instituteAvailability$.next(input.instituteAvailability);
+    }
+    if (input.staffScheduleModes) {
+      this.staffScheduleModes$.next(input.staffScheduleModes);
+    }
+    if (input.staffCustomDays) {
+      this.staffCustomDays$.next(input.staffCustomDays);
     }
   }
 

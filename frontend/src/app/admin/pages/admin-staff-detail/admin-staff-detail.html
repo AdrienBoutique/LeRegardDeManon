@@ -216,50 +216,167 @@
 
     @if (tab() === 'availability') {
       <article class="card panel">
-        <h2>Horaires hebdomadaires</h2>
+        <h2>Planning</h2>
 
-        <div class="days stack">
-          @for (row of dayRows(); track row.weekday) {
-            <article class="day-row card">
-              <strong>{{ row.label }}</strong>
-
-              <div class="grid day-grid">
-                <label class="check-row">
-                  <input
-                    type="checkbox"
-                    [checked]="row.off"
-                    (change)="updateDayRow(row.weekday, { off: $any($event.target).checked })"
-                  />
-                  OFF
-                </label>
-
-                <label>
-                  Debut
-                  <input
-                    type="time"
-                    [disabled]="row.off"
-                    [value]="row.startTime"
-                    (input)="updateDayRow(row.weekday, { startTime: $any($event.target).value })"
-                  />
-                </label>
-
-                <label>
-                  Fin
-                  <input
-                    type="time"
-                    [disabled]="row.off"
-                    [value]="row.endTime"
-                    (input)="updateDayRow(row.weekday, { endTime: $any($event.target).value })"
-                  />
-                </label>
-              </div>
-            </article>
-          }
+        <div class="planning-mode">
+          <button
+            type="button"
+            class="chip"
+            [class.active-chip]="planningMode() === 'WEEKLY'"
+            [disabled]="saving()"
+            (click)="setPlanningMode('WEEKLY')"
+          >
+            Horaires hebdomadaires
+          </button>
+          <button
+            type="button"
+            class="chip"
+            [class.active-chip]="planningMode() === 'CUSTOM_DAYS'"
+            [disabled]="saving()"
+            (click)="setPlanningMode('CUSTOM_DAYS')"
+          >
+            Jours personnalisés
+          </button>
         </div>
 
-        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveAvailability()">
-          Sauvegarder les horaires
-        </button>
+        @if (planningMode() === 'WEEKLY') {
+          <section class="stack">
+            <p class="muted">Le planning utilise les horaires hebdomadaires existants.</p>
+
+            <div class="days stack">
+              @for (row of dayRows(); track row.weekday) {
+                <article class="day-row card">
+                  <strong>{{ row.label }}</strong>
+
+                  <div class="grid day-grid">
+                    <label class="check-row">
+                      <input
+                        type="checkbox"
+                        [checked]="row.off"
+                        (change)="updateDayRow(row.weekday, { off: $any($event.target).checked })"
+                      />
+                      OFF
+                    </label>
+
+                    <label>
+                      Debut
+                      <input
+                        type="time"
+                        [disabled]="row.off"
+                        [value]="row.startTime"
+                        (input)="updateDayRow(row.weekday, { startTime: $any($event.target).value })"
+                      />
+                    </label>
+
+                    <label>
+                      Fin
+                      <input
+                        type="time"
+                        [disabled]="row.off"
+                        [value]="row.endTime"
+                        (input)="updateDayRow(row.weekday, { endTime: $any($event.target).value })"
+                      />
+                    </label>
+                  </div>
+                </article>
+              }
+            </div>
+
+            <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveAvailability()">
+              Sauvegarder les horaires
+            </button>
+          </section>
+        } @else {
+          <section class="stack">
+            <p class="muted">Les jours non defines sont fermes. Ajoutez une ou plusieurs dates travaillées.</p>
+
+            @if (customDaysError()) {
+              <article class="card error-box">{{ customDaysError() }}</article>
+            }
+            @if (customDaysSuccess()) {
+              <article class="card success-box">{{ customDaysSuccess() }}</article>
+            }
+
+            <div class="custom-day-toolbar">
+              <button type="button" class="btn btn-ghost btn-small" [disabled]="customDaysSaving()" (click)="startNewCustomDay()">
+                Nouveau jour
+              </button>
+              <button type="button" class="btn btn-primary btn-small" [disabled]="customDaysSaving()" (click)="saveCustomDay()">
+                {{ customDaysSaving() ? 'Sauvegarde...' : 'Enregistrer le jour' }}
+              </button>
+            </div>
+
+            <div class="custom-day-list">
+              @for (day of customDaysSorted(); track day.id) {
+                <article class="card day-row">
+                  <div class="day-row-head">
+                    <div>
+                      <strong>{{ day.date }}</strong>
+                      @if (day.isClosed) {
+                        <span class="muted">Fermé</span>
+                      } @else {
+                        <span class="muted">{{ day.slots.length }} plage(s)</span>
+                      }
+                    </div>
+                    <div class="row-actions">
+                      <button type="button" class="btn btn-ghost btn-small" [disabled]="customDaysSaving()" (click)="editCustomDay(day)">
+                        Modifier
+                      </button>
+                      <button type="button" class="btn btn-danger-lite btn-small" [disabled]="customDaysSaving()" (click)="deleteCustomDay(day)">
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (!day.isClosed) {
+                    <div class="slot-list">
+                      @for (slot of day.slots; track slot.id) {
+                        <div class="slot-item">
+                          <span>{{ slot.startTime }} - {{ slot.endTime }}</span>
+                          <button type="button" class="btn btn-ghost btn-small" [disabled]="customDaysSaving()" (click)="deleteCustomSlot(day, slot.id)">
+                            Retirer
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+
+            <article class="card panel custom-day-editor">
+              <h3>Jour personnalise</h3>
+              <label>
+                Date
+                <input type="date" [value]="customDayDraft().date" (input)="setCustomDraftDate($any($event.target).value)" />
+              </label>
+
+              <label class="check-row">
+                <input type="checkbox" [checked]="customDayDraft().isClosed" (change)="setCustomDraftClosed($any($event.target).checked)" />
+                Ferme
+              </label>
+
+              @if (!customDayDraft().isClosed) {
+                <div class="slot-editor stack">
+                  @for (slot of customDayDraft().slots; track $index) {
+                    <article class="slot-row card">
+                      <label>
+                        Debut
+                        <input type="time" [value]="slot.startTime" (input)="updateCustomDraftSlot($index, 'startTime', $any($event.target).value)" />
+                      </label>
+                      <label>
+                        Fin
+                        <input type="time" [value]="slot.endTime" (input)="updateCustomDraftSlot($index, 'endTime', $any($event.target).value)" />
+                      </label>
+                      <button type="button" class="btn btn-ghost btn-small" (click)="removeCustomDraftSlot($index)">Supprimer</button>
+                    </article>
+                  }
+                  <button type="button" class="btn btn-ghost btn-small" (click)="addCustomDraftSlot()">Ajouter une plage</button>
+                </div>
+              }
+            </article>
+          </section>
+        }
       </article>
     }
 

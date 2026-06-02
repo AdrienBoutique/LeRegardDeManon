@@ -1,4 +1,5 @@
 export type AppointmentStatus = 'confirmed' | 'pending' | 'blocked' | 'cancelled';
+export type AvailabilityMode = 'WEEKLY' | 'CUSTOM_DAYS';
 
 export interface AppointmentServiceItem {
   serviceId: string;
@@ -25,6 +26,17 @@ export interface AvailabilityRuleLite {
   weekday: number;
   startTime: string;
   endTime: string;
+}
+
+export interface CustomWorkingDaySlotLite {
+  startTime: string;
+  endTime: string;
+}
+
+export interface CustomWorkingDayLite {
+  date: string;
+  isClosed: boolean;
+  slots: CustomWorkingDaySlotLite[];
 }
 
 export interface AppointmentDraft {

@@ -17,6 +17,31 @@ export type AdminStaffItem = {
   updatedAt: string;
 };
 
+export type AvailabilityMode = 'WEEKLY' | 'CUSTOM_DAYS';
+
+export type StaffPlanningSettings = {
+  staffId: string;
+  availabilityMode: AvailabilityMode;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type CustomWorkingDaySlot = {
+  id: string;
+  startTime: string;
+  endTime: string;
+};
+
+export type CustomWorkingDayItem = {
+  id: string;
+  staffId: string;
+  date: string;
+  isClosed: boolean;
+  slots: CustomWorkingDaySlot[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AdminAvailabilityItem = {
   id: string | null;
   staffId: string;
@@ -177,6 +202,49 @@ export class AdminInstituteApiService {
 
   deleteAvailability(id: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(`${this.adminBaseUrl}/availability/${id}`);
+  }
+
+  getStaffPlanningSettings(staffId: string): Observable<StaffPlanningSettings> {
+    return this.http.get<StaffPlanningSettings>(`${this.adminBaseUrl}/staff/${staffId}/planning-settings`);
+  }
+
+  updateStaffPlanningSettings(
+    staffId: string,
+    payload: { availabilityMode: AvailabilityMode }
+  ): Observable<StaffPlanningSettings> {
+    return this.http.put<StaffPlanningSettings>(
+      `${this.adminBaseUrl}/staff/${staffId}/planning-settings`,
+      payload
+    );
+  }
+
+  listCustomWorkingDays(staffId: string, start: string, end: string): Observable<{ staffId: string; start: string; end: string; days: CustomWorkingDayItem[] }> {
+    return this.http.get<{ staffId: string; start: string; end: string; days: CustomWorkingDayItem[] }>(
+      `${this.adminBaseUrl}/staff/${staffId}/custom-days?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+    );
+  }
+
+  upsertCustomWorkingDay(
+    staffId: string,
+    date: string,
+    payload: { isClosed?: boolean; slots?: Array<{ startTime: string; endTime: string }> }
+  ): Observable<{ day: CustomWorkingDayItem | null }> {
+    return this.http.put<{ day: CustomWorkingDayItem | null }>(
+      `${this.adminBaseUrl}/staff/${staffId}/custom-days/${encodeURIComponent(date)}`,
+      payload
+    );
+  }
+
+  deleteCustomWorkingDay(staffId: string, date: string): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(
+      `${this.adminBaseUrl}/staff/${staffId}/custom-days/${encodeURIComponent(date)}`
+    );
+  }
+
+  deleteCustomWorkingDaySlot(staffId: string, date: string, slotId: string): Observable<{ ok: true }> {
+    return this.http.delete<{ ok: true }>(
+      `${this.adminBaseUrl}/staff/${staffId}/custom-days/${encodeURIComponent(date)}/slots/${slotId}`
+    );
   }
 
   listTimeOff(staffId: string): Observable<AdminTimeOffItem[]> {

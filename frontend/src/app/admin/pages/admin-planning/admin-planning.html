@@ -3,7 +3,7 @@
     <div class="heading-grid">
       <div class="heading-left">
         <div class="titles">
-          <h1>Planning hebdomadaire</h1>
+          <h1>Planning global</h1>
           <p class="month-label">{{ monthLabel() }}</p>
         </div>
 
@@ -31,6 +31,12 @@
               </span>
             }
           </div>
+        }
+
+        @if (hasCustomModeVisibleStaff()) {
+          <p class="mode-note">
+            Les praticiennes en mode jours personnalises affichent leurs jours configures dans chaque colonne.
+          </p>
         }
 
         @if (isMobile()) {
@@ -107,6 +113,17 @@
         </div>
 
         <section class="mobile-timeline" aria-label="Planning horaire de la journee">
+          @if (getDayAvailabilitySummaries(mobileSelectedDay().key).length > 0) {
+            <section class="mobile-availability-summary" aria-label="Disponibilites de la journee">
+              @for (item of getDayAvailabilitySummaries(mobileSelectedDay().key); track item.staffId) {
+                <article class="mobile-availability-item" [ngStyle]="getAvailabilityBadgeStyle(item.colorHex, item.tone)">
+                  <strong>{{ item.staffName }}</strong>
+                  <span>{{ item.label }}</span>
+                </article>
+              }
+            </section>
+          }
+
           @for (row of mobileSlotRows(); track row.label) {
             <article class="mobile-slot-row" [class.busy]="row.appointments.length > 0">
               <span class="mobile-slot-time">{{ row.label }}</span>
@@ -150,7 +167,25 @@
         <div class="planning-header" [style.gridTemplateColumns]="gridTemplateColumns()">
           <div class="corner-cell">Heure</div>
           @for (day of visibleDays(); track day.key) {
-            <div class="day-head" [class.current-day]="isToday(day.key)">{{ day.shortLabel }}</div>
+            <div class="day-head" [class.current-day]="isToday(day.key)">
+              <strong class="day-head-label">{{ day.shortLabel }}</strong>
+              @if (hasCustomModeVisibleStaff()) {
+                <div class="day-head-availability">
+                  @for (item of getDayAvailabilitySummaries(day.key); track item.staffId) {
+                    <span
+                      class="availability-chip"
+                      [class.is-open]="item.tone === 'open'"
+                      [class.is-closed]="item.tone !== 'open'"
+                      [ngStyle]="getAvailabilityBadgeStyle(item.colorHex, item.tone)"
+                      [title]="item.staffName + ' : ' + item.label"
+                    >
+                      <span class="availability-chip-dot"></span>
+                      <span>{{ item.staffName }}: {{ item.label }}</span>
+                    </span>
+                  }
+                </div>
+              }
+            </div>
           }
         </div>
 

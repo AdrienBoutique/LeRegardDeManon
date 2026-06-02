@@ -1,16 +1,46 @@
+import { AvailabilityMode, Role } from "@prisma/client";
+import { DateTime } from "luxon";
 import { Router } from "express";
-import { Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { AuthenticatedRequest, authRequired, requireRole } from "../middlewares/auth";
 import { authAdmin } from "../middlewares/authAdmin";
+import { BRUSSELS_TIMEZONE } from "../lib/time";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 function timeToMinutes(value: string): number {
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;
+}
+
+function parseYmd(date: string): DateTime | null {
+  const parsed = DateTime.fromISO(date, { zone: BRUSSELS_TIMEZONE }).startOf("day");
+  if (!parsed.isValid || parsed.toFormat("yyyy-MM-dd") !== date) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function validateSlots(slots: Array<{ startTime: string; endTime: string }>): string | null {
+  const sorted = [...slots].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const current = sorted[index];
+    if (timeToMinutes(current.endTime) <= timeToMinutes(current.startTime)) {
+      return "endTime must be after startTime";
+    }
+
+    const previous = sorted[index - 1];
+    if (previous && timeToMinutes(current.startTime) < timeToMinutes(previous.endTime)) {
+      return "Time slots must not overlap";
+    }
+  }
+
+  return null;
 }
 
 const createAvailabilitySchema = z
@@ -46,6 +76,54 @@ const updateAvailabilitySchema = z
       path: ["endTime"],
     }
   );
+
+const updatePlanningModeSchema = z.object({
+  availabilityMode: z.nativeEnum(AvailabilityMode),
+});
+
+const customTimeSlotSchema = z
+  .object({
+    startTime: z.string().regex(timeRegex),
+    endTime: z.string().regex(timeRegex),
+  })
+  .refine((payload) => timeToMinutes(payload.endTime) > timeToMinutes(payload.startTime), {
+    message: "endTime must be after startTime",
+    path: ["endTime"],
+  });
+
+const customWorkingDayBodySchema = z
+  .object({
+    isClosed: z.boolean().optional(),
+    slots: z.array(customTimeSlotSchema).optional(),
+  })
+  .superRefine((payload, context) => {
+    if (payload.isClosed) {
+      return;
+    }
+
+    if (!payload.slots || payload.slots.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["slots"],
+        message: "At least one time slot is required when the day is open",
+      });
+      return;
+    }
+
+    const overlapError = validateSlots(payload.slots);
+    if (overlapError) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["slots"],
+        message: overlapError,
+      });
+    }
+  });
+
+const customDayQuerySchema = z.object({
+  start: z.string().regex(dateRegex),
+  end: z.string().regex(dateRegex),
+});
 
 const weeklyDaySchema = z
   .object({
@@ -133,6 +211,41 @@ function formatWeeklyDays(
   });
 }
 
+function formatCustomWorkingDay(day: {
+  id: string;
+  staffMemberId: string;
+  workingDate: string;
+  isClosed: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  timeSlots: Array<{ id: string; startTime: string; endTime: string }>;
+}): {
+  id: string;
+  staffId: string;
+  date: string;
+  isClosed: boolean;
+  slots: Array<{ id: string; startTime: string; endTime: string }>;
+  createdAt: Date;
+  updatedAt: Date;
+} {
+  return {
+    id: day.id,
+    staffId: day.staffMemberId,
+    date: day.workingDate,
+    isClosed: day.isClosed,
+    slots: day.timeSlots
+      .slice()
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      .map((slot) => ({
+        id: slot.id,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      })),
+    createdAt: day.createdAt,
+    updatedAt: day.updatedAt,
+  };
+}
+
 export const adminAvailabilityRouter = Router();
 
 async function getLinkedPractitionerId(userId: string): Promise<string | null> {
@@ -141,6 +254,16 @@ async function getLinkedPractitionerId(userId: string): Promise<string | null> {
     select: { practitioner: { select: { id: true } } },
   });
   return user?.practitioner?.id ?? null;
+}
+
+async function assertStaffAccess(req: unknown, staffId: string): Promise<boolean> {
+  const auth = (req as AuthenticatedRequest).user;
+  if (auth.role !== Role.STAFF) {
+    return true;
+  }
+
+  const linkedPractitionerId = await getLinkedPractitionerId(auth.id);
+  return Boolean(linkedPractitionerId && linkedPractitionerId === staffId);
 }
 
 adminAvailabilityRouter.get("/staff/:id/availability", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
@@ -435,6 +558,371 @@ adminAvailabilityRouter.delete("/availability/:id", ...authAdmin, async (req, re
     res.json({ ok: true });
   } catch (error) {
     console.error("[adminAvailability.delete]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.get("/staff/:id/planning-settings", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    const auth = (req as AuthenticatedRequest).user;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    if (auth.role === Role.STAFF) {
+      const allowed = await assertStaffAccess(req, staffId);
+      if (!allowed) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+
+    const settings = await prisma.practitionerScheduleSettings.findUnique({
+      where: { staffMemberId: staffId },
+      select: {
+        staffMemberId: true,
+        availabilityMode: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({
+      staffId,
+      availabilityMode: settings?.availabilityMode ?? AvailabilityMode.WEEKLY,
+      createdAt: settings?.createdAt ?? null,
+      updatedAt: settings?.updatedAt ?? null,
+    });
+  } catch (error) {
+    console.error("[adminAvailability.getPlanningSettings]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.put("/staff/:id/planning-settings", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    const auth = (req as AuthenticatedRequest).user;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const payload = parseOrThrow(updatePlanningModeSchema, req.body);
+
+    if (auth.role === Role.STAFF) {
+      const allowed = await assertStaffAccess(req, staffId);
+      if (!allowed) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+
+    const updated = await prisma.practitionerScheduleSettings.upsert({
+      where: { staffMemberId: staffId },
+      update: { availabilityMode: payload.availabilityMode },
+      create: {
+        staffMemberId: staffId,
+        availabilityMode: payload.availabilityMode,
+      },
+      select: {
+        staffMemberId: true,
+        availabilityMode: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({
+      staffId: updated.staffMemberId,
+      availabilityMode: updated.availabilityMode,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[adminAvailability.updatePlanningSettings]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.get("/staff/:id/custom-days", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    const auth = (req as AuthenticatedRequest).user;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const query = parseOrThrow(customDayQuerySchema, req.query);
+
+    if (auth.role === Role.STAFF) {
+      const allowed = await assertStaffAccess(req, staffId);
+      if (!allowed) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+
+    const startLocal = parseYmd(query.start);
+    const endLocal = parseYmd(query.end);
+
+    if (!startLocal || !endLocal || startLocal > endLocal) {
+      res.status(400).json({ error: "start and end must be valid YYYY-MM-DD values" });
+      return;
+    }
+
+    const days = await prisma.practitionerCustomWorkingDay.findMany({
+      where: {
+        staffMemberId: staffId,
+        workingDate: {
+          gte: query.start,
+          lte: query.end,
+        },
+      },
+      orderBy: { workingDate: "asc" },
+      select: {
+        id: true,
+        staffMemberId: true,
+        workingDate: true,
+        isClosed: true,
+        createdAt: true,
+        updatedAt: true,
+        timeSlots: {
+          orderBy: { startTime: "asc" },
+          select: {
+            id: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      staffId,
+      start: query.start,
+      end: query.end,
+      days: days.map(formatCustomWorkingDay),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[adminAvailability.listCustomDays]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+async function upsertCustomDayHandler(req: unknown, res: any) {
+  const auth = (req as AuthenticatedRequest).user;
+  const staffId = Array.isArray((req as { params: { id?: string | string[] } }).params.id)
+    ? ((req as { params: { id?: string | string[] } }).params.id as string[])[0]
+    : ((req as { params: { id?: string | string[] } }).params.id as string);
+  const date = Array.isArray((req as { params: { date?: string | string[] } }).params.date)
+    ? ((req as { params: { date?: string | string[] } }).params.date as string[])[0]
+    : ((req as { params: { date?: string | string[] } }).params.date as string);
+  const payload = parseOrThrow(customWorkingDayBodySchema, (req as { body: unknown }).body);
+
+  if (auth.role === Role.STAFF) {
+    const allowed = await assertStaffAccess(req, staffId);
+    if (!allowed) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+  }
+
+  const dayLocal = parseYmd(date);
+  if (!dayLocal) {
+    res.status(400).json({ error: "date must be a valid YYYY-MM-DD" });
+    return;
+  }
+
+  const slotError = payload.isClosed ? null : validateSlots(payload.slots ?? []);
+  if (slotError) {
+    res.status(400).json({ error: slotError });
+    return;
+  }
+
+  const workingDay = await prisma.practitionerCustomWorkingDay.upsert({
+    where: {
+      staffMemberId_workingDate: {
+        staffMemberId: staffId,
+        workingDate: date,
+      },
+    },
+    update: {
+      isClosed: payload.isClosed ?? false,
+    },
+    create: {
+      staffMemberId: staffId,
+      workingDate: date,
+      isClosed: payload.isClosed ?? false,
+    },
+    select: {
+      id: true,
+      staffMemberId: true,
+      workingDate: true,
+      isClosed: true,
+      createdAt: true,
+      updatedAt: true,
+      timeSlots: {
+        orderBy: { startTime: "asc" },
+        select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+        },
+      },
+    },
+  });
+
+  if (!payload.isClosed) {
+    await prisma.practitionerCustomTimeSlot.deleteMany({
+      where: {
+        customWorkingDayId: workingDay.id,
+      },
+    });
+
+    if ((payload.slots ?? []).length > 0) {
+      await prisma.practitionerCustomTimeSlot.createMany({
+        data: (payload.slots ?? []).map((slot) => ({
+          customWorkingDayId: workingDay.id,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        })),
+      });
+    }
+  } else {
+    await prisma.practitionerCustomTimeSlot.deleteMany({
+      where: {
+        customWorkingDayId: workingDay.id,
+      },
+    });
+  }
+
+  const refreshed = await prisma.practitionerCustomWorkingDay.findUnique({
+    where: {
+      id: workingDay.id,
+    },
+    select: {
+      id: true,
+      staffMemberId: true,
+      workingDate: true,
+      isClosed: true,
+      createdAt: true,
+      updatedAt: true,
+      timeSlots: {
+        orderBy: { startTime: "asc" },
+        select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+        },
+      },
+    },
+  });
+
+  res.status(200).json({
+    day: refreshed ? formatCustomWorkingDay(refreshed) : null,
+  });
+}
+
+adminAvailabilityRouter.post("/staff/:id/custom-days/:date", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    await upsertCustomDayHandler(req, res);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[adminAvailability.createCustomDay]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.put("/staff/:id/custom-days/:date", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    await upsertCustomDayHandler(req, res);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: zodErrorToMessage(error) });
+      return;
+    }
+
+    console.error("[adminAvailability.updateCustomDay]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.delete("/staff/:id/custom-days/:date", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    const auth = (req as AuthenticatedRequest).user;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const date = Array.isArray(req.params.date) ? req.params.date[0] : req.params.date;
+
+    if (auth.role === Role.STAFF) {
+      const allowed = await assertStaffAccess(req, staffId);
+      if (!allowed) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+
+    const dayLocal = parseYmd(date);
+    if (!dayLocal) {
+      res.status(400).json({ error: "date must be a valid YYYY-MM-DD" });
+      return;
+    }
+
+    await prisma.practitionerCustomWorkingDay.deleteMany({
+      where: {
+        staffMemberId: staffId,
+        workingDate: date,
+      },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("[adminAvailability.deleteCustomDay]", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminAvailabilityRouter.delete("/staff/:id/custom-days/:date/slots/:slotId", authRequired, requireRole(Role.ADMIN, Role.STAFF), async (req, res) => {
+  try {
+    const auth = (req as AuthenticatedRequest).user;
+    const staffId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const slotId = Array.isArray(req.params.slotId) ? req.params.slotId[0] : req.params.slotId;
+
+    if (auth.role === Role.STAFF) {
+      const allowed = await assertStaffAccess(req, staffId);
+      if (!allowed) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+
+    const slot = await prisma.practitionerCustomTimeSlot.findUnique({
+      where: { id: slotId },
+      select: {
+        id: true,
+        customWorkingDay: {
+          select: {
+            staffMemberId: true,
+          },
+        },
+      },
+    });
+
+    if (!slot || slot.customWorkingDay.staffMemberId !== staffId) {
+      res.status(404).json({ error: "Time slot not found" });
+      return;
+    }
+
+    await prisma.practitionerCustomTimeSlot.delete({
+      where: { id: slotId },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("[adminAvailability.deleteCustomSlot]", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

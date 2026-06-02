@@ -1,4 +1,4 @@
-import { AppointmentStatus, BookingMode, Prisma } from "@prisma/client";
+import { AppointmentStatus, AvailabilityMode, BookingMode, Prisma } from "@prisma/client";
 import { DateTime } from "luxon";
 import { Router } from "express";
 import { z } from "zod";
@@ -8,7 +8,12 @@ import {
   subtractIntervals,
   TimeInterval,
 } from "../lib/time";
-import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
+import {
+  buildInstituteIntervals,
+  buildStaffWorkIntervalsByMode,
+  StaffCustomWorkingDay,
+  StaffScheduleMode,
+} from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 import { sendConfirmationEmailIfNeeded } from "../services/email/appointmentEmails";
 import { sendAppointmentConfirmationSms } from "../jobs/appointmentSmsReminders.job";
@@ -274,19 +279,14 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
         const dateIso = dayStartLocal.toFormat("yyyy-MM-dd");
         const startAtMs = startAtLocal.toUTC().toMillis();
 
-        const [rules, instituteRules, timeOffs, appointments] = await Promise.all([
-          tx.availabilityRule.findMany({
+        const [scheduleSettings, instituteRules, timeOffs, appointments] = await Promise.all([
+          tx.practitionerScheduleSettings.findMany({
             where: {
               staffMemberId: { in: candidateStaffIds },
-              dayOfWeek: weekday,
-              isActive: true,
             },
             select: {
               staffMemberId: true,
-              startTime: true,
-              endTime: true,
-              effectiveFrom: true,
-              effectiveTo: true,
+              availabilityMode: true,
             },
           }),
           tx.instituteAvailabilityRule.findMany({
@@ -326,12 +326,66 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
           }),
         ]);
 
+        const modeByStaff = new Map<string, StaffScheduleMode>(
+          candidateStaffIds.map((id) => [
+            id,
+            scheduleSettings.find((setting) => setting.staffMemberId === id)?.availabilityMode ?? AvailabilityMode.WEEKLY,
+          ])
+        );
+        const weeklyStaffIds = candidateStaffIds.filter((id) => modeByStaff.get(id) !== AvailabilityMode.CUSTOM_DAYS);
+        const customStaffIds = candidateStaffIds.filter((id) => modeByStaff.get(id) === AvailabilityMode.CUSTOM_DAYS);
+
+        const [rules, customDays] = await Promise.all([
+          weeklyStaffIds.length > 0
+            ? tx.availabilityRule.findMany({
+                where: {
+                  staffMemberId: { in: weeklyStaffIds },
+                  dayOfWeek: weekday,
+                  isActive: true,
+                },
+                select: {
+                  staffMemberId: true,
+                  startTime: true,
+                  endTime: true,
+                  effectiveFrom: true,
+                  effectiveTo: true,
+                },
+              })
+            : Promise.resolve([]),
+          customStaffIds.length > 0
+            ? tx.practitionerCustomWorkingDay.findMany({
+                where: {
+                  staffMemberId: { in: customStaffIds },
+                  workingDate: dateIso,
+                },
+                select: {
+                  staffMemberId: true,
+                  workingDate: true,
+                  isClosed: true,
+                  timeSlots: {
+                    orderBy: { startTime: "asc" },
+                    select: {
+                      startTime: true,
+                      endTime: true,
+                    },
+                  },
+                },
+              })
+            : Promise.resolve([]),
+        ]);
+
         const instituteIntervals = buildInstituteIntervals(dateIso, dayStartLocal, instituteRules);
-        const workIntervalsByStaff = buildStaffWorkIntervals(
+        const workIntervalsByStaff = buildStaffWorkIntervalsByMode(
           dateIso,
           dayStartLocal,
-          rules,
-          instituteIntervals
+          instituteIntervals,
+          candidateStaffIds.map((staffMemberId) => ({
+            staffMemberId,
+            availabilityMode: modeByStaff.get(staffMemberId) ?? AvailabilityMode.WEEKLY,
+            weeklyRules: rules.filter((rule) => rule.staffMemberId === staffMemberId),
+            customWorkingDay:
+              customDays.find((day) => day.staffMemberId === staffMemberId) as StaffCustomWorkingDay | null | undefined,
+          }))
         );
         const blockedIntervalsByStaff = new Map<string, TimeInterval[]>();
 
@@ -393,11 +447,11 @@ publicAppointmentsRouter.post(["/appointments", "/public/appointments"], async (
           throw new HttpError(400, "No staff can perform the selected services");
         }
 
-        const settings = await tx.instituteSettings.findFirst({
+        const instituteSettings = await tx.instituteSettings.findFirst({
           orderBy: { createdAt: "asc" },
           select: { bookingMode: true },
         });
-        const bookingMode = settings?.bookingMode ?? BookingMode.MANUAL;
+        const bookingMode = instituteSettings?.bookingMode ?? BookingMode.MANUAL;
         const selectedAvailability = candidatesWithAvailability.find((candidate) => candidate.id === selectedStaff.id);
         const canAutoConfirm = bookingMode === BookingMode.AUTO_INTELLIGENT && Boolean(selectedAvailability?.eligible);
         const nextStatus = canAutoConfirm ? AppointmentStatus.CONFIRMED : AppointmentStatus.PENDING;

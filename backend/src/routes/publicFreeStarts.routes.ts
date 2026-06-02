@@ -1,4 +1,4 @@
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, AvailabilityMode } from "@prisma/client";
 import { DateTime } from "luxon";
 import { Router } from "express";
 import { z } from "zod";
@@ -8,7 +8,12 @@ import {
   subtractIntervals,
   TimeInterval,
 } from "../lib/time";
-import { buildInstituteIntervals, buildStaffWorkIntervals } from "../lib/availability";
+import {
+  buildInstituteIntervals,
+  buildStaffWorkIntervalsByMode,
+  StaffCustomWorkingDay,
+  StaffScheduleMode,
+} from "../lib/availability";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
 import { getInstituteSettings } from "../services/settings/instituteSettings";
 
@@ -81,19 +86,14 @@ async function listDayStarts(
     return { starts: [], staffMissing: false };
   }
 
-  const [availabilityRules, instituteRules, timeOffs, appointments] = await Promise.all([
-    prisma.availabilityRule.findMany({
+  const [settings, instituteRules, timeOffs, appointments] = await Promise.all([
+    prisma.practitionerScheduleSettings.findMany({
       where: {
         staffMemberId: { in: staffIds },
-        dayOfWeek: weekday,
-        isActive: true,
       },
       select: {
         staffMemberId: true,
-        startTime: true,
-        endTime: true,
-        effectiveFrom: true,
-        effectiveTo: true,
+        availabilityMode: true,
       },
     }),
     prisma.instituteAvailabilityRule.findMany({
@@ -134,12 +134,63 @@ async function listDayStarts(
     }),
   ]);
 
+  const modeByStaff = new Map<string, StaffScheduleMode>(
+    staffIds.map((id) => [id, settings.find((setting) => setting.staffMemberId === id)?.availabilityMode ?? AvailabilityMode.WEEKLY])
+  );
+  const weeklyStaffIds = staffIds.filter((id) => modeByStaff.get(id) !== AvailabilityMode.CUSTOM_DAYS);
+  const customStaffIds = staffIds.filter((id) => modeByStaff.get(id) === AvailabilityMode.CUSTOM_DAYS);
+
+  const [weeklyRules, customDays] = await Promise.all([
+    weeklyStaffIds.length > 0
+      ? prisma.availabilityRule.findMany({
+          where: {
+            staffMemberId: { in: weeklyStaffIds },
+            dayOfWeek: weekday,
+            isActive: true,
+          },
+          select: {
+            staffMemberId: true,
+            startTime: true,
+            endTime: true,
+            effectiveFrom: true,
+            effectiveTo: true,
+          },
+        })
+      : Promise.resolve([]),
+    customStaffIds.length > 0
+      ? prisma.practitionerCustomWorkingDay.findMany({
+          where: {
+            staffMemberId: { in: customStaffIds },
+            workingDate: date,
+          },
+          select: {
+            staffMemberId: true,
+            workingDate: true,
+            isClosed: true,
+            timeSlots: {
+              orderBy: { startTime: "asc" },
+              select: {
+                startTime: true,
+                endTime: true,
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
   const instituteIntervals = buildInstituteIntervals(date, dayStartLocal, instituteRules);
-  const workIntervalsByStaff = buildStaffWorkIntervals(
+  const workIntervalsByStaff = buildStaffWorkIntervalsByMode(
     date,
     dayStartLocal,
-    availabilityRules,
-    instituteIntervals
+    instituteIntervals,
+    staffIds.map((staffMemberId) => ({
+      staffMemberId,
+      availabilityMode: modeByStaff.get(staffMemberId) ?? AvailabilityMode.WEEKLY,
+      weeklyRules: weeklyRules.filter((rule) => rule.staffMemberId === staffMemberId),
+      customWorkingDay:
+        customDays.find((day) => day.staffMemberId === staffMemberId) as StaffCustomWorkingDay | null | undefined,
+    }))
   );
   const blockedIntervalsByStaff = new Map<string, TimeInterval[]>();
 

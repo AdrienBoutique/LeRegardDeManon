@@ -40,6 +40,11 @@ enum BookingMode {
   AUTO_INTELLIGENT
 }
 
+enum AvailabilityMode {
+  WEEKLY
+  CUSTOM_DAYS
+}
+
 model StaffMember {
   id                String             @id @default(cuid())
   firstName         String
@@ -58,6 +63,8 @@ model StaffMember {
   serviceLinks      ServiceStaff[]
   appointments      Appointment[]
   availabilityRules AvailabilityRule[]
+  scheduleSettings   PractitionerScheduleSettings?
+  customWorkingDays PractitionerCustomWorkingDay[]
   timeOffs          TimeOff[]
   notificationLogs  NotificationLog[]
 }
@@ -267,6 +274,41 @@ model TimeOff {
   staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
 
   @@index([staffMemberId, startsAt])
+}
+
+model PractitionerScheduleSettings {
+  id                String                 @id @default(cuid())
+  staffMemberId     String                 @unique
+  availabilityMode  AvailabilityMode       @default(WEEKLY)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  staffMember       StaffMember            @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+}
+
+model PractitionerCustomWorkingDay {
+  id                String                     @id @default(cuid())
+  staffMemberId     String
+  workingDate       String
+  isClosed          Boolean                    @default(false)
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  staffMember       StaffMember                @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  timeSlots         PractitionerCustomTimeSlot[]
+
+  @@unique([staffMemberId, workingDate])
+  @@index([staffMemberId, workingDate])
+}
+
+model PractitionerCustomTimeSlot {
+  id                String                     @id @default(cuid())
+  customWorkingDayId String
+  startTime         String
+  endTime           String
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  customWorkingDay  PractitionerCustomWorkingDay @relation(fields: [customWorkingDayId], references: [id], onDelete: Cascade)
+
+  @@index([customWorkingDayId])
 }
 
 model NotificationLog {
