@@ -207,13 +207,19 @@
                 ></button>
               }
 
-              @if (getDayShadingStyle(day.key); as shade) {
-                <div class="off-overlay off-overlay-top" [style.height]="shade.topHeight"></div>
-                <div
-                  class="off-overlay off-overlay-bottom"
-                  [style.top]="shade.bottomTop"
-                  [style.height]="shade.bottomHeight"
-                ></div>
+              @if (hasCustomModeVisibleStaff()) {
+                @for (shade of getCustomDayShadingSegments(day.key); track $index) {
+                  <div class="off-overlay" [style.top]="shade.topHeight" [style.height]="shade.height"></div>
+                }
+              } @else {
+                @if (getDayShadingStyle(day.key); as shade) {
+                  <div class="off-overlay off-overlay-top" [style.height]="shade.topHeight"></div>
+                  <div
+                    class="off-overlay off-overlay-bottom"
+                    [style.top]="shade.bottomTop"
+                    [style.height]="shade.bottomHeight"
+                  ></div>
+                }
               }
 
               @for (leave of getTimeOffForDay(day.key); track leave.id) {

@@ -352,19 +352,41 @@ export class AdminPlanning {
   }
 
   protected getDayShadingStyle(dayKey: string): { topHeight: string; bottomTop: string; bottomHeight: string } | null {
-    if (this.hasCustomModeVisibleStaff()) {
-      return null;
-    }
-
     const day = new Date(dayKey);
     const weekday = day.getDay();
     const filter = this.staffFilter();
     const visibleStaffIds =
       filter === 'all' ? this.staff().map((member) => member.id) : [filter];
+    const visibleStaff = this.staff().filter((member) => visibleStaffIds.includes(member.id));
+    const customModeStaff = visibleStaff.filter((member) => (this.staffScheduleModes()[member.id] ?? 'WEEKLY') === 'CUSTOM_DAYS');
 
-    const matches = this.staffAvailability().filter(
-      (rule) => rule.weekday === weekday && visibleStaffIds.includes(rule.staffId)
-    );
+    if (customModeStaff.length > 0) {
+      const openIntervals = this.getMergedCustomDayIntervals(dayKey, customModeStaff.map((staff) => staff.id));
+      if (openIntervals.length === 0) {
+        return {
+          topHeight: `${this.gridHeight()}px`,
+          bottomTop: `${this.gridHeight()}px`,
+          bottomHeight: '0px'
+        };
+      }
+
+      const first = openIntervals[0];
+      const last = openIntervals[openIntervals.length - 1];
+      const workStart = Math.max(START_HOUR * 60, first.startMin);
+      const workEnd = Math.min(END_HOUR * 60, last.endMin);
+
+      const topHeight = Math.max(0, ((workStart - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT);
+      const bottomTop = Math.max(0, ((workEnd - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT);
+      const bottomHeight = Math.max(0, this.gridHeight() - bottomTop);
+
+      return {
+        topHeight: `${topHeight}px`,
+        bottomTop: `${bottomTop}px`,
+        bottomHeight: `${bottomHeight}px`
+      };
+    }
+
+    const matches = this.staffAvailability().filter((rule) => rule.weekday === weekday && visibleStaffIds.includes(rule.staffId));
 
     if (!matches.length) {
       return {
@@ -416,8 +438,8 @@ export class AdminPlanning {
           return {
             staffId: staff.id,
             staffName: staff.name,
-            label: 'Non configure',
-            tone: 'unconfigured' as const,
+            label: 'Congé',
+            tone: 'closed' as const,
             colorHex
           };
         }
@@ -480,6 +502,49 @@ export class AdminPlanning {
       '--availBg': bg,
       '--availText': this.pickTextColor(border)
     };
+  }
+
+  protected getCustomDayShadingSegments(dayKey: string): Array<{ topHeight: string; height: string }> {
+    const filter = this.staffFilter();
+    const visibleStaffIds =
+      filter === 'all' ? this.staff().map((member) => member.id) : [filter];
+    const visibleStaff = this.staff().filter((member) => visibleStaffIds.includes(member.id));
+    const customModeStaff = visibleStaff.filter((member) => (this.staffScheduleModes()[member.id] ?? 'WEEKLY') === 'CUSTOM_DAYS');
+
+    if (!customModeStaff.length) {
+      return [];
+    }
+
+    const openIntervals = this.getMergedCustomDayIntervals(dayKey, customModeStaff.map((staff) => staff.id));
+    const gridStart = START_HOUR * 60;
+    const gridEnd = END_HOUR * 60;
+
+    if (!openIntervals.length) {
+      return [{ topHeight: '0px', height: `${this.gridHeight()}px` }];
+    }
+
+    const segments: Array<{ startMin: number; endMin: number }> = [];
+    let cursor = gridStart;
+
+    for (const interval of openIntervals) {
+      const start = Math.max(gridStart, interval.startMin);
+      const end = Math.min(gridEnd, interval.endMin);
+      if (start > cursor) {
+        segments.push({ startMin: cursor, endMin: start });
+      }
+      cursor = Math.max(cursor, end);
+    }
+
+    if (cursor < gridEnd) {
+      segments.push({ startMin: cursor, endMin: gridEnd });
+    }
+
+    return segments
+      .filter((segment) => segment.endMin > segment.startMin)
+      .map((segment) => ({
+        topHeight: `${((segment.startMin - gridStart) / SLOT_MIN) * SLOT_HEIGHT}px`,
+        height: `${((segment.endMin - segment.startMin) / SLOT_MIN) * SLOT_HEIGHT}px`
+      }));
   }
 
   protected getAppointmentStyle(item: PlanningAppointmentItem): Record<string, string> {
@@ -766,6 +831,50 @@ export class AdminPlanning {
           this.errorMessage.set(error.error?.error ?? 'Impossible de charger le planning.');
         }
       });
+  }
+
+  private getMergedCustomDayIntervals(dayKey: string, staffIds: string[]): Array<{ startMin: number; endMin: number }> {
+    const intervals: Array<{ startMin: number; endMin: number }> = [];
+    const gridStart = START_HOUR * 60;
+    const gridEnd = END_HOUR * 60;
+
+    for (const staffId of staffIds) {
+      const customDay = this.staffCustomDays()[staffId]?.find((item) => item.date === dayKey);
+      if (!customDay || customDay.isClosed || customDay.slots.length === 0) {
+        continue;
+      }
+
+      for (const slot of customDay.slots) {
+        const startMin = this.timeToMinutes(slot.startTime);
+        const endMin = this.timeToMinutes(slot.endTime);
+        if (Number.isNaN(startMin) || Number.isNaN(endMin) || endMin <= startMin) {
+          continue;
+        }
+
+        intervals.push({
+          startMin: Math.max(gridStart, startMin),
+          endMin: Math.min(gridEnd, endMin)
+        });
+      }
+    }
+
+    const filtered = intervals.filter((interval) => interval.endMin > interval.startMin).sort((a, b) => a.startMin - b.startMin);
+    if (!filtered.length) {
+      return [];
+    }
+
+    const merged: Array<{ startMin: number; endMin: number }> = [];
+    for (const interval of filtered) {
+      const last = merged[merged.length - 1];
+      if (!last || interval.startMin > last.endMin) {
+        merged.push({ ...interval });
+        continue;
+      }
+
+      last.endMin = Math.max(last.endMin, interval.endMin);
+    }
+
+    return merged;
   }
 
   private getMonday(date: Date): Date {

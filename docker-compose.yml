@@ -6,9 +6,9 @@ services:
     environment:
       POSTGRES_USER: lrdm
       POSTGRES_PASSWORD: lrdm_pass
-      POSTGRES_DB: lrdm_db
+      POSTGRES_DB: leregarddemanon
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - lrdm_pgdata:/var/lib/postgresql/data
 
