@@ -75,21 +75,26 @@ export class AppointmentWizardComponent {
     const allowed = this.staffServiceIds();
     const practitionerId = this.draft().practitionerId;
 
-    const byStaff = this.services().filter((item) => {
-      if (!practitionerId) {
-        return true;
-      }
-      if (!allowed) {
-        return true;
-      }
-      return allowed.has(item.serviceId);
-    });
+    const filtered = this.services()
+      .map((item) => {
+        const available =
+          !practitionerId || !allowed ? true : allowed.has(item.serviceId);
 
-    if (!query) {
-      return byStaff;
-    }
+        return {
+          item,
+          available
+        };
+      })
+      .filter(({ item }) => (query ? item.name.toLowerCase().includes(query) : true))
+      .sort((a, b) => {
+        if (a.available !== b.available) {
+          return a.available ? -1 : 1;
+        }
 
-    return byStaff.filter((item) => item.name.toLowerCase().includes(query));
+        return a.item.name.localeCompare(b.item.name, 'fr', { sensitivity: 'base' });
+      });
+
+    return filtered.map(({ item }) => item);
   });
 
   protected readonly canGoStep2 = computed(() => {
