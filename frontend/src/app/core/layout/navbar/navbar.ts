@@ -2,6 +2,7 @@ import { NgIf } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { BOOKING_URL } from '../../constants/booking-url';
 
 @Component({
   selector: 'app-navbar',
@@ -10,6 +11,7 @@ import { AuthService } from '../../services/auth.service';
   styleUrl: './navbar.scss'
 })
 export class Navbar {
+  protected readonly bookingUrl = BOOKING_URL;
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;

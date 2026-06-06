@@ -9,7 +9,7 @@
       (pointerleave)="onBrandPointerEnd()"
       (contextmenu)="onBrandContextMenu($event)"
       (click)="onBrandClick($event); closeMenu()"
-      >MA Beauty Academy</a
+      >M&A Beauty Academy</a
     >
 
     <button
@@ -28,11 +28,18 @@
 
     <ul class="links" id="main-nav-links" [class.open]="menuOpen()">
       <li><a routerLink="/" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" (click)="closeMenu()">Accueil</a></li>
-      <li><a routerLink="/soins" routerLinkActive="active" (click)="closeMenu()">Soins</a></li>
-      <li><a routerLink="/a-propos" routerLinkActive="active" (click)="closeMenu()">À propos</a></li>
       <li><a routerLink="/formations" routerLinkActive="active" (click)="closeMenu()">Formations</a></li>
-      <li><a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a></li>
-      <li><a routerLink="/rdv" class="cta" (click)="closeMenu()">Prendre RDV</a></li>
+      <li>
+        <a
+          class="cta"
+          [href]="bookingUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          (click)="closeMenu()"
+        >
+          Prendre RDV
+        </a>
+      </li>
       <li *ngIf="isAdmin">
         <button class="admin-btn" (click)="editHomepage(); closeMenu()" title="Ouvrir le dashboard">
           ⚙

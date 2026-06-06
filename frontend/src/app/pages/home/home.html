@@ -14,7 +14,14 @@
         </div>
 
         <div class="hero-buttons">
-          <button type="button" class="btn-primary" routerLink="/rdv">{{ homeContent.hero.primaryButtonLabel }}</button>
+          <a
+            class="btn-primary"
+            [href]="bookingUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ homeContent.hero.primaryButtonLabel }}
+          </a>
           <button type="button" class="btn-secondary" routerLink="/formations">{{ homeContent.hero.secondaryButtonLabel }}</button>
         </div>
       </div>

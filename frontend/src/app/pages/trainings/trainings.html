@@ -1,31 +1,64 @@
-﻿<section class="page">
-  <h1>Formations</h1>
-  <p class="intro">
-    Les formations professionnelles sont en preparation. Laissez vos coordonnees pour etre informee
-    en priorite des prochaines sessions.
-  </p>
+<section class="formations-page container">
+  <header class="formations-hero">
+    <p class="eyebrow">Academy</p>
+    <h1>Formations</h1>
+    <p class="lead">
+      Des brochures pensées comme une vitrine premium: gestes précis, univers doux, et parcours
+      techniques pour développer une vraie signature professionnelle.
+    </p>
+  </header>
 
-  <form class="interest-form" novalidate>
-    <label>
-      Nom
-      <input type="text" name="name" placeholder="Votre nom" />
-    </label>
-    <label>
-      Email
-      <input type="email" name="email" placeholder="vous@email.com" />
-    </label>
-    <label>
-      Niveau
-      <select name="level">
-        <option>Debutant</option>
-        <option>Intermediaire</option>
-        <option>Professionnel</option>
-      </select>
-    </label>
-    <label>
-      Message
-      <textarea name="message" rows="4" placeholder="Votre besoin en quelques lignes"></textarea>
-    </label>
-    <button type="button" class="btn btn-primary">Envoyer mon interet</button>
-  </form>
+  <div class="formations-grid">
+    @for (brochure of brochures; track brochure.id) {
+      <article
+        class="formation-card"
+        role="button"
+        tabindex="0"
+        [attr.aria-label]="'Ouvrir la brochure ' + brochure.title"
+        (click)="openBrochure(brochure)"
+        (keydown)="onCardKeydown($event, brochure)"
+      >
+        <div class="formation-media">
+          <img [src]="brochure.image" [alt]="brochure.title" loading="lazy" />
+          <span class="formation-chip">{{ brochure.accent }}</span>
+        </div>
+
+        <div class="formation-body">
+          <h2>{{ brochure.title }}</h2>
+          <p>{{ brochure.teaser }}</p>
+          <button type="button" class="btn btn-ghost" (click)="openBrochure(brochure); $event.stopPropagation()">
+            Voir la brochure
+          </button>
+        </div>
+      </article>
+    }
+  </div>
 </section>
+
+@if (selectedBrochure(); as brochure) {
+  <div class="brochure-overlay" (click)="onBackdropClick()">
+    <section
+      class="brochure-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'Brochure ' + brochure.title"
+      (click)="onModalClick($event)"
+    >
+      <button type="button" class="modal-close" aria-label="Fermer" (click)="closeBrochure()">×</button>
+
+      <div class="brochure-visual">
+        <img [src]="brochure.image" [alt]="brochure.title" />
+      </div>
+
+      <div class="brochure-copy">
+        <p class="modal-eyebrow">{{ brochure.accent }}</p>
+        <h2>{{ brochure.title }}</h2>
+        <p>{{ brochure.teaser }}</p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary" (click)="closeBrochure()">Fermer</button>
+        </div>
+      </div>
+    </section>
+  </div>
+}

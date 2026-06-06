@@ -9,6 +9,7 @@ import {
   HomeContentApi,
   HomeContentPayload
 } from '../../core/api/home-content.api';
+import { BOOKING_URL } from '../../core/constants/booking-url';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 
 @Component({
@@ -20,6 +21,7 @@ import { SectionTitle } from '../../shared/ui/section-title/section-title';
 export class Home {
   @ViewChild('offersRail') private offersRail?: ElementRef<HTMLElement>;
 
+  protected readonly bookingUrl = BOOKING_URL;
   private readonly publicPromotionsApi = inject(PublicPromotionsApi);
   private readonly homeContentApi = inject(HomeContentApi);
 
