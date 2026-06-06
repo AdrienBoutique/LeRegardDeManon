@@ -9,8 +9,8 @@
 
 .formations-hero {
   display: grid;
-  gap: 0.85rem;
-  padding: clamp(1.2rem, 3vw, 2rem);
+  gap: 1rem;
+  padding: clamp(1.35rem, 3.5vw, 2.3rem);
   border: 1px solid rgba(228, 216, 206, 0.95);
   border-radius: 28px;
   background:
@@ -40,11 +40,39 @@
   letter-spacing: -0.03em;
 }
 
-.lead {
+.subheading {
   margin: 0;
-  max-width: 66ch;
+  color: var(--color-primary-strong);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.intro-copy {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 68ch;
+}
+
+.intro-copy p {
+  margin: 0;
   color: var(--color-text-soft);
   font-size: 1.02rem;
+  line-height: 1.8;
+}
+
+.cta-note {
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(228, 216, 206, 0.9);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+  line-height: 1.5;
+  box-shadow: 0 12px 24px rgba(45, 33, 24, 0.05);
 }
 
 .formations-grid {
@@ -267,6 +295,14 @@
 
   .formations-hero {
     border-radius: 24px;
+  }
+
+  .intro-copy p {
+    line-height: 1.72;
+  }
+
+  .cta-note {
+    width: 100%;
   }
 
   .formation-body {

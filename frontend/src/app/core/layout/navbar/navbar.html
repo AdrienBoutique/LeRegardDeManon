@@ -9,7 +9,15 @@
       (pointerleave)="onBrandPointerEnd()"
       (contextmenu)="onBrandContextMenu($event)"
       (click)="onBrandClick($event); closeMenu()"
-      >M&A Beauty Academy</a
+    >
+      <img
+        class="brand-logo"
+        src="/assets/logo.png"
+        alt="M&A Beauty Academy"
+        loading="eager"
+        decoding="async"
+      />
+    </a
     >
 
     <button
@@ -29,6 +37,7 @@
     <ul class="links" id="main-nav-links" [class.open]="menuOpen()">
       <li><a routerLink="/" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" (click)="closeMenu()">Accueil</a></li>
       <li><a routerLink="/formations" routerLinkActive="active" (click)="closeMenu()">Formations</a></li>
+      <li><a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a></li>
       <li>
         <a
           class="cta"
