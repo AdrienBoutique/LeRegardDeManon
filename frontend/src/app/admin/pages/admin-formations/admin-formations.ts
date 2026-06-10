@@ -32,7 +32,6 @@ export class AdminFormations {
     title: ['', [Validators.required]],
     category: ['', [Validators.required]],
     description: ['', [Validators.required]],
-    brochureImageUrl: ['', [Validators.required]],
     eventUrl: [''],
     nextDatesText: [''],
     sessionNote: [''],
@@ -65,7 +64,6 @@ export class AdminFormations {
       title: formation.title,
       category: formation.category,
       description: formation.description,
-      brochureImageUrl: formation.brochureImageUrl,
       eventUrl: formation.eventUrl ?? '',
       nextDatesText: formation.nextDatesText ?? '',
       sessionNote: formation.sessionNote ?? '',
@@ -83,6 +81,7 @@ export class AdminFormations {
 
   protected save(): void {
     const id = this.editingId();
+    const formation = this.selectedFormation();
     if (!id || this.form.invalid || this.saving()) {
       this.form.markAllAsTouched();
       return;
@@ -96,7 +95,7 @@ export class AdminFormations {
       title: value.title.trim(),
       category: value.category.trim(),
       description: value.description.trim(),
-      brochureImageUrl: value.brochureImageUrl.trim(),
+      brochureImageUrl: formation?.brochureImageUrl ?? '',
       eventUrl: value.eventUrl.trim() ? value.eventUrl.trim() : null,
       nextDatesText: value.nextDatesText.trim() ? value.nextDatesText.trim() : null,
       sessionNote: value.sessionNote.trim() ? value.sessionNote.trim() : null,
@@ -111,7 +110,6 @@ export class AdminFormations {
           title: updated.title,
           category: updated.category,
           description: updated.description,
-          brochureImageUrl: updated.brochureImageUrl,
           eventUrl: updated.eventUrl ?? '',
           nextDatesText: updated.nextDatesText ?? '',
           sessionNote: updated.sessionNote ?? '',
