@@ -19,6 +19,7 @@ import { AdminPromotions } from './admin/pages/promotions/admin-promotions';
 import { AdminHomeContent } from './admin/pages/admin-home-content/admin-home-content';
 import { AdminAboutContent } from './admin/pages/admin-about-content/admin-about-content';
 import { AdminContactContent } from './admin/pages/admin-contact-content/admin-contact-content';
+import { AdminFormations } from './admin/pages/admin-formations/admin-formations';
 import { AdminContentHub } from './admin/pages/admin-content-hub/admin-content-hub';
 import { AdminLayout } from './admin/layout/admin-layout';
 import { AdminClients } from './admin/pages/admin-clients/admin-clients';
@@ -38,6 +39,7 @@ const adminChildren: Routes = [
   { path: 'accueil', component: AdminHomeContent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'a-propos', component: AdminAboutContent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'contact', component: AdminContactContent, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'formations', component: AdminFormations, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'staff', component: AdminStaffList, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'staff/:id', component: AdminStaffDetail, canActivate: [roleGuard], data: { roles: ['ADMIN'] } },
   { path: 'praticiennes', redirectTo: 'staff', pathMatch: 'full' },

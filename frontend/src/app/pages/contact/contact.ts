@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   ContactDayHours,
@@ -15,12 +15,15 @@ import { AuthService } from '../../core/services/auth.service';
   styleUrl: './contact.scss'
 })
 export class Contact {
+  @ViewChild('contactVideo') private contactVideo?: ElementRef<HTMLVideoElement>;
+
   private readonly pageContentApi = inject(PageContentApi);
   private readonly authService = inject(AuthService);
 
   protected readonly content = signal<ContactPageContent>(defaultContactPageContent());
   protected readonly errorMessage = signal('');
   protected readonly isAdminLoggedIn = signal(this.authService.isLoggedIn());
+  protected readonly isPlaying = signal(true);
 
   constructor() {
     this.pageContentApi.getPublicContent<ContactPageContent>('contact').subscribe({
@@ -45,6 +48,28 @@ export class Contact {
     }
 
     return `${this.formatHour(day.start)} - ${this.formatHour(day.end)}`;
+  }
+
+  protected toggleVideo(): void {
+    const video = this.contactVideo?.nativeElement;
+    if (!video) {
+      return;
+    }
+
+    if (video.paused) {
+      void video.play();
+      return;
+    }
+
+    video.pause();
+  }
+
+  protected onVideoPlay(): void {
+    this.isPlaying.set(true);
+  }
+
+  protected onVideoPause(): void {
+    this.isPlaying.set(false);
   }
 
   private formatHour(value: string): string {

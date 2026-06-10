@@ -1,0 +1,128 @@
+<section class="admin-formations stack">
+  <header class="card heading">
+    <div class="heading-top">
+      <div>
+        <h1>Edition des formations</h1>
+        <p>Gerez les brochures, les prochaines dates et le lien vers l'evenement Facebook.</p>
+      </div>
+      <a routerLink="/admin/edition" class="btn btn-ghost">Retour au choix d'edition</a>
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <article class="card error-box">{{ errorMessage() }}</article>
+  }
+
+  @if (toastMessage()) {
+    <article class="toast">{{ toastMessage() }}</article>
+  }
+
+  @if (loading()) {
+    <article class="card panel">Chargement...</article>
+  } @else {
+    <section class="formations-layout">
+      <article class="card panel list-panel">
+        <div class="section-head">
+          <div>
+            <h2>Formations existantes</h2>
+            <p>Selectionnez une carte pour modifier ses contenus.</p>
+          </div>
+        </div>
+
+        <div class="formations-list">
+          @for (formation of formations(); track formation.id) {
+            <article class="formation-item" [class.active]="editingId() === formation.id">
+              <img class="formation-thumb" [src]="formation.brochureImageUrl" [alt]="formation.title" />
+              <div class="formation-copy">
+                <div class="formation-top">
+                  <span class="chip">{{ formation.category }}</span>
+                  <span class="chip" [class.inactive]="!hasEventLink(formation)">
+                    {{ hasEventLink(formation) ? 'Evenement actif' : 'Sans lien' }}
+                  </span>
+                </div>
+                <h3>{{ formation.title }}</h3>
+                <p>{{ formation.description }}</p>
+                <p class="meta">{{ formatDatesText(formation.nextDatesText) }}</p>
+                @if (formation.sessionNote) {
+                  <p class="muted">{{ formation.sessionNote }}</p>
+                }
+              </div>
+              <button type="button" class="btn btn-ghost" (click)="startEdit(formation)">Modifier</button>
+            </article>
+          }
+        </div>
+      </article>
+
+      @if (selectedFormation(); as formation) {
+        <article class="card panel editor-panel">
+          <div class="editor-head">
+            <div>
+              <h2>Modifier la formation</h2>
+              <p>{{ formation.title }}</p>
+            </div>
+            @if (hasEventLink(formation)) {
+              <button type="button" class="btn btn-ghost danger-btn" [disabled]="saving()" (click)="removeEventLink()">
+                Supprimer le lien evenement
+              </button>
+            }
+          </div>
+
+          <form class="stack editor-form" [formGroup]="form" (ngSubmit)="save()">
+            <div class="grid two-cols">
+              <label>
+                Titre formation
+                <input type="text" formControlName="title" />
+              </label>
+              <label>
+                Categorie
+                <input type="text" formControlName="category" />
+              </label>
+            </div>
+
+            <label>
+              Description
+              <textarea rows="3" formControlName="description"></textarea>
+            </label>
+
+            <label>
+              Image brochure
+              <input type="text" formControlName="brochureImageUrl" />
+            </label>
+
+            <label>
+              Lien evenement Facebook
+              <input type="text" formControlName="eventUrl" placeholder="https://www.facebook.com/..." />
+            </label>
+
+            <div class="grid two-cols">
+              <label>
+                Texte court optionnel
+                <input type="text" formControlName="sessionNote" placeholder="Prochaine session disponible" />
+              </label>
+              <label>
+                Prochaines dates
+                <input type="text" formControlName="nextDatesText" placeholder="12 et 13 avril 2026" />
+              </label>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" formControlName="showEventButton" />
+              Activer le bouton evenement
+            </label>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
+              </button>
+              <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Fermer</button>
+            </div>
+          </form>
+        </article>
+      } @else {
+        <article class="card panel editor-empty">
+          Selectionnez une formation pour modifier ses informations.
+        </article>
+      }
+    </section>
+  }
+</section>

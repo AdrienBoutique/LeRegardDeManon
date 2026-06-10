@@ -41,6 +41,119 @@ h2 {
   margin-top: 1rem;
 }
 
+.contact-video-section {
+  margin-top: 1rem;
+}
+
+.contact-video-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(229, 218, 207, 0.96);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 246, 242, 0.98));
+  box-shadow:
+    0 24px 60px rgba(92, 69, 52, 0.1),
+    0 3px 14px rgba(92, 69, 52, 0.05);
+  transform: translateZ(0);
+  animation: contactVideoEnter 560ms ease both;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.contact-video-wrapper:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 28px 70px rgba(92, 69, 52, 0.12),
+    0 6px 20px rgba(92, 69, 52, 0.06);
+}
+
+.contact-video-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top left, rgba(139, 94, 60, 0.08), transparent 32%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0) 58%, rgba(55, 38, 27, 0.14) 100%);
+  z-index: 1;
+}
+
+.contact-video {
+  display: block;
+  width: 100%;
+  max-width: 450px;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
+  background: #f4eee8;
+  border: 0;
+  border-radius: 24px;
+}
+
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    linear-gradient(to top, rgba(22, 16, 12, 0.18), rgba(22, 16, 12, 0) 30%);
+}
+
+.video-control-btn {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 3;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.video-control-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.68);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.video-control-btn:focus-visible {
+  outline: 2px solid #8b5e3c;
+  outline-offset: 3px;
+}
+
+.video-control-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  display: block;
+  color: #fff;
+}
+
 .hours-list {
   margin: 0.6rem 0 0;
   padding: 0;
@@ -84,4 +197,49 @@ h2 {
   border-radius: 14px;
   background: #fff;
   padding: 0.9rem;
+}
+
+@keyframes contactVideoEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 900px) {
+  .contact-video-section {
+    display: flex;
+    justify-content: center;
+  }
+
+  .contact-video-wrapper {
+    max-width: 1000px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  .contact-video-wrapper {
+    border-radius: 22px;
+  }
+
+  .contact-video {
+    border-radius: 22px;
+  }
+
+  .video-control-btn {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
 }

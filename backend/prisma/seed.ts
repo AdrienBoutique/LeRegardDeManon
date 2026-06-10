@@ -6,6 +6,7 @@ import {
   defaultContactPageContent,
   defaultHomeContent,
 } from "../src/lib/homeContent";
+import { defaultFormationContent } from "../src/lib/formations";
 
 const prisma = new PrismaClient();
 
@@ -366,8 +367,16 @@ async function main() {
     },
   });
 
+  for (const formation of defaultFormationContent) {
+    await prisma.formationContent.upsert({
+      where: { id: formation.id },
+      update: {},
+      create: formation,
+    });
+  }
+
   console.log(
-    "[seed] Done: admin, staff, categories, services, links, availability rules (staff+institute), promotions, home content"
+    "[seed] Done: admin, staff, categories, services, links, availability rules (staff+institute), promotions, home content, formations"
   );
 }
 

@@ -6,45 +6,79 @@
 
     <div class="intro-copy">
       <p>
-        Chez M&A Beauty Academy, nous avons à cœur de transmettre bien plus qu'une technique : nous
-        partageons un véritable savoir-faire professionnel fondé sur l'exigence, la passion et
+        Chez M&A Beauty Academy, nous avons a coeur de transmettre bien plus qu'une technique : nous
+        partageons un veritable savoir-faire professionnel fonde sur l'exigence, la passion et
         l'excellence.
       </p>
       <p>
-        Nos formations ont été conçues pour permettre à chaque élève d'acquérir des compétences
-        concrètes, maîtriser des protocoles reconnus et développer la confiance nécessaire pour
-        évoluer sereinement dans le secteur de la beauté et du bien-être.
+        Nos formations ont ete concues pour permettre a chaque eleve d'acquerir des competences
+        concretes, maitriser des protocoles reconnus et developper la confiance necessaire pour
+        evoluer sereinement dans le secteur de la beaute et du bien-etre.
       </p>
       <p>
-        Que vous souhaitiez débuter une nouvelle carrière, enrichir vos prestations ou perfectionner
-        votre expertise, vous trouverez un accompagnement adapté à vos ambitions professionnelles.
+        Que vous souhaitiez debuter une nouvelle carriere, enrichir vos prestations ou perfectionner
+        votre expertise, vous trouverez un accompagnement adapte a vos ambitions professionnelles.
       </p>
     </div>
 
-    <p class="cta-note">Sélectionnez une formation ci-dessous pour découvrir son programme détaillé.</p>
+    <p class="cta-note">Selectionnez une formation ci-dessous pour decouvrir son programme detaille.</p>
   </header>
 
+  @if (errorMessage()) {
+    <article class="page-alert error">{{ errorMessage() }}</article>
+  }
+
+  @if (loading()) {
+    <article class="page-alert loading">Chargement des formations...</article>
+  }
+
   <div class="formations-grid">
-    @for (brochure of brochures; track brochure.id) {
+    @for (formation of formations(); track formation.id) {
       <article
         class="formation-card"
         role="button"
         tabindex="0"
-        [attr.aria-label]="'Ouvrir la brochure ' + brochure.title"
-        (click)="openBrochure(brochure)"
-        (keydown)="onCardKeydown($event, brochure)"
+        [attr.aria-label]="'Ouvrir la brochure ' + formation.title"
+        (click)="openBrochure(formation)"
+        (keydown)="onCardKeydown($event, formation)"
       >
         <div class="formation-media">
-          <img [src]="brochure.image" [alt]="brochure.title" loading="lazy" />
-          <span class="formation-chip">{{ brochure.accent }}</span>
+          <img [src]="formation.brochureImageUrl" [alt]="formation.title" loading="lazy" />
+          <span class="formation-chip">{{ formation.category }}</span>
         </div>
 
         <div class="formation-body">
-          <h2>{{ brochure.title }}</h2>
-          <p>{{ brochure.teaser }}</p>
-          <button type="button" class="btn btn-ghost" (click)="openBrochure(brochure); $event.stopPropagation()">
-            Voir la brochure
-          </button>
+          <h2>{{ formation.title }}</h2>
+          <p class="formation-description">{{ formation.description }}</p>
+
+          @if (formation.sessionNote || formation.nextDatesText) {
+            <div class="formation-meta">
+              @if (formation.sessionNote) {
+                <p class="formation-session-note">{{ formation.sessionNote }}</p>
+              }
+              @if (formation.nextDatesText) {
+                <p class="formation-next-date">Prochaine date : {{ formation.nextDatesText }}</p>
+              }
+            </div>
+          }
+
+          <div class="formation-actions">
+            <button type="button" class="btn btn-ghost brochure-btn" (click)="openBrochure(formation); $event.stopPropagation()">
+              Voir la brochure
+            </button>
+
+            @if (hasEventButton(formation)) {
+              <a
+                class="btn btn-primary event-btn"
+                [href]="formation.eventUrl!"
+                target="_blank"
+                rel="noopener noreferrer"
+                (click)="$event.stopPropagation()"
+              >
+                Voir prochain evenement
+              </a>
+            }
+          </div>
         </div>
       </article>
     }
@@ -63,13 +97,13 @@
       <button type="button" class="modal-close" aria-label="Fermer" (click)="closeBrochure()">×</button>
 
       <div class="brochure-visual">
-        <img [src]="brochure.image" [alt]="brochure.title" />
+        <img [src]="brochure.brochureImageUrl" [alt]="brochure.title" />
       </div>
 
       <div class="brochure-copy">
-        <p class="modal-eyebrow">{{ brochure.accent }}</p>
+        <p class="modal-eyebrow">{{ brochure.category }}</p>
         <h2>{{ brochure.title }}</h2>
-        <p>{{ brochure.teaser }}</p>
+        <p>{{ brochure.description }}</p>
 
         <div class="modal-actions">
           <button type="button" class="btn btn-primary" (click)="closeBrochure()">Fermer</button>
