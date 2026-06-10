@@ -206,17 +206,21 @@
 .formation-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.55rem;
   margin-top: 0.3rem;
 }
 
 .formation-actions .btn {
   width: 100%;
   justify-content: center;
+  min-height: 3.35rem;
+  border-radius: 18px;
 }
 
 .brochure-btn {
   background: transparent;
+  border-color: #e0cdbd;
+  color: #5e4638;
 }
 
 .event-btn {
@@ -406,16 +410,6 @@
   .modal-close {
     top: 0.9rem;
     right: 0.9rem;
-  }
-}
-
-@media (min-width: 720px) {
-  .formation-actions {
-    flex-direction: row;
-  }
-
-  .formation-actions .btn {
-    flex: 1 1 0;
   }
 }
 
