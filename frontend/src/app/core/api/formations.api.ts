@@ -57,7 +57,7 @@ export function defaultFormationContent(): FormationContentItem[] {
       updatedAt: new Date().toISOString()
     },
     {
-      id: 'extension-cils',
+      id: 'extension-de-cils',
       title: 'Extension de cils',
       category: 'Regard',
       description: 'Creer une pose harmonieuse, durable et sophistiquee.',
@@ -187,7 +187,7 @@ export function defaultFormationContent(): FormationContentItem[] {
       updatedAt: new Date().toISOString()
     },
     {
-      id: 'techniques-specifiques-pedicure',
+      id: 'techniques-specifiques-pedicure-medicale',
       title: 'Techniques specifiques pedicure medicale',
       category: 'Expertise',
       description: 'Des gestes cibles pour des besoins plus techniques.',

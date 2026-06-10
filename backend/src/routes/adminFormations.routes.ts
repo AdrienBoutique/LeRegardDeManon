@@ -2,7 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { authAdmin } from "../middlewares/authAdmin";
 import { parseOrThrow, zodErrorToMessage } from "../lib/validate";
-import { formationContentSchema, normalizeFormationPayload } from "../lib/formations";
+import {
+  formationContentSchema,
+  mergeFormationContent,
+  normalizeFormationId,
+  normalizeFormationPayload,
+} from "../lib/formations";
 import { prisma } from "../lib/prisma";
 
 export const adminFormationsRouter = Router();
@@ -12,19 +17,19 @@ adminFormationsRouter.use(authAdmin);
 adminFormationsRouter.get("/formations", async (_req, res) => {
   try {
     const formations = await prisma.formationContent.findMany({
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }],
     });
 
-    res.json(formations);
+    res.json(mergeFormationContent(formations));
   } catch (error) {
     console.error("[adminFormations.get]", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.json(mergeFormationContent([]));
   }
 });
 
 adminFormationsRouter.put("/formations/:id", async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = normalizeFormationId(req.params.id);
     const payload = parseOrThrow(formationContentSchema, req.body);
     const normalized = normalizeFormationPayload(payload);
 
@@ -51,7 +56,7 @@ adminFormationsRouter.put("/formations/:id", async (req, res) => {
 
 adminFormationsRouter.delete("/formations/:id/event-link", async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = normalizeFormationId(req.params.id);
 
     const existing = await prisma.formationContent.findUnique({
       where: { id },

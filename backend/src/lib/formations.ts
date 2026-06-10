@@ -13,11 +13,13 @@ export const formationContentSchema = z.object({
 
 export type FormationContentPayload = z.infer<typeof formationContentSchema>;
 
-export type SeedFormationContent = FormationContentPayload & {
+export type FormationRecord = FormationContentPayload & {
   id: string;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
-export const defaultFormationContent: SeedFormationContent[] = [
+export const defaultFormationContent: FormationRecord[] = [
   {
     id: "brow-lift",
     title: "Brow Lift",
@@ -28,6 +30,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "esthetique",
@@ -39,9 +43,11 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
-    id: "extension-cils",
+    id: "extension-de-cils",
     title: "Extension de cils",
     category: "Regard",
     description: "Creer une pose harmonieuse, durable et sophistiquee.",
@@ -50,6 +56,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "maderotherapie",
@@ -61,6 +69,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "massage-drainant",
@@ -72,6 +82,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "massage-harmonisant",
@@ -83,6 +95,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "massage-pierre-chaude",
@@ -94,6 +108,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "massage-prenatal",
@@ -105,6 +121,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "pedicure-medicale",
@@ -116,6 +134,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "perfection-pedicure",
@@ -127,6 +147,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "reflexologie-plantaire",
@@ -138,6 +160,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "rehaussement-cils",
@@ -149,9 +173,11 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
-    id: "techniques-specifiques-pedicure",
+    id: "techniques-specifiques-pedicure-medicale",
     title: "Techniques specifiques pedicure medicale",
     category: "Expertise",
     description: "Des gestes cibles pour des besoins plus techniques.",
@@ -160,6 +186,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "volume-russe",
@@ -171,6 +199,8 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
   {
     id: "vsp",
@@ -182,8 +212,19 @@ export const defaultFormationContent: SeedFormationContent[] = [
     nextDatesText: null,
     sessionNote: null,
     showEventButton: false,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
   },
 ];
+
+const slugAliases: Record<string, string> = {
+  "extension-cils": "extension-de-cils",
+  "techniques-specifiques-pedicure": "techniques-specifiques-pedicure-medicale",
+};
+
+export function normalizeFormationId(id: string): string {
+  return slugAliases[id] ?? id;
+}
 
 export function normalizeEventUrl(value: string | null | undefined): string | null {
   const trimmed = value?.trim() ?? "";
@@ -206,4 +247,33 @@ export function normalizeFormationPayload(input: FormationContentPayload): Forma
     sessionNote: normalizeOptionalText(input.sessionNote ?? null),
     showEventButton: input.showEventButton,
   };
+}
+
+function formationSortIndex(id: string): number {
+  const index = defaultFormationContent.findIndex((item) => item.id === id);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+export function mergeFormationContent(records: FormationRecord[]): FormationRecord[] {
+  const normalizedRecords = new Map<string, FormationRecord>();
+
+  for (const record of records) {
+    normalizedRecords.set(normalizeFormationId(record.id), {
+      ...record,
+      id: normalizeFormationId(record.id),
+    });
+  }
+
+  const mergedDefaults = defaultFormationContent.map((fallback) => {
+    const existing = normalizedRecords.get(fallback.id);
+    return existing ?? fallback;
+  });
+
+  const extraRecords = [...normalizedRecords.values()].filter(
+    (record) => !defaultFormationContent.some((fallback) => fallback.id === record.id)
+  );
+
+  extraRecords.sort((a, b) => formationSortIndex(a.id) - formationSortIndex(b.id));
+
+  return [...mergedDefaults, ...extraRecords];
 }
