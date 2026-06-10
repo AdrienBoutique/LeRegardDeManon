@@ -28,19 +28,13 @@ adminFormationsRouter.put("/formations/:id", async (req, res) => {
     const payload = parseOrThrow(formationContentSchema, req.body);
     const normalized = normalizeFormationPayload(payload);
 
-    const existing = await prisma.formationContent.findUnique({
+    const updated = await prisma.formationContent.upsert({
       where: { id },
-      select: { id: true },
-    });
-
-    if (!existing) {
-      res.status(404).json({ error: "Formation not found" });
-      return;
-    }
-
-    const updated = await prisma.formationContent.update({
-      where: { id },
-      data: normalized,
+      update: normalized,
+      create: {
+        id,
+        ...normalized,
+      },
     });
 
     res.json(updated);
